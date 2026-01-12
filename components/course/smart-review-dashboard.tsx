@@ -1,0 +1,232 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Play, Brain, BookOpen, Zap, CheckCircle2 } from "lucide-react";
+import {
+  getSmartReviewStatsAction,
+  getNextReviewItemAction,
+  type SmartReviewStats,
+  type SmartReviewItemWithRelations,
+} from "@/app/actions/smart-review";
+import { toast } from "sonner";
+import { SmartReviewSession } from "./smart-review-session";
+
+interface SmartReviewDashboardProps {
+  courseId: string;
+  course: any;
+  settings: any;
+}
+
+export function SmartReviewDashboard({ courseId, course, settings }: SmartReviewDashboardProps) {
+  const [stats, setStats] = useState<SmartReviewStats | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isStarting, setIsStarting] = useState(false);
+  const [currentItem, setCurrentItem] = useState<SmartReviewItemWithRelations | null>(null);
+  const [isReviewing, setIsReviewing] = useState(false);
+
+  useEffect(() => {
+    loadStats();
+  }, [courseId]);
+
+  const loadStats = async () => {
+    try {
+      const result = await getSmartReviewStatsAction(courseId);
+      if (result.success && result.data) {
+        setStats(result.data);
+      }
+    } catch (error) {
+      console.error("Error loading stats:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleStartReview = async () => {
+    setIsStarting(true);
+    try {
+      const result = await getNextReviewItemAction(courseId);
+      
+      if (!result.success || !result.data) {
+        toast.error(result.error || "Aucun item disponible pour la révision");
+        return;
+      }
+
+      setCurrentItem(result.data);
+      setIsReviewing(true);
+    } catch (error) {
+      console.error("Error starting review:", error);
+      toast.error("Une erreur est survenue");
+    } finally {
+      setIsStarting(false);
+    }
+  };
+
+  const handleNextItem = async () => {
+    try {
+      const result = await getNextReviewItemAction(courseId);
+      
+      if (!result.success || !result.data) {
+        toast.info("Vous avez révisé tous les items disponibles !");
+        setIsReviewing(false);
+        setCurrentItem(null);
+        loadStats(); // Refresh stats
+        return;
+      }
+
+      setCurrentItem(result.data);
+    } catch (error) {
+      console.error("Error getting next item:", error);
+      toast.error("Une erreur est survenue");
+    }
+  };
+
+  const handleExit = () => {
+    setIsReviewing(false);
+    setCurrentItem(null);
+    loadStats(); // Refresh stats
+  };
+
+  // Show review session if active
+  if (isReviewing && currentItem) {
+    return (
+      <SmartReviewSession
+        courseId={courseId}
+        currentItem={currentItem}
+        onNext={handleNextItem}
+        onExit={handleExit}
+        totalReviewed={stats?.totalItemsReviewed || 0}
+      />
+    );
+  }
+
+  // Calculate totals
+  const totalFlashcards = stats?.chapterStats.reduce((sum, c) => sum + c.totalFlashcards, 0) || 0;
+  const totalActivities = stats?.chapterStats.reduce((sum, c) => sum + c.totalActivities, 0) || 0;
+  const totalItems = totalFlashcards + totalActivities;
+  const reviewedFlashcards = stats?.chapterStats.reduce((sum, c) => sum + c.flashcardsReviewed, 0) || 0;
+  const reviewedActivities = stats?.chapterStats.reduce((sum, c) => sum + c.activitiesReviewed, 0) || 0;
+  const totalReviewed = reviewedFlashcards + reviewedActivities;
+
+  const hasCompletedChapters = (stats?.completedChapters.length || 0) > 0;
+
+  return (
+    <div className="space-y-6">
+      {/* Overview Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Brain className="h-5 w-5 text-primary" />
+            Révision intelligente
+          </CardTitle>
+          <CardDescription>
+            Révisez un mélange aléatoire de flashcards et d'activités de vos chapitres complétés.
+            Les items sont priorisés pour maximiser votre couverture.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Stats Summary */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="text-center p-3 bg-muted/50 rounded-lg">
+              <div className="text-2xl font-bold text-primary">
+                {isLoading ? "..." : stats?.completedChapters.length || 0}
+              </div>
+              <div className="text-xs text-muted-foreground">Chapitres débloqués</div>
+            </div>
+            <div className="text-center p-3 bg-muted/50 rounded-lg">
+              <div className="text-2xl font-bold">
+                {isLoading ? "..." : totalItems}
+              </div>
+              <div className="text-xs text-muted-foreground">Items disponibles</div>
+            </div>
+            <div className="text-center p-3 bg-muted/50 rounded-lg">
+              <div className="text-2xl font-bold text-green-600">
+                {isLoading ? "..." : totalReviewed}
+              </div>
+              <div className="text-xs text-muted-foreground">Items vus</div>
+            </div>
+            <div className="text-center p-3 bg-muted/50 rounded-lg">
+              <div className="text-2xl font-bold">
+                {isLoading ? "..." : stats?.totalItemsReviewed || 0}
+              </div>
+              <div className="text-xs text-muted-foreground">Révisions totales</div>
+            </div>
+          </div>
+
+          {/* Start Button */}
+          <Button
+            size="lg"
+            className="w-full"
+            onClick={handleStartReview}
+            disabled={isStarting || isLoading || !hasCompletedChapters}
+          >
+            <Play className="h-4 w-4 mr-2" />
+            {isStarting ? "Chargement..." : "Commencer la révision"}
+          </Button>
+
+          {!hasCompletedChapters && !isLoading && (
+            <p className="text-sm text-muted-foreground text-center">
+              Complétez au moins un chapitre dans la phase d'apprentissage pour débloquer la révision intelligente.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Chapter Stats */}
+      {stats && stats.chapterStats.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Progression par chapitre</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {stats.chapterStats
+                .sort((a, b) => a.moduleOrder - b.moduleOrder)
+                .map((chapter) => (
+                  <div
+                    key={chapter.moduleId}
+                    className="flex items-center justify-between p-3 border rounded-lg"
+                  >
+                    <div className="flex items-center gap-3">
+                      <CheckCircle2 className="h-4 w-4 text-green-500" />
+                      <span className="font-medium text-sm truncate max-w-[200px] md:max-w-none">
+                        {chapter.moduleTitle}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-xs">
+                        <Zap className="h-3 w-3 mr-1" />
+                        {chapter.flashcardsReviewed}/{chapter.totalFlashcards}
+                      </Badge>
+                      <Badge variant="outline" className="text-xs">
+                        <BookOpen className="h-3 w-3 mr-1" />
+                        {chapter.activitiesReviewed}/{chapter.totalActivities}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Locked Chapters Info */}
+      {course.modules && stats && (
+        <Card className="border-dashed">
+          <CardContent className="pt-6">
+            <div className="text-center text-muted-foreground">
+              <p className="text-sm">
+                {course.modules.length - (stats.completedChapters.length || 0)} chapitre(s) restant(s) à débloquer.
+              </p>
+              <p className="text-xs mt-1">
+                Marquez les chapitres comme complétés dans la phase d'apprentissage pour les ajouter à la révision.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}

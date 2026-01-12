@@ -1,0 +1,4 @@
+ActivityType,Module,Instructions,Question,CorrectAnswer,Tolerance
+NUMERIC_ENTRY,Module 1,Compute the investment value,Compute the value of this investment after 5 years: Initial investment $10,000, annual return 5%, compounded annually,12762.82,0.01
+NUMERIC_ENTRY,Module 1,Calculate bond duration,What is the duration (in years) of this bond: Face value $1,000, coupon rate 4%, yield 5%, maturity 10 years,8.5,0.1
+

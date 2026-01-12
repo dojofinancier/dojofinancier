@@ -1,0 +1,4 @@
+ActivityType,Module,Instructions,TableJSON,AnswersJSON
+TABLE_COMPLETION,Module 1,Fill in the missing cells in the risk vs. return table,"{""headers"": [""Product"", ""Risk"", ""Return""], ""rows"": [[""GIC"", ""Low"", null], [""Bond Fund"", null, ""Medium""], [""Equity Fund"", ""High"", null]]}","{""0_2"": ""Low"", ""1_1"": ""Medium"", ""2_2"": ""High""}"
+TABLE_COMPLETION,Module 1,Fill in the tax table,"{""headers"": [""Income Type"", ""Tax Status""], ""rows"": [[""Salary"", null], [""Capital Gains"", null], [""TFSA Withdrawal"", null]]}","{""0_1"": ""Fully taxable"", ""1_1"": ""50% taxable"", ""2_1"": ""Tax-free""}"
+

@@ -1,0 +1,17 @@
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+[build]
+  command = "npm run prisma:generate && npm run build"
+  # Note: publish directory is automatically handled by the Next.js adapter
+
+[build.environment]
+  NODE_VERSION = "24"
+  TZ = "America/Toronto"
+
+# Note: Next.js API routes work automatically with the adapter
+# No need for manual redirects - the adapter handles all routing
+
+
+
+

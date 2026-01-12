@@ -1,0 +1,427 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  AlertCircle,
+  CheckCircle2,
+  XCircle,
+  RefreshCw,
+  Search,
+  Filter,
+  ExternalLink,
+  Calendar,
+  User,
+  FileText,
+} from "lucide-react";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
+import { getErrorLogsAction, resolveErrorAction } from "@/app/actions/error-logs";
+import { toast } from "sonner";
+
+type ErrorLog = {
+  id: string;
+  errorId: string;
+  errorType: "CLIENT" | "SERVER";
+  errorMessage: string;
+  stackTrace: string | null;
+  severity: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+  resolved: boolean;
+  createdAt: Date;
+  url: string | null;
+  userAgent: string | null;
+  user: {
+    id: string;
+    email: string;
+    firstName: string | null;
+    lastName: string | null;
+  } | null;
+};
+
+export function ErrorLogViewer() {
+  const [errorLogs, setErrorLogs] = useState<ErrorLog[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedError, setSelectedError] = useState<ErrorLog | null>(null);
+  const [filters, setFilters] = useState({
+    resolved: undefined as boolean | undefined,
+    severity: undefined as "LOW" | "MEDIUM" | "HIGH" | "CRITICAL" | undefined,
+  });
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const loadErrorLogs = async () => {
+    try {
+      setLoading(true);
+      const result = await getErrorLogsAction({
+        resolved: filters.resolved,
+        severity: filters.severity,
+        limit: 100,
+      });
+      if (result.items) {
+        setErrorLogs(result.items);
+      }
+    } catch (error) {
+      toast.error("Erreur lors du chargement des logs d'erreur");
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadErrorLogs();
+  }, [filters.resolved, filters.severity]);
+
+  const handleResolve = async (errorId: string) => {
+    try {
+      const result = await resolveErrorAction(errorId);
+      if (result.success) {
+        toast.success("Erreur marquée comme résolue");
+        loadErrorLogs();
+      } else {
+        toast.error(result.error || "Erreur lors de la résolution");
+      }
+    } catch (error) {
+      toast.error("Erreur lors de la résolution");
+    }
+  };
+
+  const getSeverityColor = (severity: string) => {
+    switch (severity) {
+      case "CRITICAL":
+        return "bg-red-500";
+      case "HIGH":
+        return "bg-orange-500";
+      case "MEDIUM":
+        return "bg-yellow-500";
+      case "LOW":
+        return "bg-blue-500";
+      default:
+        return "bg-gray-500";
+    }
+  };
+
+  const getSeverityLabel = (severity: string) => {
+    switch (severity) {
+      case "CRITICAL":
+        return "Critique";
+      case "HIGH":
+        return "Élevée";
+      case "MEDIUM":
+        return "Moyenne";
+      case "LOW":
+        return "Faible";
+      default:
+        return severity;
+    }
+  };
+
+  const filteredLogs = errorLogs.filter((log) => {
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      return (
+        log.errorMessage.toLowerCase().includes(query) ||
+        log.errorId.toLowerCase().includes(query) ||
+        log.user?.email.toLowerCase().includes(query) ||
+        log.url?.toLowerCase().includes(query)
+      );
+    }
+    return true;
+  });
+
+  const unresolvedCount = errorLogs.filter((log) => !log.resolved).length;
+  const criticalCount = errorLogs.filter(
+    (log) => !log.resolved && log.severity === "CRITICAL"
+  ).length;
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Summary Cards */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Erreurs non résolues</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{unresolvedCount}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Erreurs critiques</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-600">{criticalCount}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Total des erreurs</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{errorLogs.length}</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filters */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Logs d'erreur</CardTitle>
+          <CardDescription>
+            Consultez et gérez les erreurs enregistrées dans le système
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Rechercher par message, ID, email, URL..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+            </div>
+            <Select
+              value={filters.resolved === undefined ? "all" : filters.resolved ? "resolved" : "unresolved"}
+              onValueChange={(value) => {
+                setFilters({
+                  ...filters,
+                  resolved: value === "all" ? undefined : value === "resolved",
+                });
+              }}
+            >
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <Filter className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Statut" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous les statuts</SelectItem>
+                <SelectItem value="unresolved">Non résolues</SelectItem>
+                <SelectItem value="resolved">Résolues</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select
+              value={filters.severity || "all"}
+              onValueChange={(value) => {
+                setFilters({
+                  ...filters,
+                  severity: value === "all" ? undefined : (value as any),
+                });
+              }}
+            >
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="Sévérité" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Toutes les sévérités</SelectItem>
+                <SelectItem value="CRITICAL">Critique</SelectItem>
+                <SelectItem value="HIGH">Élevée</SelectItem>
+                <SelectItem value="MEDIUM">Moyenne</SelectItem>
+                <SelectItem value="LOW">Faible</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button onClick={loadErrorLogs} variant="outline" size="icon">
+              <RefreshCw className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* Error Logs Table */}
+          <div className="border rounded-md">
+            <ScrollArea className="h-[600px]">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Sévérité</TableHead>
+                    <TableHead>Message</TableHead>
+                    <TableHead>Utilisateur</TableHead>
+                    <TableHead>Statut</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredLogs.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                        Aucune erreur trouvée
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredLogs.map((log) => (
+                      <TableRow key={log.id}>
+                        <TableCell className="whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm">
+                              {format(new Date(log.createdAt), "d MMM yyyy HH:mm", { locale: fr })}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {log.errorType === "CLIENT" ? "Client" : "Serveur"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            className={`${getSeverityColor(log.severity)} text-white`}
+                            variant="default"
+                          >
+                            {getSeverityLabel(log.severity)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="max-w-md">
+                          <div className="truncate" title={log.errorMessage}>
+                            {log.errorMessage}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {log.user ? (
+                            <div className="flex items-center gap-2">
+                              <User className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-sm">
+                                {log.user.firstName || log.user.lastName
+                                  ? `${log.user.firstName || ""} ${log.user.lastName || ""}`.trim()
+                                  : log.user.email}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">Anonyme</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {log.resolved ? (
+                            <Badge variant="outline" className="bg-green-50 text-green-700">
+                              <CheckCircle2 className="h-3 w-3 mr-1" />
+                              Résolue
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="bg-orange-50 text-orange-700">
+                              <XCircle className="h-3 w-3 mr-1" />
+                              Non résolue
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setSelectedError(log)}
+                                >
+                                  <FileText className="h-4 w-4" />
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent className="max-w-3xl max-h-[80vh]">
+                                <DialogHeader>
+                                  <DialogTitle>Détails de l'erreur</DialogTitle>
+                                  <DialogDescription>ID: {log.errorId}</DialogDescription>
+                                </DialogHeader>
+                                <ScrollArea className="max-h-[60vh]">
+                                  <div className="space-y-4">
+                                    <div>
+                                      <h4 className="font-semibold mb-2">Message</h4>
+                                      <p className="text-sm bg-muted p-3 rounded-md">
+                                        {log.errorMessage}
+                                      </p>
+                                    </div>
+                                    {log.stackTrace && (
+                                      <div>
+                                        <h4 className="font-semibold mb-2">Stack Trace</h4>
+                                        <pre className="text-xs bg-muted p-3 rounded-md overflow-auto">
+                                          {log.stackTrace}
+                                        </pre>
+                                      </div>
+                                    )}
+                                    {log.url && (
+                                      <div>
+                                        <h4 className="font-semibold mb-2">URL</h4>
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-sm break-all">{log.url}</span>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => window.open(log.url!, "_blank")}
+                                          >
+                                            <ExternalLink className="h-4 w-4" />
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    )}
+                                    {log.userAgent && (
+                                      <div>
+                                        <h4 className="font-semibold mb-2">User Agent</h4>
+                                        <p className="text-xs bg-muted p-3 rounded-md break-all">
+                                          {log.userAgent}
+                                        </p>
+                                      </div>
+                                    )}
+                                  </div>
+                                </ScrollArea>
+                              </DialogContent>
+                            </Dialog>
+                            {!log.resolved && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleResolve(log.errorId)}
+                              >
+                                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </ScrollArea>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+

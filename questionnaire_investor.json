@@ -1,0 +1,238 @@
+{
+    "diagnostic_id": "diagnostic_investisseur_v1",
+    "language": "fr-CA",
+    "version": "1.0.0",
+    "scoring_model": {
+      "method": "weighted_points",
+      "output": {
+        "primary_profile": { "type": "archetype", "selection": "highest_score" },
+        "secondary_profile": {
+          "type": "archetype",
+          "selection": "second_highest_score",
+          "eligibility": {
+            "min_score": 4,
+            "min_gap_from_primary": -2,
+            "max_gap_from_primary": 4
+          },
+          "fallback": "none"
+        },
+        "tie_breakers": [
+          {
+            "when": "tie_on_total_score",
+            "priority_rules": [
+              "use_q4_structure_as_primary_signal",
+              "use_q3_behavior_as_secondary_signal",
+              "use_q2_horizon_as_tertiary_signal"
+            ]
+          }
+        ]
+      }
+    },
+    "questions": [
+      {
+        "id": "q1_goal",
+        "label": "Objectif principal",
+        "type": "single_choice",
+        "answers": [
+          { "id": "q1_a1_growth", "text": "Faire croître mon patrimoine à long terme" },
+          { "id": "q1_a2_income", "text": "Générer un revenu complémentaire" },
+          { "id": "q1_a3_capital", "text": "Protéger mon capital avant tout" },
+          { "id": "q1_a4_fi", "text": "Atteindre l’indépendance financière" },
+          { "id": "q1_a5_unclear", "text": "Je ne sais pas / pas clairement défini" }
+        ]
+      },
+      {
+        "id": "q2_horizon",
+        "label": "Horizon de placement",
+        "type": "single_choice",
+        "answers": [
+          { "id": "q2_a1_lt5", "text": "Moins de 5 ans" },
+          { "id": "q2_a2_5to10", "text": "Entre 5 et 10 ans" },
+          { "id": "q2_a3_10plus", "text": "Plus de 10 ans" },
+          { "id": "q2_a4_depends", "text": "Ça dépend des occasions" },
+          { "id": "q2_a5_never", "text": "Je n’y ai jamais vraiment réfléchi" }
+        ]
+      },
+      {
+        "id": "q3_drawdown_reaction",
+        "label": "Réaction aux baisses",
+        "type": "single_choice",
+        "answers": [
+          { "id": "q3_a1_stay", "text": "Je reste investi sans changer ma stratégie" },
+          { "id": "q3_a2_review", "text": "Je réévalue, mais sans paniquer" },
+          { "id": "q3_a3_reduce", "text": "Je réduis mon exposition pour me rassurer" },
+          { "id": "q3_a4_sell_wait", "text": "Je vends et j’attends que “ça se replace”" },
+          { "id": "q3_a5_never_lived", "text": "Je n’ai jamais vraiment vécu une baisse importante" }
+        ]
+      },
+      {
+        "id": "q4_structure",
+        "label": "Niveau de structure",
+        "type": "single_choice",
+        "answers": [
+          { "id": "q4_a1_written", "text": "J’ai une stratégie d’investissement claire et écrite" },
+          { "id": "q4_a2_general", "text": "J’ai une idée générale, mais rien de formalisé" },
+          { "id": "q4_a3_delegate", "text": "Je fais confiance à mon conseiller sans trop intervenir" },
+          { "id": "q4_a4_info_flow", "text": "Je prends des décisions au fil de l’information que je consomme" },
+          { "id": "q4_a5_bricole", "text": "J’ai l’impression de « bricoler » sans vision d’ensemble" }
+        ]
+      },
+      {
+        "id": "q5_info_source",
+        "label": "Source principale d’information",
+        "type": "single_choice",
+        "answers": [
+          { "id": "q5_a1_advisor", "text": "Mon conseiller financier" },
+          { "id": "q5_a2_structured_learning", "text": "Des livres ou formations structurées" },
+          { "id": "q5_a3_media", "text": "YouTube, podcasts, médias financiers" },
+          { "id": "q5_a4_social", "text": "Discussions, forums, réseaux sociaux" },
+          { "id": "q5_a5_mix", "text": "Un mélange de tout ça" }
+        ]
+      },
+      {
+        "id": "q6_time_energy",
+        "label": "Temps et énergie investis",
+        "type": "single_choice",
+        "answers": [
+          { "id": "q6_a1_low_by_choice", "text": "J’y consacre peu de temps, volontairement" },
+          { "id": "q6_a2_right_amount", "text": "J’y consacre le temps nécessaire, sans excès" },
+          { "id": "q6_a3_lots_no_clarity", "text": "J’y consacre beaucoup de temps, mais sans grande clarté" },
+          { "id": "q6_a4_too_much_for_results", "text": "J’y consacre trop de temps pour les résultats obtenus" },
+          { "id": "q6_a5_avoid", "text": "J’évite le sujet autant que possible" }
+        ]
+      }
+    ],
+    "archetypes": [
+      {
+        "id": "architecte",
+        "name": "L’Architecte",
+        "one_liner": "Structuré, discipliné, long terme — parfois trop rigide.",
+        "signals": { "primary": ["q4_a1_written", "q3_a1_stay", "q2_a3_10plus"] }
+      },
+      {
+        "id": "stratege",
+        "name": "Le Stratège",
+        "one_liner": "Bonne tête, bonne direction — manque encore de cadre formalisé.",
+        "signals": { "primary": ["q4_a2_general", "q3_a2_review", "q2_a2_5to10"] }
+      },
+      {
+        "id": "delegateur",
+        "name": "Le Délégateur",
+        "one_liner": "Délègue par confiance — comprend moins qu’il pense.",
+        "signals": { "primary": ["q4_a3_delegate", "q5_a1_advisor"] }
+      },
+      {
+        "id": "navigateur",
+        "name": "Le Navigateur",
+        "one_liner": "Avance au fil de l’info — sans boussole stable.",
+        "signals": { "primary": ["q4_a4_info_flow", "q5_a3_media", "q5_a5_mix"] }
+      },
+      {
+        "id": "optimiseur",
+        "name": "L’Optimiseur",
+        "one_liner": "Très impliqué — optimise trop tôt, au mauvais endroit.",
+        "signals": { "primary": ["q6_a4_too_much_for_results", "q6_a3_lots_no_clarity"] }
+      },
+      {
+        "id": "prudent",
+        "name": "Le Prudent",
+        "one_liner": "Sécurité d’abord — le risque émotionnel dicte les décisions.",
+        "signals": { "primary": ["q1_a3_capital", "q3_a4_sell_wait", "q3_a3_reduce"] }
+      },
+      {
+        "id": "explorateur",
+        "name": "L’Explorateur",
+        "one_liner": "Curieux, opportuniste — incohérent dans le temps.",
+        "signals": { "primary": ["q2_a4_depends", "q4_a5_bricole", "q5_a5_mix"] }
+      }
+    ],
+    "weights": {
+      "by_answer": {
+        "q1_a1_growth": { "architecte": 1, "stratege": 1, "optimiseur": 1 },
+        "q1_a2_income": { "stratege": 1, "delegateur": 1, "prudent": 1 },
+        "q1_a3_capital": { "prudent": 3, "delegateur": 1 },
+        "q1_a4_fi": { "architecte": 1, "stratege": 2, "optimiseur": 1 },
+        "q1_a5_unclear": { "navigateur": 2, "explorateur": 1 },
+  
+        "q2_a1_lt5": { "prudent": 2, "delegateur": 1 },
+        "q2_a2_5to10": { "stratege": 2, "architecte": 1 },
+        "q2_a3_10plus": { "architecte": 3, "stratege": 1 },
+        "q2_a4_depends": { "explorateur": 3, "navigateur": 1, "optimiseur": 1 },
+        "q2_a5_never": { "navigateur": 2, "delegateur": 1 },
+  
+        "q3_a1_stay": { "architecte": 3, "stratege": 1 },
+        "q3_a2_review": { "stratege": 3, "architecte": 1 },
+        "q3_a3_reduce": { "prudent": 2, "delegateur": 1 },
+        "q3_a4_sell_wait": { "prudent": 3 },
+        "q3_a5_never_lived": { "explorateur": 1, "navigateur": 1 },
+  
+        "q4_a1_written": { "architecte": 4, "stratege": 1 },
+        "q4_a2_general": { "stratege": 4, "architecte": 1 },
+        "q4_a3_delegate": { "delegateur": 5, "prudent": 1 },
+        "q4_a4_info_flow": { "navigateur": 5, "optimiseur": 1 },
+        "q4_a5_bricole": { "explorateur": 3, "navigateur": 2 },
+  
+        "q5_a1_advisor": { "delegateur": 4, "stratege": 1 },
+        "q5_a2_structured_learning": { "architecte": 2, "stratege": 2, "optimiseur": 1 },
+        "q5_a3_media": { "navigateur": 3, "optimiseur": 1 },
+        "q5_a4_social": { "navigateur": 2, "explorateur": 2 },
+        "q5_a5_mix": { "navigateur": 2, "explorateur": 2, "optimiseur": 1 },
+  
+        "q6_a1_low_by_choice": { "delegateur": 2, "architecte": 1 },
+        "q6_a2_right_amount": { "architecte": 2, "stratege": 2 },
+        "q6_a3_lots_no_clarity": { "navigateur": 2, "optimiseur": 3 },
+        "q6_a4_too_much_for_results": { "optimiseur": 5, "navigateur": 1 },
+        "q6_a5_avoid": { "delegateur": 2, "prudent": 1 }
+      }
+    },
+    "classification": {
+      "compute": [
+        {
+          "step": "sum_weights",
+          "description": "Sommer les points par archétype selon les réponses sélectionnées.",
+          "input": "selected_answer_ids[]",
+          "output": "scores_by_archetype{archetype_id:number}"
+        },
+        {
+          "step": "select_primary_secondary",
+          "description": "Trier par score décroissant; appliquer règles d'éligibilité pour secondaire.",
+          "output": {
+            "primary": "top_1",
+            "secondary": "top_2_if_eligible_else_none"
+          }
+        }
+      ],
+      "secondary_eligibility": {
+        "min_score": 4,
+        "max_gap_from_primary": 4,
+        "min_gap_from_primary": -2
+      }
+    },
+    "result_payload_template": {
+      "user": { "first_name": "", "email": "", "age_range": "" },
+      "responses": {
+        "q1_goal": "",
+        "q2_horizon": "",
+        "q3_drawdown_reaction": "",
+        "q4_structure": "",
+        "q5_info_source": "",
+        "q6_time_energy": ""
+      },
+      "scores": {
+        "architecte": 0,
+        "stratege": 0,
+        "delegateur": 0,
+        "navigateur": 0,
+        "optimiseur": 0,
+        "prudent": 0,
+        "explorateur": 0
+      },
+      "primary_profile": { "id": "", "name": "", "score": 0 },
+      "secondary_profile": { "id": "", "name": "", "score": 0 },
+      "notes": {
+        "disclaimer": "Éducation seulement. Aucun conseil d’investissement personnalisé.",
+        "confidence": "medium"
+      }
+    }
+  }
+  

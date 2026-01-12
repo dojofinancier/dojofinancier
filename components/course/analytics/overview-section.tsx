@@ -1,0 +1,128 @@
+"use client";
+
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Clock, Target, TrendingUp, Calendar, BookOpen, CheckCircle2 } from "lucide-react";
+
+interface OverviewSectionProps {
+  data: {
+    totalStudyTime: number;
+    completionRate: number;
+    currentStreak: number;
+    longestStreak: number;
+    blocksCompleted: number;
+    studyDaysThisWeek: number;
+    modulesLearned: number;
+    totalModules: number;
+  };
+}
+
+export function OverviewSection({ data }: OverviewSectionProps) {
+  if (!data) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <p className="text-muted-foreground">Aucune donnée disponible</p>
+      </div>
+    );
+  }
+
+  const formatTime = (seconds: number): string => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    if (hours > 0) {
+      return `${hours}h ${minutes}min`;
+    }
+    return `${minutes}min`;
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Summary Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Temps d'étude total</CardDescription>
+            <CardTitle className="text-2xl flex items-center gap-2">
+              <Clock className="h-5 w-5 text-muted-foreground" />
+              {formatTime(data.totalStudyTime)}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-xs text-muted-foreground">
+              Temps passé sur le cours
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Taux de complétion</CardDescription>
+            <CardTitle className="text-2xl flex items-center gap-2">
+              <Target className="h-5 w-5 text-muted-foreground" />
+              {data.completionRate.toFixed(1)}%
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-xs text-muted-foreground">
+              {data.modulesLearned} / {data.totalModules} modules complétés
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Série actuelle</CardDescription>
+            <CardTitle className="text-2xl flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-muted-foreground" />
+              {data.currentStreak} jours
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-xs text-muted-foreground">
+              Meilleure série: {data.longestStreak} jours
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Blocs complétés</CardDescription>
+            <CardTitle className="text-2xl flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-muted-foreground" />
+              {data.blocksCompleted}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-xs text-muted-foreground">
+              {data.studyDaysThisWeek} jours d'étude cette semaine
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Progress Overview */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Progression globale</CardTitle>
+          <CardDescription>Vue d'ensemble de votre progression dans le cours</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div>
+              <div className="flex justify-between text-sm mb-2">
+                <span>Modules complétés</span>
+                <span>{data.modulesLearned} / {data.totalModules}</span>
+              </div>
+              <div className="w-full bg-secondary rounded-full h-2">
+                <div
+                  className="bg-primary h-2 rounded-full transition-all"
+                  style={{ width: `${data.completionRate}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+

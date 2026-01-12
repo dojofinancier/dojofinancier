@@ -1,0 +1,4 @@
+ActivityType,Module,Instructions,Category1,Category2,Category3,Item1|Category,Item2|Category,Item3|Category,Item4|Category
+CLASSIFICATION,Module 1,Sort the following into Registered / Non-registered,Registered,Non-registered,,RRSP|Registered,TFSA|Registered,Margin account|Non-registered,LIF|Registered
+CLASSIFICATION,Module 1,Sort by Principal-protected / Not protected,Principal-protected,Not protected,,GIC|Principal-protected,PPN|Principal-protected,Equity mutual fund|Not protected,Options|Not protected
+

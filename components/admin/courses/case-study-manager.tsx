@@ -1,0 +1,1035 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { toast } from "sonner";
+import { Loader2, Plus, Trash2, Upload, FileText, Edit, Eye, X } from "lucide-react";
+import {
+  getCaseStudiesAction,
+  getCaseStudyAction,
+  deleteCaseStudyAction,
+  importCaseStudyAction,
+  updateCaseStudyAction,
+  updateCaseStudyQuestionAction,
+  deleteCaseStudyQuestionAction,
+} from "@/app/actions/case-studies";
+
+interface CaseStudyManagerProps {
+  courseId: string;
+}
+
+type CaseStudy = {
+  id: string;
+  caseId: string;
+  caseNumber: number;
+  title: string;
+  theme: string | null;
+  passingScore: number;
+  _count: {
+    questions: number;
+    attempts: number;
+  };
+};
+
+type CaseStudyQuestion = {
+  id: string;
+  questionId: string;
+  order: number;
+  question: string;
+  options: Record<string, string>;
+  correctAnswer: string;
+  explanation: string | null;
+  questionType: string | null;
+  difficulty: string | null;
+};
+
+type FullCaseStudy = {
+  id: string;
+  caseId: string;
+  caseNumber: number;
+  title: string;
+  theme: string | null;
+  passingScore: number;
+  narrative: any;
+  questions: CaseStudyQuestion[];
+};
+
+function normalizeQuestionOptions(value: unknown): Record<string, string> {
+  const toRecord = (v: unknown): Record<string, string> => {
+    if (!v || typeof v !== "object" || Array.isArray(v)) return {};
+    const obj = v as Record<string, unknown>;
+    const out: Record<string, string> = {};
+    for (const [k, raw] of Object.entries(obj)) {
+      if (raw == null) continue;
+      out[k] = typeof raw === "string" ? raw : String(raw);
+    }
+    return out;
+  };
+
+  if (typeof value === "string") {
+    try {
+      return toRecord(JSON.parse(value));
+    } catch {
+      return {};
+    }
+  }
+
+  return toRecord(value);
+}
+
+export function CaseStudyManager({ courseId }: CaseStudyManagerProps) {
+  const [caseStudies, setCaseStudies] = useState<CaseStudy[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedCaseStudy, setSelectedCaseStudy] = useState<CaseStudy | null>(null);
+  
+  // Edit states
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingCaseStudy, setEditingCaseStudy] = useState<FullCaseStudy | null>(null);
+  const [questionsDialogOpen, setQuestionsDialogOpen] = useState(false);
+  const [questionEditDialogOpen, setQuestionEditDialogOpen] = useState(false);
+  const [editingQuestion, setEditingQuestion] = useState<CaseStudyQuestion | null>(null);
+  
+  // Form states
+  const [caseStudyFormState, setCaseStudyFormState] = useState({
+    title: "",
+    theme: "",
+    passingScore: 70,
+  });
+  const [narrativeFormState, setNarrativeFormState] = useState({
+    introductionBox: "",
+    sections: [] as Array<{
+      title: string;
+      content: string;
+      tables: Array<{ title: string; markdown: string }>;
+    }>,
+    closing: "",
+  });
+  const [questionFormState, setQuestionFormState] = useState({
+    question: "",
+    optionA: "",
+    optionB: "",
+    optionC: "",
+    optionD: "",
+    correctAnswer: "A",
+    explanation: "",
+  });
+
+  useEffect(() => {
+    loadCaseStudies();
+  }, [courseId]);
+
+  const loadCaseStudies = async () => {
+    setLoading(true);
+    try {
+      const result = await getCaseStudiesAction(courseId);
+      if (result.success && result.data) {
+        setCaseStudies(result.data as CaseStudy[]);
+      } else {
+        console.error("Case study loading error:", result.error);
+        setCaseStudies([]);
+        if (result.error) {
+          toast.error(result.error);
+        }
+      }
+    } catch (error) {
+      console.error("Case study loading exception:", error);
+      setCaseStudies([]);
+      toast.error("Erreur lors du chargement des études de cas");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadFullCaseStudy = async (caseStudyId: string) => {
+    try {
+      const result = await getCaseStudyAction(caseStudyId);
+      if (result.success && result.data) {
+        return result.data as FullCaseStudy;
+      }
+      return null;
+    } catch (error) {
+      console.error("Error loading full case study:", error);
+      return null;
+    }
+  };
+
+  const parseNarrativeToForm = (narrative: any) => {
+    const caseNarrative = narrative.case_narrative || narrative;
+    const sections = (caseNarrative.sections || []).map((section: any) => ({
+      title: section.title || "",
+      content: section.content || "",
+      tables: (section.tables || []).map((table: any) => ({
+        title: table.title || "",
+        markdown: table.markdown || "",
+      })),
+    }));
+
+    return {
+      introductionBox: caseNarrative.introduction_box || "",
+      sections,
+      closing: caseNarrative.closing || "",
+    };
+  };
+
+  const buildNarrativeFromForm = () => {
+    return {
+      case_narrative: {
+        introduction_box: narrativeFormState.introductionBox,
+        sections: narrativeFormState.sections.map((section) => ({
+          title: section.title,
+          content: section.content,
+          tables: section.tables.map((table) => ({
+            title: table.title,
+            markdown: table.markdown,
+          })),
+        })),
+        closing: narrativeFormState.closing,
+      },
+    };
+  };
+
+  const openEditDialog = async (caseStudy: CaseStudy) => {
+    const fullCaseStudy = await loadFullCaseStudy(caseStudy.id);
+    if (fullCaseStudy) {
+      setEditingCaseStudy(fullCaseStudy);
+      setCaseStudyFormState({
+        title: fullCaseStudy.title,
+        theme: fullCaseStudy.theme || "",
+        passingScore: fullCaseStudy.passingScore,
+      });
+      setNarrativeFormState(parseNarrativeToForm(fullCaseStudy.narrative));
+      setEditDialogOpen(true);
+    }
+  };
+
+  const openQuestionsDialog = async (caseStudy: CaseStudy) => {
+    const fullCaseStudy = await loadFullCaseStudy(caseStudy.id);
+    if (fullCaseStudy) {
+      setEditingCaseStudy(fullCaseStudy);
+      setQuestionsDialogOpen(true);
+    }
+  };
+
+  const openQuestionEditDialog = (question: CaseStudyQuestion) => {
+    const options = normalizeQuestionOptions(question.options);
+    const optionKeys = Object.keys(options).sort();
+    
+    setEditingQuestion(question);
+    setQuestionFormState({
+      question: question.question,
+      optionA: options[optionKeys[0]] || "",
+      optionB: options[optionKeys[1]] || "",
+      optionC: options[optionKeys[2]] || "",
+      optionD: options[optionKeys[3]] || "",
+      correctAnswer: question.correctAnswer,
+      explanation: question.explanation || "",
+    });
+    setQuestionEditDialogOpen(true);
+  };
+
+  const handleUpdateCaseStudy = async () => {
+    if (!editingCaseStudy) return;
+
+    if (!caseStudyFormState.title.trim()) {
+      toast.error("Le titre est requis");
+      return;
+    }
+
+    const narrativeData = buildNarrativeFromForm();
+
+    const result = await updateCaseStudyAction(editingCaseStudy.id, {
+      title: caseStudyFormState.title.trim(),
+      theme: caseStudyFormState.theme.trim() || null,
+      passingScore: caseStudyFormState.passingScore,
+      narrative: narrativeData,
+    });
+
+    if (result.success) {
+      toast.success("Étude de cas mise à jour");
+      setEditDialogOpen(false);
+      await loadCaseStudies();
+    } else {
+      toast.error(result.error || "Erreur lors de la mise à jour");
+    }
+  };
+
+  const addSection = () => {
+    setNarrativeFormState({
+      ...narrativeFormState,
+      sections: [
+        ...narrativeFormState.sections,
+        { title: "", content: "", tables: [] },
+      ],
+    });
+  };
+
+  const updateSection = (index: number, field: string, value: any) => {
+    const newSections = [...narrativeFormState.sections];
+    newSections[index] = { ...newSections[index], [field]: value };
+    setNarrativeFormState({ ...narrativeFormState, sections: newSections });
+  };
+
+  const updateTable = (sectionIndex: number, tableIndex: number, field: "title" | "markdown", value: string) => {
+    const newSections = [...narrativeFormState.sections];
+    if (!newSections[sectionIndex]) return;
+    const newTables = [...(newSections[sectionIndex].tables || [])];
+    if (!newTables[tableIndex]) {
+      newTables[tableIndex] = { title: "", markdown: "" };
+    }
+    newTables[tableIndex] = { ...newTables[tableIndex], [field]: value };
+    newSections[sectionIndex] = { ...newSections[sectionIndex], tables: newTables };
+    setNarrativeFormState({ ...narrativeFormState, sections: newSections });
+  };
+
+  const deleteSection = (index: number) => {
+    setNarrativeFormState({
+      ...narrativeFormState,
+      sections: narrativeFormState.sections.filter((_, i) => i !== index),
+    });
+  };
+
+  const addTable = (sectionIndex: number) => {
+    const newSections = [...narrativeFormState.sections];
+    if (!newSections[sectionIndex]) return;
+    newSections[sectionIndex] = {
+      ...newSections[sectionIndex],
+      tables: [...(newSections[sectionIndex].tables || []), { title: "", markdown: "" }],
+    };
+    setNarrativeFormState({ ...narrativeFormState, sections: newSections });
+  };
+
+  const deleteTable = (sectionIndex: number, tableIndex: number) => {
+    const newSections = [...narrativeFormState.sections];
+    if (!newSections[sectionIndex]) return;
+    newSections[sectionIndex] = {
+      ...newSections[sectionIndex],
+      tables: newSections[sectionIndex].tables.filter((_, i) => i !== tableIndex),
+    };
+    setNarrativeFormState({ ...narrativeFormState, sections: newSections });
+  };
+
+  const handleUpdateQuestion = async () => {
+    if (!editingQuestion || !editingCaseStudy) return;
+
+    if (!questionFormState.question.trim()) {
+      toast.error("La question est requise");
+      return;
+    }
+
+    if (!questionFormState.optionA.trim() || !questionFormState.optionB.trim()) {
+      toast.error("Au moins deux options (A et B) sont requises");
+      return;
+    }
+
+    const options: Record<string, string> = {};
+    if (questionFormState.optionA.trim()) options["A"] = questionFormState.optionA.trim();
+    if (questionFormState.optionB.trim()) options["B"] = questionFormState.optionB.trim();
+    if (questionFormState.optionC.trim()) options["C"] = questionFormState.optionC.trim();
+    if (questionFormState.optionD.trim()) options["D"] = questionFormState.optionD.trim();
+
+    if (!options[questionFormState.correctAnswer]) {
+      toast.error("La réponse correcte doit correspondre à une option valide");
+      return;
+    }
+
+    const result = await updateCaseStudyQuestionAction(editingQuestion.id, {
+      question: questionFormState.question.trim(),
+      options,
+      correctAnswer: questionFormState.correctAnswer,
+      explanation: questionFormState.explanation.trim() || null,
+    });
+
+    if (result.success) {
+      toast.success("Question mise à jour");
+      setQuestionEditDialogOpen(false);
+      setEditingQuestion(null);
+      await loadCaseStudies();
+      // Reload full case study
+      const fullCaseStudy = await loadFullCaseStudy(editingCaseStudy.id);
+      if (fullCaseStudy) {
+        setEditingCaseStudy(fullCaseStudy);
+      }
+    } else {
+      toast.error(result.error || "Erreur lors de la mise à jour");
+    }
+  };
+
+  const handleDeleteQuestion = async (questionId: string) => {
+    if (!confirm("Êtes-vous sûr de vouloir supprimer cette question ?")) {
+      return;
+    }
+
+    const result = await deleteCaseStudyQuestionAction(questionId);
+    if (result.success) {
+      toast.success("Question supprimée");
+      await loadCaseStudies();
+      if (editingCaseStudy) {
+        const fullCaseStudy = await loadFullCaseStudy(editingCaseStudy.id);
+        if (fullCaseStudy) {
+          setEditingCaseStudy(fullCaseStudy);
+        }
+      }
+    } else {
+      toast.error(result.error || "Erreur lors de la suppression");
+    }
+  };
+
+  const handleDelete = async (caseStudyId: string) => {
+    if (!confirm("Êtes-vous sûr de vouloir supprimer cette étude de cas ?")) {
+      return;
+    }
+
+    const result = await deleteCaseStudyAction(caseStudyId);
+    if (result.success) {
+      toast.success("Étude de cas supprimée");
+      loadCaseStudies();
+    } else {
+      toast.error(result.error || "Erreur lors de la suppression");
+    }
+  };
+
+  const handleImport = async () => {
+    const narrativeFile = document.getElementById("narrative-file") as HTMLInputElement;
+    const mcqFile = document.getElementById("mcq-file") as HTMLInputElement;
+
+    if (!narrativeFile?.files?.[0] || !mcqFile?.files?.[0]) {
+      toast.error("Veuillez sélectionner les deux fichiers JSON (narrative et MCQ)");
+      return;
+    }
+
+    setImporting(true);
+    try {
+      const narrativeContent = await narrativeFile.files[0].text();
+      const mcqContent = await mcqFile.files[0].text();
+
+      const result = await importCaseStudyAction(courseId, narrativeContent, mcqContent);
+
+      if (result.success) {
+        toast.success("Étude de cas importée avec succès");
+        setImportDialogOpen(false);
+        narrativeFile.value = "";
+        mcqFile.value = "";
+        loadCaseStudies();
+      } else {
+        toast.error(result.error || "Erreur lors de l'importation");
+      }
+    } catch (error) {
+      console.error("Error importing case study:", error);
+      toast.error("Erreur lors de l'importation des fichiers");
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12 text-muted-foreground gap-2">
+        <Loader2 className="h-5 w-5 animate-spin" />
+        Chargement des études de cas...
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-semibold">Études de cas</h2>
+          <p className="text-sm text-muted-foreground">
+            Gérez les études de cas pour la Phase 3 (Pratique). Chaque cas contient un récit et 10 questions à choix multiples.
+          </p>
+        </div>
+        <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Upload className="h-4 w-4 mr-2" />
+              Importer une étude de cas
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Importer une étude de cas</DialogTitle>
+              <DialogDescription>
+                Importez une étude de cas depuis deux fichiers JSON : le récit (narrative) et les questions (MCQ).
+                Les fichiers doivent avoir le même case_id.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <Label htmlFor="narrative-file">Fichier Narrative JSON *</Label>
+                <Input
+                  id="narrative-file"
+                  type="file"
+                  accept=".json"
+                  disabled={importing}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="mcq-file">Fichier MCQ JSON *</Label>
+                <Input
+                  id="mcq-file"
+                  type="file"
+                  accept=".json"
+                  disabled={importing}
+                />
+              </div>
+              {importing && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Importation en cours...
+                </div>
+              )}
+              <div className="flex justify-end gap-2 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setImportDialogOpen(false)}
+                  disabled={importing}
+                >
+                  Annuler
+                </Button>
+                <Button onClick={handleImport} disabled={importing}>
+                  {importing ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Importation...
+                    </>
+                  ) : (
+                    "Importer"
+                  )}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {caseStudies.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <p className="text-muted-foreground mb-4">
+              Aucune étude de cas pour le moment.
+            </p>
+            <Button onClick={() => setImportDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Importer une étude de cas
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="border rounded-md">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Numéro</TableHead>
+                <TableHead>Titre</TableHead>
+                <TableHead>Thème</TableHead>
+                <TableHead>Questions</TableHead>
+                <TableHead>Tentatives</TableHead>
+                <TableHead className="w-[200px]">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {caseStudies.map((caseStudy) => (
+                <TableRow key={caseStudy.id}>
+                  <TableCell>
+                    <Badge variant="outline">Cas {caseStudy.caseNumber}</Badge>
+                  </TableCell>
+                  <TableCell className="font-medium">{caseStudy.title}</TableCell>
+                  <TableCell>{caseStudy.theme || "-"}</TableCell>
+                  <TableCell>{caseStudy._count.questions}</TableCell>
+                  <TableCell>{caseStudy._count.attempts}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openQuestionsDialog(caseStudy)}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openEditDialog(caseStudy)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedCaseStudy(caseStudy);
+                          setDeleteDialogOpen(true);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+
+      {/* Edit Case Study Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0">
+          <DialogHeader className="px-6 pt-6 pb-4 flex-shrink-0">
+            <DialogTitle>Modifier l'étude de cas</DialogTitle>
+            <DialogDescription>
+              Modifiez les informations de l'étude de cas et le récit.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 min-h-0 overflow-y-auto px-6">
+            <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-title">Titre *</Label>
+              <Input
+                id="edit-title"
+                value={caseStudyFormState.title}
+                onChange={(e) =>
+                  setCaseStudyFormState({ ...caseStudyFormState, title: e.target.value })
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-theme">Thème</Label>
+              <Input
+                id="edit-theme"
+                value={caseStudyFormState.theme}
+                onChange={(e) =>
+                  setCaseStudyFormState({ ...caseStudyFormState, theme: e.target.value })
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-passing-score">Note de passage (%)</Label>
+              <Input
+                id="edit-passing-score"
+                type="number"
+                min="0"
+                max="100"
+                value={caseStudyFormState.passingScore}
+                onChange={(e) =>
+                  setCaseStudyFormState({
+                    ...caseStudyFormState,
+                    passingScore: parseInt(e.target.value) || 70,
+                  })
+                }
+              />
+            </div>
+            <div className="space-y-4">
+              <Label>Récit *</Label>
+              
+              {/* Introduction Box */}
+              <div className="space-y-2">
+                <Label htmlFor="edit-intro">Boîte d'introduction</Label>
+                <Textarea
+                  id="edit-intro"
+                  rows={4}
+                  value={narrativeFormState.introductionBox}
+                  onChange={(e) =>
+                    setNarrativeFormState({
+                      ...narrativeFormState,
+                      introductionBox: e.target.value,
+                    })
+                  }
+                  placeholder="Texte d'introduction du cas..."
+                />
+              </div>
+
+              {/* Sections */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label>Sections</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addSection}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Ajouter une section
+                  </Button>
+                </div>
+                <div className="space-y-4">
+                    {narrativeFormState.sections.map((section, sectionIndex) => (
+                      <Card key={sectionIndex}>
+                        <CardHeader>
+                          <div className="flex items-center justify-between">
+                            <CardTitle className="text-base">
+                              Section {sectionIndex + 1}
+                            </CardTitle>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => deleteSection(sectionIndex)}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <div className="space-y-2">
+                            <Label>Titre de la section</Label>
+                            <Input
+                              value={section.title}
+                              onChange={(e) =>
+                                updateSection(sectionIndex, "title", e.target.value)
+                              }
+                              placeholder="Titre de la section..."
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Contenu</Label>
+                            <Textarea
+                              rows={6}
+                              value={section.content}
+                              onChange={(e) =>
+                                updateSection(sectionIndex, "content", e.target.value)
+                              }
+                              placeholder="Contenu de la section..."
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <Label>Tableaux</Label>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => addTable(sectionIndex)}
+                              >
+                                <Plus className="h-4 w-4 mr-2" />
+                                Ajouter un tableau
+                              </Button>
+                            </div>
+                            {section.tables.map((table, tableIndex) => (
+                              <Card key={tableIndex} className="bg-muted">
+                                <CardHeader className="pb-3">
+                                  <div className="flex items-center justify-between">
+                                    <CardTitle className="text-sm">
+                                      Tableau {tableIndex + 1}
+                                    </CardTitle>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => deleteTable(sectionIndex, tableIndex)}
+                                    >
+                                      <Trash2 className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                  </div>
+                                </CardHeader>
+                                <CardContent className="space-y-2">
+                                  <div className="space-y-2">
+                                    <Label>Titre du tableau</Label>
+                                    <Input
+                                      value={table.title}
+                                      onChange={(e) =>
+                                        updateTable(sectionIndex, tableIndex, "title", e.target.value)
+                                      }
+                                      placeholder="Titre du tableau..."
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label>Contenu Markdown</Label>
+                                    <Textarea
+                                      rows={4}
+                                      className="font-mono text-sm"
+                                      value={table.markdown}
+                                      onChange={(e) =>
+                                        updateTable(sectionIndex, tableIndex, "markdown", e.target.value)
+                                      }
+                                      placeholder="Tableau en format Markdown..."
+                                    />
+                                    <p className="text-xs text-muted-foreground">
+                                      Utilisez la syntaxe Markdown pour les tableaux
+                                    </p>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                </div>
+              </div>
+
+              {/* Closing */}
+              <div className="space-y-2">
+                <Label htmlFor="edit-closing">Conclusion</Label>
+                <Textarea
+                  id="edit-closing"
+                  rows={3}
+                  value={narrativeFormState.closing}
+                  onChange={(e) =>
+                    setNarrativeFormState({
+                      ...narrativeFormState,
+                      closing: e.target.value,
+                    })
+                  }
+                  placeholder="Texte de conclusion..."
+                />
+              </div>
+            </div>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 px-6 py-4 border-t flex-shrink-0">
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+              Annuler
+            </Button>
+            <Button onClick={handleUpdateCaseStudy}>
+              Enregistrer
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Questions Dialog */}
+      <Dialog open={questionsDialogOpen} onOpenChange={setQuestionsDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+          <DialogHeader className="flex-shrink-0">
+            <DialogTitle>
+              Questions - {editingCaseStudy?.title}
+            </DialogTitle>
+            <DialogDescription>
+              Gérez les questions de cette étude de cas. Chaque cas doit contenir exactement 10 questions.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 min-h-0 mt-4">
+            <ScrollArea className="h-[calc(90vh-180px)]">
+              <div className="space-y-4 pr-4">
+                {editingCaseStudy?.questions.map((question) => {
+                  const options = normalizeQuestionOptions(question.options);
+                  const optionKeys = Object.keys(options).sort();
+                  
+                  return (
+                    <Card key={question.id}>
+                      <CardHeader>
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-base">
+                            Question {question.order}
+                          </CardTitle>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openQuestionEditDialog(question)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteQuestion(question.id)}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-2">
+                        <p className="font-medium">{question.question}</p>
+                        <div className="space-y-1">
+                          {optionKeys.map((key) => (
+                            <div
+                              key={key}
+                              className={`text-sm ${
+                                key === question.correctAnswer
+                                  ? "font-semibold text-green-600"
+                                  : ""
+                              }`}
+                            >
+                              <span className="font-medium">{key}:</span> {options[key]}
+                              {key === question.correctAnswer && " ✓"}
+                            </div>
+                          ))}
+                        </div>
+                        {question.explanation && (
+                          <div className="mt-2 p-2 bg-muted rounded text-sm">
+                            <span className="font-semibold">Explication:</span> {question.explanation}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </ScrollArea>
+          </div>
+          <div className="flex justify-end gap-2 pt-4 border-t flex-shrink-0">
+            <Button variant="outline" onClick={() => setQuestionsDialogOpen(false)}>
+              Fermer
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Question Dialog */}
+      <Dialog open={questionEditDialogOpen} onOpenChange={setQuestionEditDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Modifier la question</DialogTitle>
+            <DialogDescription>
+              Modifiez les détails de la question.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-question-text">Question *</Label>
+              <Textarea
+                id="edit-question-text"
+                value={questionFormState.question}
+                onChange={(e) =>
+                  setQuestionFormState({ ...questionFormState, question: e.target.value })
+                }
+                rows={3}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-option-a">Option A *</Label>
+                <Input
+                  id="edit-option-a"
+                  value={questionFormState.optionA}
+                  onChange={(e) =>
+                    setQuestionFormState({ ...questionFormState, optionA: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-option-b">Option B *</Label>
+                <Input
+                  id="edit-option-b"
+                  value={questionFormState.optionB}
+                  onChange={(e) =>
+                    setQuestionFormState({ ...questionFormState, optionB: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-option-c">Option C</Label>
+                <Input
+                  id="edit-option-c"
+                  value={questionFormState.optionC}
+                  onChange={(e) =>
+                    setQuestionFormState({ ...questionFormState, optionC: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-option-d">Option D</Label>
+                <Input
+                  id="edit-option-d"
+                  value={questionFormState.optionD}
+                  onChange={(e) =>
+                    setQuestionFormState({ ...questionFormState, optionD: e.target.value })
+                  }
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-correct-answer">Réponse correcte *</Label>
+              <Select
+                value={questionFormState.correctAnswer}
+                onValueChange={(value) =>
+                  setQuestionFormState({ ...questionFormState, correctAnswer: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="A">A</SelectItem>
+                  <SelectItem value="B">B</SelectItem>
+                  <SelectItem value="C">C</SelectItem>
+                  <SelectItem value="D">D</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-explanation">Explication</Label>
+              <Textarea
+                id="edit-explanation"
+                value={questionFormState.explanation}
+                onChange={(e) =>
+                  setQuestionFormState({ ...questionFormState, explanation: e.target.value })
+                }
+                rows={3}
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-4">
+              <Button variant="outline" onClick={() => setQuestionEditDialogOpen(false)}>
+                Annuler
+              </Button>
+              <Button onClick={handleUpdateQuestion}>
+                Enregistrer
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Supprimer l'étude de cas</DialogTitle>
+            <DialogDescription>
+              Êtes-vous sûr de vouloir supprimer cette étude de cas ? Toutes les questions et tentatives associées seront également supprimées.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+              Annuler
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (selectedCaseStudy) {
+                  handleDelete(selectedCaseStudy.id);
+                  setDeleteDialogOpen(false);
+                  setSelectedCaseStudy(null);
+                }
+              }}
+            >
+              Supprimer
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

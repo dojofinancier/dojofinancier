@@ -1,0 +1,290 @@
+{
+  "case_id": "negp_cas_20260110_213403",
+  "generated_at": "2026-01-10T21:39:38.969792",
+  "model": "claude-opus-4-5-20251101",
+  "model_short": "Opus 4.5",
+  "chapters": [
+    4,
+    5,
+    6
+  ],
+  "questions": [
+    {
+      "id": "Q1",
+      "type": "comprehension",
+      "difficulty": "easy",
+      "question": "Selon l'énoncé de politique de placement du couple Bélanger, quelle est la tolérance maximale aux pertes annuelles acceptée?",
+      "options": {
+        "A": "10 % par année",
+        "B": "15 % par année",
+        "C": "20 % par année",
+        "D": "25 % par année"
+      },
+      "correct_answer": "B",
+      "explanation": "D'après le tableau 1 de l'énoncé de politique de placement, le profil de risque du couple Bélanger indique une tolérance maximale aux pertes de 15 % par année. Le couple est décrit comme « modérément conservateur » avec un score de tolérance au risque de 6/10 et un temps de récupération toléré de 2-3 ans. Les options A (10 %), C (20 %) et D (25 %) ne correspondent pas aux paramètres établis dans l'énoncé de politique de placement.",
+      "chapter_reference": [
+        4
+      ],
+      "calculation_steps": null,
+      "case_reference": "Tableau 1 – Énoncé de politique de placement, section Profil de risque"
+    },
+    {
+      "id": "Q2",
+      "type": "calculation",
+      "difficulty": "medium",
+      "question": "Quel est le ratio de Sharpe du Fonds équilibré conservateur Desjardins sur 3 ans, sachant que le taux sans risque actuel est de 4,5 %?",
+      "options": {
+        "A": "0,08",
+        "B": "0,15",
+        "C": "0,52",
+        "D": "0,68"
+      },
+      "correct_answer": "B",
+      "explanation": "Le ratio de Sharpe se calcule selon la formule: (Rendement du fonds - Taux sans risque) / Écart-type. Selon le tableau 3, le Fonds équilibré conservateur Desjardins affiche un rendement sur 3 ans de 5,78 % et un écart-type sur 3 ans de 8,45 %. Avec un taux sans risque de 4,5 %: Ratio de Sharpe = (5,78 % - 4,5 %) / 8,45 % = 1,28 % / 8,45 % = 0,1515 ≈ 0,15. L'option A (0,08) résulterait d'une erreur de calcul, l'option C (0,52) utiliserait incorrectement le rendement sur 5 ans, et l'option D (0,68) pourrait provenir d'une confusion avec un autre fonds.",
+      "chapter_reference": [
+        4
+      ],
+      "calculation_steps": "Ratio de Sharpe = (Rendement 3 ans - Taux sans risque) / Écart-type 3 ans = (5,78% - 4,5%) / 8,45% = 1,28% / 8,45% = 0,1515 ≈ 0,15",
+      "case_reference": "Tableau 3 – Rendement des fonds et Données complémentaires pour l'analyse"
+    },
+    {
+      "id": "Q3",
+      "type": "regulatory",
+      "difficulty": "medium",
+      "question": "Quel est le montant total des droits de cotisation REER inutilisés disponibles pour le couple Bélanger?",
+      "options": {
+        "A": "12 800 $",
+        "B": "18 500 $",
+        "C": "31 300 $",
+        "D": "44 100 $"
+      },
+      "correct_answer": "C",
+      "explanation": "Selon les informations du cas, Marie-Claude dispose d'un droit de cotisation REER inutilisé de 18 500 $ et François dispose de 12 800 $ de droits de cotisation disponibles. Le total combiné est donc de 18 500 $ + 12 800 $ = 31 300 $. L'option A représente uniquement les droits de François, l'option B uniquement ceux de Marie-Claude, et l'option D (44 100 $) inclurait incorrectement les droits de cotisation CELI dans le calcul.",
+      "chapter_reference": [
+        4,
+        5
+      ],
+      "calculation_steps": "Droits REER Marie-Claude (18 500 $) + Droits REER François (12 800 $) = 31 300 $",
+      "case_reference": "Section Portefeuille de placements - REER Marie-Claude et REER François"
+    },
+    {
+      "id": "Q4",
+      "type": "strategy",
+      "difficulty": "hard",
+      "question": "Selon la recommandation du conseiller pour l'utilisation de l'héritage de 185 000 $, quelle proportion est suggérée pour le remboursement partiel de l'hypothèque?",
+      "options": {
+        "A": "27 % (50 000 $)",
+        "B": "32 % (60 000 $)",
+        "C": "41 % (75 000 $)",
+        "D": "68 % (125 000 $)"
+      },
+      "correct_answer": "A",
+      "explanation": "D'après les recommandations du conseiller, l'héritage de 185 000 $ devrait être réparti comme suit: 50 000 $ pour le remboursement partiel de l'hypothèque (50 000 $ / 185 000 $ = 27 %), 60 000 $ pour la maximisation des REER et 75 000 $ pour bonifier le fonds d'urgence. L'option B (32 %) correspond à la portion REER, l'option C (41 %) à la portion fonds d'urgence, et l'option D (68 %) représenterait le remboursement total de l'hypothèque (125 000 $) qui n'est pas la stratégie recommandée.",
+      "chapter_reference": [
+        4,
+        5
+      ],
+      "calculation_steps": "50 000 $ / 185 000 $ × 100 = 27,03 % ≈ 27 %",
+      "case_reference": "Section Recommandations du conseiller - Optimisation de l'héritage"
+    },
+    {
+      "id": "Q5",
+      "type": "calculation",
+      "difficulty": "hard",
+      "question": "Quelle est la surpondération actuelle en liquidités du portefeuille par rapport à la répartition stratégique cible?",
+      "options": {
+        "A": "4 points de pourcentage",
+        "B": "6 points de pourcentage",
+        "C": "8 points de pourcentage",
+        "D": "10 points de pourcentage"
+      },
+      "correct_answer": "C",
+      "explanation": "Selon la section Répartition d'actifs du cas, la répartition stratégique cible prévoit 8 % en liquidités, tandis que la répartition tactique actuelle montre 16 % en liquidités. L'écart est donc de 16 % - 8 % = 8 points de pourcentage de surpondération. Le cas précise explicitement que cette surpondération est principalement attribuable à l'héritage de 185 000 $ non encore investi. Les options A, B et D ne correspondent pas à cet écart calculé.",
+      "chapter_reference": [
+        4
+      ],
+      "calculation_steps": "Pondération actuelle en liquidités (16 %) - Pondération cible (8 %) = 8 points de pourcentage",
+      "case_reference": "Section Répartition d'actifs - Répartition stratégique cible vs Répartition tactique actuelle"
+    },
+    {
+      "id": "Q6",
+      "type": "comprehension",
+      "difficulty": "easy",
+      "question": "Combien d'horizons de placement distincts sont identifiés dans l'énoncé de politique de placement du couple Bélanger?",
+      "options": {
+        "A": "2 horizons",
+        "B": "3 horizons",
+        "C": "4 horizons",
+        "D": "5 horizons"
+      },
+      "correct_answer": "B",
+      "explanation": "D'après le tableau 1 de l'énoncé de politique de placement, trois horizons de placement distincts sont identifiés: 1) Retraite de Marie-Claude à 4 ans (priorité élevée), 2) Retraite de François à 7 ans (priorité élevée), et 3) Achat du chalet à 6 ans (priorité moyenne). Les options A (2), C (4) et D (5) ne correspondent pas aux horizons explicitement énoncés dans l'énoncé de politique de placement.",
+      "chapter_reference": [
+        4
+      ],
+      "calculation_steps": null,
+      "case_reference": "Tableau 1 – Énoncé de politique de placement, section Horizon de placement"
+    },
+    {
+      "id": "Q7",
+      "type": "regulatory",
+      "difficulty": "medium",
+      "question": "Selon la stratégie proposée par le conseiller pour aider Samuel avec sa mise de fonds, quel montant serait retiré du REER de Marie-Claude dans le cadre du RAP?",
+      "options": {
+        "A": "25 000 $",
+        "B": "35 000 $",
+        "C": "50 000 $",
+        "D": "60 000 $"
+      },
+      "correct_answer": "B",
+      "explanation": "Selon les recommandations du conseiller dans la section Aide à Samuel, la stratégie proposée consiste à utiliser le RAP de Marie-Claude pour un montant de 35 000 $ combiné à un don de 15 000 $ provenant du compte non enregistré pour constituer la mise de fonds de 50 000 $. Le remboursement du RAP s'étalera sur la période pré-retraite de Marie-Claude. L'option A (25 000 $) est incorrecte, l'option C (50 000 $) représente le montant total de la mise de fonds, et l'option D (60 000 $) correspond au montant recommandé pour les REER.",
+      "chapter_reference": [
+        5,
+        6
+      ],
+      "calculation_steps": null,
+      "case_reference": "Section Recommandations du conseiller - Planification de l'aide à Samuel via RAP"
+    },
+    {
+      "id": "Q8",
+      "type": "calculation",
+      "difficulty": "medium",
+      "question": "Quel est le taux d'imposition effectif sur les dividendes canadiens pour le couple Bélanger comparativement au taux sur les intérêts?",
+      "options": {
+        "A": "L'économie est de 5,05 points de pourcentage",
+        "B": "L'économie est de 13,05 points de pourcentage",
+        "C": "L'économie est de 24,18 points de pourcentage",
+        "D": "Les taux sont identiques"
+      },
+      "correct_answer": "B",
+      "explanation": "Selon le tableau 1 de l'énoncé de politique de placement, le taux marginal sur les intérêts est de 48,37 % tandis que le taux sur les dividendes canadiens est de 35,32 %. L'économie fiscale en recevant des dividendes canadiens plutôt que des intérêts est donc de 48,37 % - 35,32 % = 13,05 points de pourcentage. L'option A (5,05) est incorrecte, l'option C (24,18) correspond au taux sur les gains en capital, et l'option D est fausse car il y a une différence significative entre les deux taux.",
+      "chapter_reference": [
+        4
+      ],
+      "calculation_steps": "Taux sur intérêts (48,37 %) - Taux sur dividendes canadiens (35,32 %) = 13,05 points de pourcentage",
+      "case_reference": "Tableau 1 – Énoncé de politique de placement, section Imposition"
+    },
+    {
+      "id": "Q9",
+      "type": "strategy",
+      "difficulty": "hard",
+      "question": "Compte tenu de l'horizon de placement de 4 ans avant la retraite de Marie-Claude et du profil de risque modérément conservateur, quelle affirmation décrit le mieux le dilemme stratégique du couple?",
+      "options": {
+        "A": "Le portefeuille est trop agressif pour l'horizon de placement",
+        "B": "Le portefeuille est trop défensif pour les objectifs de croissance nécessaires",
+        "C": "L'allocation en actions internationales est excessive",
+        "D": "Le niveau d'endettement empêche toute stratégie d'investissement"
+      },
+      "correct_answer": "B",
+      "explanation": "Selon la section Recommandations du conseiller concernant la restructuration de la répartition d'actifs, le portefeuille est décrit comme « trop défensif pour l'horizon de placement et les objectifs de croissance nécessaires à la retraite ». Le conseiller recommande de rééquilibrer pour réduire la surpondération en liquidités et augmenter l'exposition aux actions internationales. L'option A est contraire à l'analyse du conseiller, l'option C est incorrecte car l'allocation en actions internationales est sous-pondérée (6 % vs 8 % cible), et l'option D est inexacte puisque le couple a une valeur nette positive de 2 224 500 $.",
+      "chapter_reference": [
+        4
+      ],
+      "calculation_steps": null,
+      "case_reference": "Section Recommandations du conseiller - Restructuration de la répartition d'actifs"
+    },
+    {
+      "id": "Q10",
+      "type": "comprehension",
+      "difficulty": "medium",
+      "question": "Quelle est la préoccupation de François concernant sa planification financière personnelle mentionnée lors de la rencontre?",
+      "options": {
+        "A": "Le remboursement de la marge de crédit avant la retraite",
+        "B": "L'impact de sa réduction de revenus prévue en 2025 sur l'épargne-retraite",
+        "C": "Le choix entre racheter des années de service ou cotiser au REER",
+        "D": "L'équité successorale entre Amélie et Samuel"
+      },
+      "correct_answer": "B",
+      "explanation": "Dans la section Préoccupations et points de discussion, François exprime spécifiquement son inquiétude: « Ma réduction de revenus prévue en 2025 m'inquiète. Comment planifier cette transition vers la semi-retraite tout en maintenant notre épargne-retraite sur la bonne voie? » Le cas indique qu'il envisage de réduire progressivement ses contrats à partir de 2025. L'option A n'est pas mentionnée comme préoccupation de François, l'option C concerne Marie-Claude (rachat d'années dans son régime à prestations déterminées), et l'option D est une préoccupation du couple liée à l'aide à Samuel, mais pas spécifiquement celle de François.",
+      "chapter_reference": [
+        4,
+        6
+      ],
+      "calculation_steps": null,
+      "case_reference": "Section Préoccupations et points de discussion - Citation de François"
+    }
+  ],
+  "distribution": {
+    "comprehension": 3,
+    "calculation": 3,
+    "regulatory": 2,
+    "strategy": 2
+  },
+  "difficulty_distribution": {
+    "easy": 2,
+    "medium": 5,
+    "hard": 3
+  },
+  "validation": {
+    "total_questions": 10,
+    "valid_questions": 10,
+    "results": [
+      {
+        "question_id": "Q1",
+        "valid": true,
+        "issues": []
+      },
+      {
+        "question_id": "Q2",
+        "valid": true,
+        "issues": []
+      },
+      {
+        "question_id": "Q3",
+        "valid": true,
+        "issues": []
+      },
+      {
+        "question_id": "Q4",
+        "valid": true,
+        "issues": []
+      },
+      {
+        "question_id": "Q5",
+        "valid": true,
+        "issues": []
+      },
+      {
+        "question_id": "Q6",
+        "valid": true,
+        "issues": []
+      },
+      {
+        "question_id": "Q7",
+        "valid": true,
+        "issues": []
+      },
+      {
+        "question_id": "Q8",
+        "valid": true,
+        "issues": []
+      },
+      {
+        "question_id": "Q9",
+        "valid": true,
+        "issues": []
+      },
+      {
+        "question_id": "Q10",
+        "valid": true,
+        "issues": []
+      }
+    ]
+  },
+  "source_files": {
+    "narrative": "C:\\Users\\User\\Desktop\\DF_Pro_Content\\courses\\negp\\output\\case_study\\case_20260110_213329\\03_narrative.json",
+    "financial_profile": "C:\\Users\\User\\Desktop\\DF_Pro_Content\\courses\\negp\\output\\case_study\\case_20260110_213329\\02_financial_profile.json"
+  },
+  "cost": {
+    "model": "claude-opus-4-5-20251101",
+    "input": "$0.3349",
+    "output": "$0.3121",
+    "embeddings": "$0.0000",
+    "total": "$0.6469"
+  },
+  "usage": {
+    "input_tokens": 22324,
+    "output_tokens": 4161,
+    "embedding_tokens": 0
+  }
+}

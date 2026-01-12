@@ -1,0 +1,4 @@
+ActivityType,Module,Instructions,Text,CorrectAnswer
+FILL_IN_BLANK,Module 1,Complete the sentence with the correct percentage,The guarantee on a segregated fund is usually ___% at maturity if held for the full term.,75
+FILL_IN_BLANK,Module 1,Complete the formula,FV = PMT × ____ (name the factor),[(1 + r)^n - 1] / r
+

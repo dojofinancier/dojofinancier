@@ -1,0 +1,164 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Target, FileText, BookOpen, AlertCircle, Lock } from "lucide-react";
+import { ExamList } from "./exam-list";
+import { ExamPlayer } from "./exam-player";
+import { QuestionBankPractice } from "./question-bank-practice";
+import { CaseStudyList } from "./case-study-list";
+import { CaseStudyPlayer } from "./case-study-player";
+import { checkPhase3AccessAction } from "@/app/actions/study-plan";
+
+interface Phase3PracticeProps {
+  courseId: string;
+  course: any;
+  settings: any;
+}
+
+export function Phase3Practice({ courseId, course, settings }: Phase3PracticeProps) {
+  const [activeTab, setActiveTab] = useState<"exams" | "questions" | "case-studies">("exams");
+  const [selectedExamId, setSelectedExamId] = useState<string | null>(null);
+  const [selectedCaseStudyId, setSelectedCaseStudyId] = useState<string | null>(null);
+  const [canAccess, setCanAccess] = useState<boolean | null>(null);
+  const [gateMessage, setGateMessage] = useState<string | null>(null);
+  const [unlearnedModules, setUnlearnedModules] = useState<Array<{ id: string; title: string; order: number }>>([]);
+  
+  // Check if case studies are enabled
+  const caseStudiesEnabled = course?.componentVisibility?.caseStudies ?? false;
+
+  useEffect(() => {
+    checkAccess();
+  }, [courseId]);
+
+  const checkAccess = async () => {
+    const result = await checkPhase3AccessAction(courseId);
+    if (result.success && result.data) {
+      setCanAccess(result.data.canAccess);
+      setGateMessage(result.data.message || null);
+      setUnlearnedModules(result.data.unlearnedModules || []);
+    }
+  };
+
+  if (selectedExamId) {
+    return (
+      <ExamPlayer
+        examId={selectedExamId}
+        onExit={() => {
+          setSelectedExamId(null);
+        }}
+      />
+    );
+  }
+
+  if (selectedCaseStudyId) {
+    return (
+      <CaseStudyPlayer
+        caseStudyId={selectedCaseStudyId}
+        onExit={() => {
+          setSelectedCaseStudyId(null);
+        }}
+      />
+    );
+  }
+
+  // Show gate message if cannot access
+  if (canAccess === false) {
+    return (
+      <div className="space-y-6">
+        <Alert variant="destructive">
+          <Lock className="h-4 w-4" />
+          <AlertTitle>Accès à la Phase 3 restreint</AlertTitle>
+          <AlertDescription className="space-y-3 mt-2">
+            <p>{gateMessage}</p>
+            {unlearnedModules.length > 0 && (
+              <div>
+                <p className="font-semibold mb-2">Modules à compléter:</p>
+                <ul className="list-disc list-inside space-y-1">
+                  {unlearnedModules.map((module) => (
+                    <li key={module.id}>
+                      Module {module.order}: {module.title}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            <Button
+              onClick={() => {
+                window.location.href = `/apprendre/${courseId}?tab=learn`;
+              }}
+              className="mt-4"
+            >
+              <BookOpen className="h-4 w-4 mr-2" />
+              Aller à la Phase 1 - Apprendre
+            </Button>
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
+  // Show loading state
+  if (canAccess === null) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardContent className="py-8 text-center">
+            <p className="text-muted-foreground">Vérification de l'accès...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Target className="h-5 w-5" />
+            Phase 3 - Pratique et simulation d'examen
+          </CardTitle>
+          <CardDescription>
+            Testez votre préparation et calibrez vos performances avec des examens simulés, des
+            questions pratiques et des études de cas.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
+            <TabsList className={`grid w-full ${caseStudiesEnabled ? "grid-cols-3" : "grid-cols-2"}`}>
+              <TabsTrigger value="exams">
+                <FileText className="h-4 w-4 mr-2" />
+                Examens simulés
+              </TabsTrigger>
+              <TabsTrigger value="questions">
+                <BookOpen className="h-4 w-4 mr-2" />
+                Questions pratiques
+              </TabsTrigger>
+              {caseStudiesEnabled && (
+                <TabsTrigger value="case-studies">
+                  <FileText className="h-4 w-4 mr-2" />
+                  Études de cas
+                </TabsTrigger>
+              )}
+            </TabsList>
+            <TabsContent value="exams" className="mt-6">
+              <ExamList courseId={courseId} onStartExam={setSelectedExamId} />
+            </TabsContent>
+            <TabsContent value="questions" className="mt-6">
+              <QuestionBankPractice courseId={courseId} />
+            </TabsContent>
+            {caseStudiesEnabled && (
+              <TabsContent value="case-studies" className="mt-6">
+                <CaseStudyList courseId={courseId} onStartCaseStudy={setSelectedCaseStudyId} />
+              </TabsContent>
+            )}
+          </Tabs>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

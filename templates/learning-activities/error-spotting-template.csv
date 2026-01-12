@@ -1,0 +1,4 @@
+ActivityType,Module,Instructions,IncorrectSolution,Question,CorrectAnswer
+ERROR_SPOTTING,Module 1,Identify the mistake in the calculation,"A TVM calculation: PV = $10,000, r = 5% annual, n = 10 years, compounded monthly. Using formula: FV = PV × (1 + r)^n = $10,000 × (1 + 0.05)^10 = $16,289",Identify the first mistake in this reasoning,The rate (5% annual) and compounding period (monthly) don't match. Should use monthly rate (5%/12) and monthly periods (10×12).
+ERROR_SPOTTING,Module 1,Find the error in the conclusion,"Analysis shows: Client has $50,000 in RRSP, $30,000 in TFSA. Total registered assets: $80,000. Recommendation: Invest all in high-risk equity fund.",What is wrong with this calculation or conclusion?,The conclusion incorrectly includes TFSA in 'registered assets'. TFSA is tax-free but not registered. Also, investing all assets in high-risk may not match client's risk profile.
+

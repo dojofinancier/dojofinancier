@@ -1,0 +1,569 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Calendar, Video, Edit, Trash2, Plus, ExternalLink } from "lucide-react";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
+import {
+  getGroupCoachingSessionsAction,
+  createGroupCoachingSessionAction,
+  updateGroupCoachingSessionAction,
+  deleteGroupCoachingSessionAction,
+} from "@/app/actions/group-coaching-sessions";
+import { toast } from "sonner";
+import { RichTextEditor } from "@/components/admin/courses/rich-text-editor";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+type GroupCoachingSession = {
+  id: string;
+  cohortId: string;
+  title: string;
+  description: string | null;
+  scheduledAt: Date;
+  zoomLink: string | null;
+  teamsLink: string | null;
+  recordingVimeoUrl: string | null;
+  adminNotes: string | null;
+  status: "UPCOMING" | "COMPLETED";
+};
+
+interface GroupCoachingSessionManagementProps {
+  cohortId: string;
+}
+
+export function GroupCoachingSessionManagement({
+  cohortId,
+}: GroupCoachingSessionManagementProps) {
+  const [sessions, setSessions] = useState<GroupCoachingSession[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [selectedSession, setSelectedSession] = useState<GroupCoachingSession | null>(null);
+  const [formData, setFormData] = useState({
+    title: "",
+    description: "",
+    scheduledAt: "",
+    scheduledTime: "",
+    zoomLink: "",
+    teamsLink: "",
+    recordingVimeoUrl: "",
+    adminNotes: "",
+    status: "UPCOMING" as "UPCOMING" | "COMPLETED",
+  });
+
+  const loadSessions = async () => {
+    try {
+      setLoading(true);
+      const result = await getGroupCoachingSessionsAction(cohortId);
+      if (result.success && result.data) {
+        setSessions(result.data as GroupCoachingSession[]);
+      }
+    } catch (error) {
+      toast.error("Erreur lors du chargement des sessions");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadSessions();
+  }, [cohortId]);
+
+  const resetForm = () => {
+    setFormData({
+      title: "",
+      description: "",
+      scheduledAt: "",
+      scheduledTime: "",
+      zoomLink: "",
+      teamsLink: "",
+      recordingVimeoUrl: "",
+      adminNotes: "",
+      status: "UPCOMING",
+    });
+    setSelectedSession(null);
+  };
+
+  const openCreateDialog = () => {
+    resetForm();
+    setCreateDialogOpen(true);
+  };
+
+  const openEditDialog = (session: GroupCoachingSession) => {
+    setSelectedSession(session);
+    const scheduledDate = new Date(session.scheduledAt);
+    setFormData({
+      title: session.title,
+      description: session.description || "",
+      scheduledAt: format(scheduledDate, "yyyy-MM-dd"),
+      scheduledTime: format(scheduledDate, "HH:mm"),
+      zoomLink: session.zoomLink || "",
+      teamsLink: session.teamsLink || "",
+      recordingVimeoUrl: session.recordingVimeoUrl || "",
+      adminNotes: session.adminNotes || "",
+      status: session.status,
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleCreate = async () => {
+    if (!formData.title.trim() || !formData.scheduledAt || !formData.scheduledTime) {
+      toast.error("Le titre, la date et l'heure sont requis");
+      return;
+    }
+
+    try {
+      const scheduledAt = new Date(`${formData.scheduledAt}T${formData.scheduledTime}`);
+      const result = await createGroupCoachingSessionAction({
+        cohortId,
+        title: formData.title,
+        description: formData.description || undefined,
+        scheduledAt,
+        zoomLink: formData.zoomLink || undefined,
+        teamsLink: formData.teamsLink || undefined,
+        recordingVimeoUrl: formData.recordingVimeoUrl || undefined,
+        adminNotes: formData.adminNotes || undefined,
+        status: formData.status,
+      });
+
+      if (result.success) {
+        toast.success("Session créée avec succès");
+        setCreateDialogOpen(false);
+        resetForm();
+        loadSessions();
+      } else {
+        toast.error(result.error || "Erreur lors de la création");
+      }
+    } catch (error) {
+      toast.error("Erreur lors de la création de la session");
+    }
+  };
+
+  const handleUpdate = async () => {
+    if (!selectedSession || !formData.title.trim() || !formData.scheduledAt || !formData.scheduledTime) {
+      return;
+    }
+
+    try {
+      const scheduledAt = new Date(`${formData.scheduledAt}T${formData.scheduledTime}`);
+      const result = await updateGroupCoachingSessionAction(selectedSession.id, {
+        title: formData.title,
+        description: formData.description || undefined,
+        scheduledAt,
+        zoomLink: formData.zoomLink || undefined,
+        teamsLink: formData.teamsLink || undefined,
+        recordingVimeoUrl: formData.recordingVimeoUrl || undefined,
+        adminNotes: formData.adminNotes || undefined,
+        status: formData.status,
+      });
+
+      if (result.success) {
+        toast.success("Session mise à jour avec succès");
+        setEditDialogOpen(false);
+        resetForm();
+        loadSessions();
+      } else {
+        toast.error(result.error || "Erreur lors de la mise à jour");
+      }
+    } catch (error) {
+      toast.error("Erreur lors de la mise à jour de la session");
+    }
+  };
+
+  const handleDelete = async (sessionId: string) => {
+    if (!confirm("Êtes-vous sûr de vouloir supprimer cette session ?")) {
+      return;
+    }
+
+    try {
+      const result = await deleteGroupCoachingSessionAction(sessionId);
+      if (result.success) {
+        toast.success("Session supprimée avec succès");
+        loadSessions();
+      } else {
+        toast.error(result.error || "Erreur lors de la suppression");
+      }
+    } catch (error) {
+      toast.error("Erreur lors de la suppression de la session");
+    }
+  };
+
+  const upcomingSessions = sessions.filter((s) => s.status === "UPCOMING");
+  const completedSessions = sessions.filter((s) => s.status === "COMPLETED");
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold">Sessions de coaching de groupe</h3>
+          <p className="text-sm text-muted-foreground">
+            Gérez les sessions de coaching pour cette cohorte
+          </p>
+        </div>
+        <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+          <DialogTrigger asChild>
+            <Button onClick={openCreateDialog}>
+              <Plus className="h-4 w-4 mr-2" />
+              Nouvelle session
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Nouvelle session de coaching</DialogTitle>
+              <DialogDescription>
+                Planifiez une nouvelle session de coaching pour cette cohorte
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Titre *</Label>
+                <Input
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  placeholder="Ex: Session 1 - Introduction"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Description</Label>
+                <RichTextEditor
+                  content={formData.description}
+                  onChange={(value) => setFormData({ ...formData, description: value })}
+                  placeholder="Décrivez la session (optionnel)..."
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Date *</Label>
+                  <Input
+                    type="date"
+                    value={formData.scheduledAt}
+                    onChange={(e) => setFormData({ ...formData, scheduledAt: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Heure *</Label>
+                  <Input
+                    type="time"
+                    value={formData.scheduledTime}
+                    onChange={(e) => setFormData({ ...formData, scheduledTime: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Lien Zoom</Label>
+                <Input
+                  value={formData.zoomLink}
+                  onChange={(e) => setFormData({ ...formData, zoomLink: e.target.value })}
+                  placeholder="https://zoom.us/j/..."
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Lien Teams</Label>
+                <Input
+                  value={formData.teamsLink}
+                  onChange={(e) => setFormData({ ...formData, teamsLink: e.target.value })}
+                  placeholder="https://teams.microsoft.com/..."
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>URL d'enregistrement Vimeo</Label>
+                <Input
+                  value={formData.recordingVimeoUrl}
+                  onChange={(e) => setFormData({ ...formData, recordingVimeoUrl: e.target.value })}
+                  placeholder="https://vimeo.com/..."
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Notes de l'administrateur</Label>
+                <RichTextEditor
+                  content={formData.adminNotes}
+                  onChange={(value) => setFormData({ ...formData, adminNotes: value })}
+                  placeholder="Notes internes (optionnel)..."
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Statut</Label>
+                <Select
+                  value={formData.status}
+                  onValueChange={(value: "UPCOMING" | "COMPLETED") =>
+                    setFormData({ ...formData, status: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="UPCOMING">À venir</SelectItem>
+                    <SelectItem value="COMPLETED">Terminée</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
+                  Annuler
+                </Button>
+                <Button onClick={handleCreate}>Créer</Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {loading ? (
+        <div className="text-center py-8">Chargement...</div>
+      ) : (
+        <div className="space-y-6">
+          {/* Upcoming Sessions */}
+          {upcomingSessions.length > 0 && (
+            <div>
+              <h4 className="text-md font-semibold mb-3">Sessions à venir</h4>
+              <div className="grid gap-4 md:grid-cols-2">
+                {upcomingSessions.map((session) => (
+                  <Card key={session.id} className="border-l-4 border-l-blue-500">
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <CardTitle className="text-base">{session.title}</CardTitle>
+                          <CardDescription className="mt-1">
+                            {format(new Date(session.scheduledAt), "EEEE d MMMM yyyy 'à' HH:mm", {
+                              locale: fr,
+                            })}
+                          </CardDescription>
+                        </div>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openEditDialog(session)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDelete(session.id)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      {session.description && (
+                        <div
+                          className="prose prose-sm max-w-none"
+                          dangerouslySetInnerHTML={{ __html: session.description }}
+                        />
+                      )}
+                      {session.zoomLink && (
+                        <Button variant="outline" size="sm" asChild>
+                          <a href={session.zoomLink} target="_blank" rel="noopener noreferrer">
+                            <Video className="h-3 w-3 mr-1" />
+                            Zoom
+                            <ExternalLink className="h-3 w-3 ml-1" />
+                          </a>
+                        </Button>
+                      )}
+                      {session.teamsLink && (
+                        <Button variant="outline" size="sm" asChild>
+                          <a href={session.teamsLink} target="_blank" rel="noopener noreferrer">
+                            <Video className="h-3 w-3 mr-1" />
+                            Teams
+                            <ExternalLink className="h-3 w-3 ml-1" />
+                          </a>
+                        </Button>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Completed Sessions */}
+          {completedSessions.length > 0 && (
+            <div>
+              <h4 className="text-md font-semibold mb-3">Sessions terminées</h4>
+              <div className="grid gap-4 md:grid-cols-2">
+                {completedSessions.map((session) => (
+                  <Card key={session.id}>
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <CardTitle className="text-base">{session.title}</CardTitle>
+                          <CardDescription className="mt-1">
+                            {format(new Date(session.scheduledAt), "EEEE d MMMM yyyy 'à' HH:mm", {
+                              locale: fr,
+                            })}
+                          </CardDescription>
+                        </div>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openEditDialog(session)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDelete(session.id)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      {session.recordingVimeoUrl && (
+                        <div className="text-sm text-muted-foreground">
+                          Enregistrement disponible
+                        </div>
+                      )}
+                      {session.adminNotes && (
+                        <div
+                          className="prose prose-sm max-w-none bg-muted p-2 rounded"
+                          dangerouslySetInnerHTML={{ __html: session.adminNotes }}
+                        />
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {sessions.length === 0 && (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <Video className="h-12 w-12 mx-auto mb-4 opacity-50 text-muted-foreground" />
+                <h3 className="text-lg font-semibold mb-2">Aucune session</h3>
+                <p className="text-muted-foreground">
+                  Créez votre première session de coaching
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {/* Edit Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Modifier la session</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Titre *</Label>
+              <Input
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Description</Label>
+              <RichTextEditor
+                content={formData.description}
+                onChange={(value) => setFormData({ ...formData, description: value })}
+                placeholder="Décrivez la session (optionnel)..."
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Date *</Label>
+                <Input
+                  type="date"
+                  value={formData.scheduledAt}
+                  onChange={(e) => setFormData({ ...formData, scheduledAt: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Heure *</Label>
+                <Input
+                  type="time"
+                  value={formData.scheduledTime}
+                  onChange={(e) => setFormData({ ...formData, scheduledTime: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Lien Zoom</Label>
+              <Input
+                value={formData.zoomLink}
+                onChange={(e) => setFormData({ ...formData, zoomLink: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Lien Teams</Label>
+              <Input
+                value={formData.teamsLink}
+                onChange={(e) => setFormData({ ...formData, teamsLink: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>URL d'enregistrement Vimeo</Label>
+              <Input
+                value={formData.recordingVimeoUrl}
+                onChange={(e) => setFormData({ ...formData, recordingVimeoUrl: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Notes de l'administrateur</Label>
+              <RichTextEditor
+                content={formData.adminNotes}
+                onChange={(value) => setFormData({ ...formData, adminNotes: value })}
+                placeholder="Notes internes (optionnel)..."
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Statut</Label>
+              <Select
+                value={formData.status}
+                onValueChange={(value: "UPCOMING" | "COMPLETED") =>
+                  setFormData({ ...formData, status: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="UPCOMING">À venir</SelectItem>
+                  <SelectItem value="COMPLETED">Terminée</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+                Annuler
+              </Button>
+              <Button onClick={handleUpdate}>Enregistrer</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+

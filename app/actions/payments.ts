@@ -1,0 +1,657 @@
+"use server";
+
+import { stripe } from "@/lib/stripe/server";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { prisma } from "@/lib/prisma";
+import { validateCouponAction, applyCouponDiscountAction } from "@/app/actions/coupons";
+import { logServerError } from "@/lib/utils/error-logging";
+import { createEnrollmentAction } from "@/app/actions/enrollments";
+import { z } from "zod";
+
+const createPaymentIntentSchema = z.object({
+  courseId: z.string().min(1),
+  couponCode: z.string().optional().nullable(),
+});
+
+const createCohortPaymentIntentSchema = z.object({
+  cohortId: z.string().min(1),
+  couponCode: z.string().optional().nullable(),
+});
+
+export type PaymentActionResult = {
+  success: boolean;
+  error?: string;
+  data?: any;
+};
+
+/**
+ * Create a PaymentIntent for one-time purchase
+ * @param userId Optional user ID to use instead of requireAuth (for checkout flow)
+ */
+export async function createPaymentIntentAction(
+  data: z.infer<typeof createPaymentIntentSchema>,
+  userId?: string
+): Promise<PaymentActionResult> {
+  try {
+    let user;
+    if (userId) {
+      // Use provided userId (for checkout flow)
+      user = await prisma.user.findUnique({ where: { id: userId } });
+      if (!user) {
+        return {
+          success: false,
+          error: "Utilisateur introuvable",
+        };
+      }
+    } else {
+      // Use requireAuth (for authenticated users)
+      user = await requireAuth();
+    }
+
+    const validatedData = createPaymentIntentSchema.parse(data);
+
+    // Get course
+    const course = await prisma.course.findUnique({
+      where: { id: validatedData.courseId },
+      include: { category: true },
+    });
+
+    if (!course) {
+      return {
+        success: false,
+        error: "Cours introuvable",
+      };
+    }
+
+    if (!course.published) {
+      return {
+        success: false,
+        error: "Ce cours n'est pas encore disponible",
+      };
+    }
+
+    if (course.paymentType === "SUBSCRIPTION") {
+      return {
+        success: false,
+        error: "Les abonnements ne sont pas encore disponibles",
+      };
+    }
+
+    // Check if user already has active enrollment
+    const existingEnrollment = await prisma.enrollment.findFirst({
+      where: {
+        userId: user.id,
+        courseId: validatedData.courseId,
+        expiresAt: {
+          gte: new Date(),
+        },
+      },
+    });
+
+    if (existingEnrollment) {
+      return {
+        success: false,
+        error: "Vous êtes déjà inscrit à ce cours",
+      };
+    }
+
+    let originalAmount = Number(course.price);
+    let discountAmount = 0;
+    let finalAmount = originalAmount;
+    let couponId: string | null = null;
+
+    // Apply coupon if provided
+    if (validatedData.couponCode) {
+      const couponValidation = await validateCouponAction(
+        validatedData.couponCode,
+        validatedData.courseId
+      );
+
+      if (!couponValidation.success || !couponValidation.data) {
+        return couponValidation;
+      }
+
+      const discountResult = await applyCouponDiscountAction(
+        validatedData.couponCode,
+        originalAmount,
+        validatedData.courseId
+      );
+
+      if (!discountResult.success || !discountResult.data) {
+        return discountResult;
+      }
+
+      discountAmount = Number(discountResult.data.discountAmount);
+      finalAmount = Number(discountResult.data.finalPrice);
+      couponId = couponValidation.data.id;
+    }
+
+    // Create PaymentIntent
+    // Only allow card payments (disable Klarna, Affirm, etc.)
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(finalAmount * 100), // Convert to cents
+      currency: "cad",
+      payment_method_types: ["card"], // Only allow card payments
+      metadata: {
+        userId: user.id,
+        courseId: validatedData.courseId,
+        courseTitle: course.title,
+        originalAmount: originalAmount.toString(),
+        discountAmount: discountAmount.toString(),
+        finalAmount: finalAmount.toString(),
+        couponCode: validatedData.couponCode || "",
+        couponId: couponId || "",
+      },
+      description: `Achat: ${course.title}`,
+    });
+
+    return {
+      success: true,
+      data: {
+        clientSecret: paymentIntent.client_secret,
+        paymentIntentId: paymentIntent.id,
+        originalAmount,
+        discountAmount,
+        finalAmount,
+        couponCode: validatedData.couponCode,
+      },
+    };
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return {
+        success: false,
+        error: error.issues[0]?.message || "Données invalides",
+      };
+    }
+
+    await logServerError({
+      errorMessage: `Failed to create payment intent: ${error instanceof Error ? error.message : "Unknown error"}`,
+      stackTrace: error instanceof Error ? error.stack : undefined,
+      userId: (await requireAuth()).id,
+      severity: "HIGH",
+    });
+
+    return {
+      success: false,
+      error: "Erreur lors de la création du paiement",
+    };
+  }
+}
+
+/**
+ * Create a PaymentIntent for cohort purchase (one-time only)
+ * @param userId Optional user ID to use instead of requireAuth (for checkout flow)
+ */
+export async function createCohortPaymentIntentAction(
+  data: z.infer<typeof createCohortPaymentIntentSchema>,
+  userId?: string
+): Promise<PaymentActionResult> {
+  try {
+    let user;
+    if (userId) {
+      // Use provided userId (for checkout flow)
+      user = await prisma.user.findUnique({ where: { id: userId } });
+      if (!user) {
+        return {
+          success: false,
+          error: "Utilisateur introuvable",
+        };
+      }
+    } else {
+      // Use requireAuth (for authenticated users)
+      user = await requireAuth();
+    }
+
+    const validatedData = createCohortPaymentIntentSchema.parse(data);
+
+    // Get cohort
+    const cohort = await prisma.cohort.findUnique({
+      where: { id: validatedData.cohortId },
+      include: {
+        _count: {
+          select: {
+            enrollments: true,
+          },
+        },
+      },
+    });
+
+    if (!cohort) {
+      return {
+        success: false,
+        error: "Cohorte introuvable",
+      };
+    }
+
+    if (!cohort.published) {
+      return {
+        success: false,
+        error: "Cette cohorte n'est pas encore disponible",
+      };
+    }
+
+    // Check max students
+    if (cohort._count.enrollments >= cohort.maxStudents) {
+      return {
+        success: false,
+        error: "La cohorte a atteint le nombre maximum d'étudiants",
+      };
+    }
+
+    // Check enrollment closing date
+    if (new Date() > cohort.enrollmentClosingDate) {
+      return {
+        success: false,
+        error: "La date limite d'inscription est dépassée",
+      };
+    }
+
+    // Check if user already has active enrollment
+    const existingEnrollment = await prisma.cohortEnrollment.findFirst({
+      where: {
+        userId: user.id,
+        cohortId: validatedData.cohortId,
+        expiresAt: {
+          gte: new Date(),
+        },
+      },
+    });
+
+    if (existingEnrollment) {
+      return {
+        success: false,
+        error: "Vous êtes déjà inscrit à cette cohorte",
+      };
+    }
+
+    let originalAmount = Number(cohort.price);
+    let discountAmount = 0;
+    let finalAmount = originalAmount;
+    let couponId: string | null = null;
+
+    // Note: Coupons for cohorts not implemented yet, but structure is ready
+    // Apply coupon if provided (when coupon system supports cohorts)
+    if (validatedData.couponCode) {
+      // For now, return error - coupon support for cohorts can be added later
+      return {
+        success: false,
+        error: "Les codes promo ne sont pas encore disponibles pour les cohortes",
+      };
+    }
+
+    // Create PaymentIntent
+    // Only allow card payments (disable Klarna, Affirm, etc.)
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(finalAmount * 100), // Convert to cents
+      currency: "cad",
+      payment_method_types: ["card"], // Only allow card payments
+      metadata: {
+        userId: user.id,
+        cohortId: validatedData.cohortId,
+        cohortTitle: cohort.title,
+        originalAmount: originalAmount.toString(),
+        discountAmount: discountAmount.toString(),
+        finalAmount: finalAmount.toString(),
+        couponCode: validatedData.couponCode || "",
+        couponId: couponId || "",
+        type: "cohort", // Mark as cohort payment
+      },
+      description: `Achat: ${cohort.title}`,
+    });
+
+    return {
+      success: true,
+      data: {
+        clientSecret: paymentIntent.client_secret,
+        paymentIntentId: paymentIntent.id,
+        originalAmount,
+        discountAmount,
+        finalAmount,
+        couponCode: validatedData.couponCode,
+      },
+    };
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return {
+        success: false,
+        error: error.issues[0]?.message || "Données invalides",
+      };
+    }
+
+    await logServerError({
+      errorMessage: `Failed to create cohort payment intent: ${error instanceof Error ? error.message : "Unknown error"}`,
+      stackTrace: error instanceof Error ? error.stack : undefined,
+      userId: (await requireAuth()).id,
+      severity: "HIGH",
+    });
+
+    return {
+      success: false,
+      error: "Erreur lors de la création du paiement",
+    };
+  }
+}
+
+/**
+ * Get payment history for current user
+ */
+export async function getPaymentHistoryAction(params: {
+  cursor?: string;
+  limit?: number;
+}) {
+  try {
+    const user = await requireAuth();
+
+    const limit = params.limit || 20;
+    const cursor = params.cursor ? { id: params.cursor } : undefined;
+
+    const enrollments = await prisma.enrollment.findMany({
+      where: {
+        userId: user.id,
+        paymentIntentId: { not: null },
+      },
+      take: limit + 1,
+      cursor,
+      orderBy: { purchaseDate: "desc" },
+      include: {
+        course: {
+          include: {
+            category: true,
+          },
+        },
+        couponUsage: {
+          include: {
+            coupon: true,
+          },
+        },
+      },
+    });
+
+    // Fetch Stripe payment intent details and refunds
+    const paymentsWithDetails = await Promise.all(
+      enrollments.map(async (enrollment) => {
+        let paymentIntent = null;
+        let refunds: any[] = [];
+
+        if (enrollment.paymentIntentId) {
+          try {
+            paymentIntent = await stripe.paymentIntents.retrieve(
+              enrollment.paymentIntentId
+            );
+
+            // Get refunds if any
+            const chargeId =
+              typeof paymentIntent.latest_charge === "string"
+                ? paymentIntent.latest_charge
+                : paymentIntent.latest_charge?.id;
+            if (chargeId) {
+              const refundsList = await stripe.refunds.list({ charge: chargeId });
+              refunds = refundsList.data;
+            }
+          } catch (error) {
+            console.error("Error fetching payment intent:", error);
+          }
+        }
+
+        return {
+          enrollment,
+          paymentIntent,
+          refunds,
+        };
+      })
+    );
+
+    const hasMore = enrollments.length > limit;
+    const items = hasMore ? paymentsWithDetails.slice(0, limit) : paymentsWithDetails;
+    const nextCursor = hasMore && items.length > 0 ? items[items.length - 1].enrollment.id : null;
+
+    return {
+      items,
+      nextCursor,
+      hasMore,
+    };
+  } catch (error) {
+    await logServerError({
+      errorMessage: `Failed to get payment history: ${error instanceof Error ? error.message : "Unknown error"}`,
+      stackTrace: error instanceof Error ? error.stack : undefined,
+      severity: "MEDIUM",
+    });
+
+    return {
+      items: [],
+      nextCursor: null,
+      hasMore: false,
+    };
+  }
+}
+
+/**
+ * Download receipt/invoice
+ */
+export async function downloadReceiptAction(paymentIntentId: string) {
+  try {
+    const user = await requireAuth();
+
+    // Verify enrollment belongs to user
+    const enrollment = await prisma.enrollment.findFirst({
+      where: {
+        userId: user.id,
+        paymentIntentId,
+      },
+      include: {
+        course: true,
+      },
+    });
+
+    if (!enrollment) {
+      return {
+        success: false,
+        error: "Paiement introuvable",
+      };
+    }
+
+    // Get payment intent from Stripe
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+
+    // Generate receipt data
+    const receipt = {
+      paymentIntentId,
+      date: enrollment.purchaseDate,
+      course: {
+        title: enrollment.course.title,
+        price: Number(enrollment.course.price),
+      },
+      amount: paymentIntent.amount / 100,
+      currency: paymentIntent.currency.toUpperCase(),
+      status: paymentIntent.status,
+      customer: {
+        email: user.email,
+        name: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email,
+      },
+    };
+
+    return {
+      success: true,
+      data: receipt,
+    };
+  } catch (error) {
+    await logServerError({
+      errorMessage: `Failed to download receipt: ${error instanceof Error ? error.message : "Unknown error"}`,
+      stackTrace: error instanceof Error ? error.stack : undefined,
+      severity: "MEDIUM",
+    });
+
+    return {
+      success: false,
+      error: "Erreur lors du téléchargement du reçu",
+    };
+  }
+}
+
+/**
+ * Create enrollment from payment intent (fallback if webhook hasn't fired)
+ * This ensures enrollment is created immediately after payment confirmation
+ * Handles both courses and cohorts
+ */
+export async function createEnrollmentFromPaymentIntentAction(
+  paymentIntentId: string
+): Promise<PaymentActionResult> {
+  try {
+    // Get payment intent from Stripe
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+
+    if (paymentIntent.status !== "succeeded") {
+      return {
+        success: false,
+        error: "Le paiement n'a pas réussi",
+      };
+    }
+
+    const { userId, courseId, cohortId, type } = paymentIntent.metadata;
+    const isCohort = type === "cohort" || cohortId;
+
+    if (!userId) {
+      return {
+        success: false,
+        error: "Informations de paiement incomplètes",
+      };
+    }
+
+    if (isCohort) {
+      // Handle cohort enrollment
+      if (!cohortId) {
+        return {
+          success: false,
+          error: "Informations de paiement incomplètes",
+        };
+      }
+
+      // Check if enrollment already exists (webhook might have created it)
+      const existingEnrollment = await prisma.cohortEnrollment.findFirst({
+        where: {
+          paymentIntentId: paymentIntentId,
+        },
+      });
+
+      if (existingEnrollment) {
+        return {
+          success: true,
+          data: existingEnrollment,
+        };
+      }
+
+      // Get cohort to calculate expiration
+      const cohort = await prisma.cohort.findUnique({
+        where: { id: cohortId },
+        select: { accessDuration: true },
+      });
+
+      if (!cohort) {
+        return {
+          success: false,
+          error: "Cohorte introuvable",
+        };
+      }
+
+      // Calculate expiration date
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + cohort.accessDuration);
+
+      // Create cohort enrollment
+      const { createCohortEnrollmentAction } = await import("@/app/actions/cohort-enrollments");
+      const enrollmentResult = await createCohortEnrollmentAction({
+        userId,
+        cohortId,
+        expiresAt,
+        paymentIntentId: paymentIntentId,
+      });
+
+      if (!enrollmentResult.success) {
+        return {
+          success: false,
+          error: enrollmentResult.error || "Erreur lors de la création de l'inscription",
+        };
+      }
+
+      return {
+        success: true,
+        data: enrollmentResult.data,
+      };
+    } else {
+      // Handle course enrollment
+      if (!courseId) {
+        return {
+          success: false,
+          error: "Informations de paiement incomplètes",
+        };
+      }
+
+      // Check if enrollment already exists (webhook might have created it)
+      const existingEnrollment = await prisma.enrollment.findFirst({
+        where: {
+          paymentIntentId: paymentIntentId,
+        },
+      });
+
+      if (existingEnrollment) {
+        return {
+          success: true,
+          data: existingEnrollment,
+        };
+      }
+
+      // Get course to calculate expiration
+      const course = await prisma.course.findUnique({
+        where: { id: courseId },
+        select: { accessDuration: true },
+      });
+
+      if (!course) {
+        return {
+          success: false,
+          error: "Cours introuvable",
+        };
+      }
+
+      // Calculate expiration date
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + course.accessDuration);
+
+      // Create enrollment (skip auth check since this is called from payment context)
+      const enrollmentResult = await createEnrollmentAction({
+        userId,
+        courseId,
+        expiresAt,
+        paymentIntentId: paymentIntentId,
+      }, true);
+
+      if (!enrollmentResult.success) {
+        return {
+          success: false,
+          error: enrollmentResult.error || "Erreur lors de la création de l'inscription",
+        };
+      }
+
+      // Note: Payment webhook is sent from createEnrollmentAction when paymentIntentId exists
+      // This ensures webhook fires even if Stripe webhook is delayed or fails
+
+      return {
+        success: true,
+        data: enrollmentResult.data,
+      };
+    }
+  } catch (error) {
+    await logServerError({
+      errorMessage: `Failed to create enrollment from payment intent: ${error instanceof Error ? error.message : "Unknown error"}`,
+      stackTrace: error instanceof Error ? error.stack : undefined,
+      severity: "HIGH",
+    });
+
+    return {
+      success: false,
+      error: "Erreur lors de la création de l'inscription",
+    };
+  }
+}
+
+

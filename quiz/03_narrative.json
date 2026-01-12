@@ -1,0 +1,194 @@
+{
+  "case_id": "negp_cas_20260110_213403",
+  "case_number": 4,
+  "generated_at": "2026-01-10T21:38:12.795302",
+  "model": "claude-opus-4-5-20251101",
+  "model_short": "Opus 4.5",
+  "chapters": [
+    4,
+    5,
+    6
+  ],
+  "narrative": {
+    "case_narrative": {
+      "title": "Étude de cas 7 – Marie-Claude Bélanger",
+      "theme": "PLANIFICATION FINANCIÈRE ET GESTION DE PLACEMENTS",
+      "introduction_box": "Marie-Claude Bélanger, 58 ans, est directrice des ressources humaines à la Caisse Desjardins du Centre de Montréal depuis 22 ans. Elle et son époux François, 61 ans, consultant en génie civil à son compte, vous consultent le 15 mars 2024 pour discuter de l'utilisation optimale d'un héritage de 185 000 $ reçu récemment et de leur planification de retraite. Le couple, marié depuis 32 ans, est propriétaire d'une résidence à Brossard et possède un portefeuille de placements totalisant 1 475 000 $. Vous êtes leur conseiller en placement depuis 12 ans.",
+      "sections": [
+        {
+          "title": "Contexte familial et professionnel",
+          "content": "Marie-Claude et François forment un couple uni avec des objectifs financiers bien définis mais des philosophies d'investissement légèrement différentes. Marie-Claude se décrit comme « modérément conservatrice » tandis que François se montre plus audacieux dans ses choix de placement.\n\nLeur fille Amélie, 28 ans, est médecin résidente à Québec et demeure célibataire. Leur fils Samuel, 25 ans, travaille comme ingénieur junior chez Hydro-Québec et vit en appartement. Samuel a récemment approché ses parents pour obtenir de l'aide avec sa mise de fonds en vue de l'achat de sa première propriété, ce qui constitue l'une des préoccupations immédiates du couple.\n\nMarie-Claude bénéficie d'un régime à prestations déterminées avec possibilité de rachat d'années de service, d'une assurance vie équivalant à trois fois son salaire, d'une assurance invalidité couvrant 70 % de son salaire et de soins dentaires complets. Elle détient également des parts privilégiées Desjardins acquises sur une période de 15 ans. Son salaire annuel s'élève à 145 000 $.\n\nFrançois, quant à lui, génère des revenus annuels d'environ 95 000 $ comme travailleur autonome. Il envisage de réduire progressivement ses contrats à partir de 2025, ce qui aura un impact significatif sur les flux de trésorerie du ménage. « Je souhaite ralentir graduellement avant de prendre ma retraite complète à 65 ans », précise-t-il lors de la rencontre.",
+          "tables": []
+        },
+        {
+          "title": "Situation patrimoniale",
+          "content": "Le patrimoine du couple s'est constitué principalement grâce à une épargne systématique pendant leurs 30 années de carrière, un héritage de 185 000 $ des parents de François reçu en janvier 2024 suivant le décès de son père, et la vente d'un duplex de revenus en 2022.\n\nLeur résidence familiale à Brossard, détenue en copropriété, est évaluée à 750 000 $ avec un solde hypothécaire de 125 000 $. Le couple a accéléré le remboursement de l'hypothèque depuis trois ans. L'hypothèque porte un taux d'intérêt de 5,65 % avec des versements mensuels de 2 850 $ et une durée résiduelle de 3 ans et 8 mois.\n\nLe couple possède également une marge de crédit personnelle avec un solde de 12 000 $ à un taux de 7,45 % et un solde de cartes de crédit de 3 500 $ à un taux de 19,95 %. Leur valeur nette totale s'établit à 2 224 500 $, calculée à partir d'actifs totaux de 2 365 000 $ moins des passifs de 140 500 $.",
+          "tables": []
+        },
+        {
+          "title": "Objectifs financiers",
+          "content": "À court terme, Marie-Claude et François souhaitent décider de l'utilisation optimale de l'héritage de 185 000 $ dans les six prochains mois et aider Samuel avec sa mise de fonds d'environ 50 000 $ d'ici l'automne 2024.\n\nÀ moyen terme, ils visent à maximiser leur épargne-retraite avant le départ de Marie-Claude à 62 ans, soit une cible additionnelle de 200 000 $ sur les quatre prochaines années, et à éliminer complètement leur hypothèque avant la retraite.\n\nÀ long terme, leur objectif principal est de générer des revenus combinés de 100 000 $ par année à la retraite. Marie-Claude prévoit prendre sa retraite à 62 ans et François à 65 ans. Ils souhaitent également conserver leur résidence familiale et acquérir un chalet modeste d'une valeur d'environ 400 000 $ dans cinq à sept ans.\n\n« Nous voulons être libres de toute dette avant la retraite, mais nous nous demandons si c'est vraiment la meilleure stratégie sur le plan fiscal », confie Marie-Claude.",
+          "tables": []
+        },
+        {
+          "title": "Énoncé de politique de placement",
+          "content": "L'énoncé de politique de placement du couple Bélanger reflète leurs besoins de croissance modérée tout en tenant compte de l'approche de la retraite de Marie-Claude dans quatre ans.",
+          "tables": [
+            {
+              "title": "Tableau 1 – Énoncé de politique de placement de Marie-Claude et François Bélanger",
+              "type": "ipp",
+              "markdown": "| Élément | Détail |\n|---------|--------|\n| Exigences de rendement | Minimum 4 %, cible 6 %, maximum 8 % – Besoin de 6 % de rendement réel pour atteindre l'objectif de 100 000 $ de revenus annuels à la retraite tout en préservant le capital |\n| Profil de risque | Modérément conservateur avec tolérance maximale aux pertes de 15 % par année. Temps de récupération toléré : 2-3 ans. Score de tolérance au risque : 6/10 |\n| Horizon de placement | Varié : 4 ans (retraite Marie-Claude, priorité élevée), 7 ans (retraite François, priorité élevée), 6 ans (achat du chalet, priorité moyenne) |\n| Besoins de liquidité | Fonds d'urgence de 6 mois. Dépenses majeures prévues : aide à Samuel 50 000 $ (6-9 mois), remboursement hypothèque 125 000 $ (3 ans) |\n| Imposition | Taux marginal sur revenus d'emploi : 48,37 %. Taux sur intérêts : 48,37 %. Taux sur dividendes canadiens : 35,32 %. Taux sur dividendes étrangers : 48,37 %. Taux sur gains en capital : 24,19 % |"
+            }
+          ]
+        },
+        {
+          "title": "Portefeuille de placements",
+          "content": "Le portefeuille total du couple s'élève à 1 475 000 $ répartis dans plusieurs comptes enregistrés et non enregistrés. L'héritage de 185 000 $ est présentement détenu en liquidités dans le compte non enregistré conjoint, ce qui crée un déséquilibre temporaire dans la répartition d'actifs.\n\nMarie-Claude dispose d'un REER de 425 000 $ avec un droit de cotisation inutilisé de 18 500 $ et d'un CELI de 95 000 $ avec un droit de cotisation de 6 500 $. François possède un REER de 285 000 $ avec 12 800 $ de droits de cotisation disponibles et un CELI de 88 500 $ avec 6 500 $ de droits de cotisation. Le compte non enregistré conjoint totalise 396 500 $, dont l'héritage de 185 000 $ en attente d'investissement. Le REEE familial, dont les enfants sont maintenant bénéficiaires de fonds résiduels, contient 185 000 $.",
+          "tables": [
+            {
+              "title": "Tableau 2 – Portefeuille de placements de Marie-Claude et François Bélanger",
+              "type": "portfolio",
+              "markdown": "| Compte | Propriétaire | Catégorie d'actif | Placement | Valeur ($) | Pondération du compte (%) |\n|--------|--------------|-------------------|-----------|------------|---------------------------|\n| REER | Marie-Claude | Fonds équilibré | Fonds équilibré conservateur Desjardins | 180 000 | 42,35 |\n| REER | Marie-Claude | Revenu fixe | Fonds obligations canadiennes Stabilité | 127 500 | 30,00 |\n| REER | Marie-Claude | Actions canadiennes | Fonds actions canadiennes Dividendes Plus | 85 000 | 20,00 |\n| REER | Marie-Claude | Actions américaines | Fonds actions américaines Croissance | 32 500 | 7,65 |\n| **Total REER Marie-Claude** | | | | **425 000** | **100,00** |\n| REER | François | Revenu fixe | FNB obligations gouvernementales (XGB) | 142 500 | 50,00 |\n| REER | François | Actions canadiennes | FNB actions canadiennes (VTI) | 85 500 | 30,00 |\n| REER | François | Actions privilégiées | Parts privilégiées Desjardins | 57 000 | 20,00 |\n| **Total REER François** | | | | **285 000** | **100,00** |\n| CELI | Marie-Claude | Actions canadiennes | FNB marché total canadien (VTI) | 47 500 | 50,00 |\n| CELI | Marie-Claude | Revenu fixe | FNB obligations à court terme (VSB) | 28 500 | 30,00 |\n| CELI | Marie-Claude | CPG | Certificat de placement garanti 18 mois | 19 000 | 20,00 |\n| **Total CELI Marie-Claude** | | | | **95 000** | **100,00** |\n| CELI | François | Actions internationales | FNB actions internationales (VTI) | 44 250 | 50,00 |\n| CELI | François | Liquidités | Compte épargne à intérêt élevé | 26 550 | 30,00 |\n| CELI | François | Revenu fixe | FNB obligations provinciales (VPB) | 17 700 | 20,00 |\n| **Total CELI François** | | | | **88 500** | **100,00** |\n| Non enregistré | Conjoint | Liquidités | Héritage – Compte épargne temporaire | 185 000 | 46,64 |\n| Non enregistré | Conjoint | Actions canadiennes | Fonds actions canadiennes Croissance | 95 000 | 23,96 |\n| Non enregistré | Conjoint | Revenu fixe | FNB obligations corporatives (XCB) | 75 000 | 18,91 |\n| Non enregistré | Conjoint | Actions canadiennes | Actions individuelles (Shopify, Banque Nationale) | 41 500 | 10,47 |\n| **Total Non enregistré** | | | | **396 500** | **100,00** |\n| REEE | Famille | Fonds équilibré | Fonds équilibré croissance | 111 000 | 60,00 |\n| REEE | Famille | Revenu fixe | FNB obligations canadiennes | 55 500 | 30,00 |\n| REEE | Famille | Liquidités | Compte épargne études | 18 500 | 10,00 |\n| **Total REEE** | | | | **185 000** | **100,00** |\n| **TOTAL PORTEFEUILLE** | | | | **1 475 000** | |"
+            }
+          ]
+        },
+        {
+          "title": "Répartition d'actifs",
+          "content": "La répartition stratégique cible du portefeuille prévoit 8 % en liquidités, 37 % en revenu fixe, 32 % en actions canadiennes, 12 % en actions américaines, 8 % en actions internationales et 3 % en placements alternatifs.\n\nLa répartition tactique actuelle montre un écart significatif avec 16 % en liquidités (surpondération de 8 points), 35 % en revenu fixe, 30 % en actions canadiennes, 10 % en actions américaines, 6 % en actions internationales et 3 % en placements alternatifs. Cette surpondération en liquidités est principalement attribuable à l'héritage non encore investi.",
+          "tables": []
+        },
+        {
+          "title": "Rendement des fonds",
+          "content": "Le tableau suivant présente les données de rendement des principaux fonds détenus dans le portefeuille du couple Bélanger.",
+          "tables": [
+            {
+              "title": "Tableau 3 – Rendement des fonds du portefeuille Bélanger",
+              "type": "performance",
+              "markdown": "| Fonds | Indice de référence | Rendement 1 an (%) | Rendement 3 ans (%) | Rendement 5 ans (%) | Écart-type 3 ans (%) | Bêta 3 ans | R² |\n|-------|---------------------|-------------------|---------------------|---------------------|---------------------|------------|----|\n| Fonds équilibré conservateur Desjardins | Indice mixte 30/70 | 4,25 | 5,78 | 6,92 | 8,45 | 0,72 | 0,89 |\n| Fonds actions canadiennes Dividendes Plus | S&P/TSX Capped Composite | 1,56 | 8,34 | 7,56 | 14,56 | 0,95 | 0,92 |\n| FNB actions américaines Croissance | S&P 500 (CAD) | 12,34 | 9,87 | 11,56 | 18,34 | 1,08 | 0,96 |\n| FNB obligations gouvernementales (XGB) | FTSE Canada Universe Bond | -2,34 | 1,45 | 2,98 | 4,56 | 0,15 | 0,78 |"
+            }
+          ]
+        },
+        {
+          "title": "Historique des cotisations",
+          "content": "Le couple maintient une discipline d'épargne constante depuis de nombreuses années, tel qu'illustré par l'historique récent des cotisations.",
+          "tables": [
+            {
+              "title": "Tableau 4 – Historique des cotisations du portefeuille Bélanger",
+              "type": "contribution",
+              "markdown": "| Date | Valeur du portefeuille avant ($) | Cotisation ($) | Valeur du portefeuille après ($) |\n|------|----------------------------------|----------------|----------------------------------|\n| 1er janvier 2024 | 1 290 000 | 185 000 | 1 475 000 |\n| 31 décembre 2023 | 1 275 000 | 31 500 | 1 290 000 |\n| 1er janvier 2023 | 1 185 000 | 28 500 | 1 275 000 |"
+            }
+          ]
+        },
+        {
+          "title": "Préoccupations et points de discussion",
+          "content": "Lors de la rencontre, Marie-Claude soulève plusieurs préoccupations importantes.\n\nPremièrement, concernant l'optimisation fiscale de l'héritage : « Comment utiliser au mieux les 185 000 $ hérités sans créer un fardeau fiscal ? Nous hésitons entre rembourser l'hypothèque, maximiser nos REER ou créer un fonds d'urgence plus substantiel. »\n\nDeuxièmement, le dilemme entre le remboursement hypothécaire et l'épargne-retraite : « Avec l'héritage reçu, vaut-il mieux rembourser entièrement notre hypothèque ou maximiser nos contributions REER ? Quel est l'impact fiscal de chaque option ? »\n\nTroisièmement, l'impact du RAP de Samuel sur leur planification : « Si nous aidons Samuel avec le RAP, comment cela affecte-t-il notre planification de retraite ? Y a-t-il des implications successorales à considérer pour assurer l'équité avec Amélie ? »\n\nFrançois ajoute : « Ma réduction de revenus prévue en 2025 m'inquiète. Comment planifier cette transition vers la semi-retraite tout en maintenant notre épargne-retraite sur la bonne voie ? »\n\nMarie-Claude précise également qu'elle hésite entre racheter des années de service dans son régime à prestations déterminées ou maximiser ses cotisations REER personnelles pour les années restantes avant sa retraite.",
+          "tables": []
+        },
+        {
+          "title": "Recommandations du conseiller",
+          "content": "Après analyse de la situation, vous avez formulé les recommandations suivantes au couple Bélanger.\n\nPour l'optimisation de l'héritage de 185 000 $, vous recommandez de répartir le montant comme suit : 50 000 $ pour le remboursement partiel de l'hypothèque, 60 000 $ pour la maximisation des REER (31 300 $ pour Marie-Claude et 12 800 $ pour François, utilisant leurs droits de cotisation disponibles) et 75 000 $ pour bonifier le fonds d'urgence et maintenir la liquidité nécessaire pour l'aide à Samuel. Cette stratégie optimise la réduction des intérêts non déductibles, maximise les avantages fiscaux des REER et maintient la liquidité requise.\n\nPour la restructuration de la répartition d'actifs, vous suggérez de rééquilibrer le portefeuille afin de réduire la surpondération en liquidités de 16 % à la cible de 8 % et d'augmenter l'exposition aux actions internationales pour améliorer la diversification géographique.\n\nConcernant la stratégie hypothécaire, vous recommandez de maintenir les paiements accélérés actuels et d'utiliser une partie de l'héritage pour réduire le solde, ce qui libérera 2 850 $ par mois pour l'épargne-retraite une fois l'hypothèque remboursée en 2027.\n\nPour l'aide à Samuel, vous proposez d'utiliser le RAP de Marie-Claude pour un montant de 35 000 $ combiné à un don de 15 000 $ provenant du compte non enregistré pour constituer la mise de fonds de 50 000 $. Le remboursement du RAP s'étalera sur la période pré-retraite de Marie-Claude, minimisant ainsi l'impact fiscal.",
+          "tables": []
+        },
+        {
+          "title": "Données complémentaires pour l'analyse",
+          "content": "Le taux sans risque actuel est de 4,5 % et le rendement espéré du marché est de 8,5 %, ce qui implique une prime de risque des actions de 4 %. La duration moyenne des obligations du portefeuille est de 6,2 ans. La corrélation entre les marchés canadien et américain est de 0,78. Il reste 44 versements hypothécaires à effectuer au rythme actuel.\n\nMarie-Claude se décrit comme « très impliquée » dans la gestion de ses placements, révisant mensuellement son portefeuille et suivant l'actualité financière. Elle admet cependant être « anxieuse lors des corrections de marché » tout en maintenant une discipline d'épargne systématique. Son niveau de connaissances financières est intermédiaire – elle comprend les concepts de base mais recherche une validation professionnelle pour ses décisions importantes.",
+          "tables": []
+        }
+      ],
+      "closing": "Fin de l'étude de cas"
+    },
+    "full_text_markdown": "# PLANIFICATION FINANCIÈRE ET GESTION DE PLACEMENTS\n\n## Étude de cas 7 – Marie-Claude Bélanger\n\n┌────────────────────────────────────────────────────────────────────────┐\n│ Marie-Claude Bélanger, 58 ans, est directrice des ressources humaines │\n│ à la Caisse Desjardins du Centre de Montréal depuis 22 ans. Elle et   │\n│ son époux François, 61 ans, consultant en génie civil à son compte,   │\n│ vous consultent le 15 mars 2024 pour discuter de l'utilisation        │\n│ optimale d'un héritage de 185 000 $ reçu récemment et de leur         │\n│ planification de retraite. Le couple, marié depuis 32 ans, est        │\n│ propriétaire d'une résidence à Brossard et possède un portefeuille    │\n│ de placements totalisant 1 475 000 $. Vous êtes leur conseiller en    │\n│ placement depuis 12 ans.                                               │\n└────────────────────────────────────────────────────────────────────────┘\n\n### Contexte familial et professionnel\n\nMarie-Claude et François forment un couple uni avec des objectifs financiers bien définis mais des philosophies d'investissement légèrement différentes. Marie-Claude se décrit comme « modérément conservatrice » tandis que François se montre plus audacieux dans ses choix de placement.\n\nLeur fille Amélie, 28 ans, est médecin résidente à Québec et demeure célibataire. Leur fils Samuel, 25 ans, travaille comme ingénieur junior chez Hydro-Québec et vit en appartement. Samuel a récemment approché ses parents pour obtenir de l'aide avec sa mise de fonds en vue de l'achat de sa première propriété, ce qui constitue l'une des préoccupations immédiates du couple.\n\nMarie-Claude bénéficie d'un régime à prestations déterminées avec possibilité de rachat d'années de service, d'une assurance vie équivalant à trois fois son salaire, d'une assurance invalidité couvrant 70 % de son salaire et de soins dentaires complets. Elle détient également des parts privilégiées Desjardins acquises sur une période de 15 ans. Son salaire annuel s'élève à 145 000 $.\n\nFrançois, quant à lui, génère des revenus annuels d'environ 95 000 $ comme travailleur autonome. Il envisage de réduire progressivement ses contrats à partir de 2025, ce qui aura un impact significatif sur les flux de trésorerie du ménage. « Je souhaite ralentir graduellement avant de prendre ma retraite complète à 65 ans », précise-t-il lors de la rencontre.\n\n### Situation patrimoniale\n\nLe patrimoine du couple s'est constitué principalement grâce à une épargne systématique pendant leurs 30 années de carrière, un héritage de 185 000 $ des parents de François reçu en janvier 2024 suivant le décès de son père, et la vente d'un duplex de revenus en 2022.\n\nLeur résidence familiale à Brossard, détenue en copropriété, est évaluée à 750 000 $ avec un solde hypothécaire de 125 000 $. Le couple a accéléré le remboursement de l'hypothèque depuis trois ans. L'hypothèque porte un taux d'intérêt de 5,65 % avec des versements mensuels de 2 850 $ et une durée résiduelle de 3 ans et 8 mois.\n\nLe couple possède également une marge de crédit personnelle avec un solde de 12 000 $ à un taux de 7,45 % et un solde de cartes de crédit de 3 500 $ à un taux de 19,95 %. Leur valeur nette totale s'établit à 2 224 500 $, calculée à partir d'actifs totaux de 2 365 000 $ moins des passifs de 140 500 $.\n\n### Objectifs financiers\n\nÀ court terme, Marie-Claude et François souhaitent décider de l'utilisation optimale de l'héritage de 185 000 $ dans les six prochains mois et aider Samuel avec sa mise de fonds d'environ 50 000 $ d'ici l'automne 2024.\n\nÀ moyen terme, ils visent à maximiser leur épargne-retraite avant le départ de Marie-Claude à 62 ans, soit une cible additionnelle de 200 000 $ sur les quatre prochaines années, et à éliminer complètement leur hypothèque avant la retraite.\n\nÀ long terme, leur objectif principal est de générer des revenus combinés de 100 000 $ par année à la retraite. Marie-Claude prévoit prendre sa retraite à 62 ans et François à 65 ans. Ils souhaitent également conserver leur résidence familiale et acquérir un chalet modeste d'une valeur d'environ 400 000 $ dans cinq à sept ans.\n\n« Nous voulons être libres de toute dette avant la retraite, mais nous nous demandons si c'est vraiment la meilleure stratégie sur le plan fiscal », confie Marie-Claude.\n\n### Énoncé de politique de placement\n\nL'énoncé de politique de placement du couple Bélanger reflète leurs besoins de croissance modérée tout en tenant compte de l'approche de la retraite de Marie-Claude dans quatre ans.\n\n**Tableau 1 – Énoncé de politique de placement de Marie-Claude et François Bélanger**\n\n| Élément | Détail |\n|---------|--------|\n| Exigences de rendement | Minimum 4 %, cible 6 %, maximum 8 % – Besoin de 6 % de rendement réel pour atteindre l'objectif de 100 000 $ de revenus annuels à la retraite tout en préservant le capital |\n| Profil de risque | Modérément conservateur avec tolérance maximale aux pertes de 15 % par année. Temps de récupération toléré : 2-3 ans. Score de tolérance au risque : 6/10 |\n| Horizon de placement | Varié : 4 ans (retraite Marie-Claude, priorité élevée), 7 ans (retraite François, priorité élevée), 6 ans (achat du chalet, priorité moyenne) |\n| Besoins de liquidité | Fonds d'urgence de 6 mois. Dépenses majeures prévues : aide à Samuel 50 000 $ (6-9 mois), remboursement hypothèque 125 000 $ (3 ans) |\n| Imposition | Taux marginal sur revenus d'emploi : 48,37 %. Taux sur intérêts : 48,37 %. Taux sur dividendes canadiens : 35,32 %. Taux sur dividendes étrangers : 48,37 %. Taux sur gains en capital : 24,19 % |\n\n### Portefeuille de placements\n\nLe portefeuille total du couple s'élève à 1 475 000 $ répartis dans plusieurs comptes enregistrés et non enregistrés. L'héritage de 185 000 $ est présentement détenu en liquidités dans le compte non enregistré conjoint, ce qui crée un déséquilibre temporaire dans la répartition d'actifs.\n\nMarie-Claude dispose d'un REER de 425 000 $ avec un droit de cotisation inutilisé de 18 500 $ et d'un CELI de 95 000 $ avec un droit de cotisation de 6 500 $. François possède un REER de 285 000 $ avec 12 800 $ de droits de cotisation disponibles et un CELI de 88 500 $ avec 6 500 $ de droits de cotisation. Le compte non enregistré conjoint totalise 396 500 $, dont l'héritage de 185 000 $ en attente d'investissement. Le REEE familial, dont les enfants sont maintenant bénéficiaires de fonds résiduels, contient 185 000 $.\n\n**Tableau 2 – Portefeuille de placements de Marie-Claude et François Bélanger**\n\n| Compte | Propriétaire | Catégorie d'actif | Placement | Valeur ($) | Pondération du compte (%) |\n|--------|--------------|-------------------|-----------|------------|---------------------------|\n| REER | Marie-Claude | Fonds équilibré | Fonds équilibré conservateur Desjardins | 180 000 | 42,35 |\n| REER | Marie-Claude | Revenu fixe | Fonds obligations canadiennes Stabilité | 127 500 | 30,00 |\n| REER | Marie-Claude | Actions canadiennes | Fonds actions canadiennes Dividendes Plus | 85 000 | 20,00 |\n| REER | Marie-Claude | Actions américaines | Fonds actions américaines Croissance | 32 500 | 7,65 |\n| **Total REER Marie-Claude** | | | | **425 000** | **100,00** |\n| REER | François | Revenu fixe | FNB obligations gouvernementales (XGB) | 142 500 | 50,00 |\n| REER | François | Actions canadiennes | FNB actions canadiennes (VTI) | 85 500 | 30,00 |\n| REER | François | Actions privilégiées | Parts privilégiées Desjardins | 57 000 | 20,00 |\n| **Total REER François** | | | | **285 000** | **100,00** |\n| CELI | Marie-Claude | Actions canadiennes | FNB marché total canadien (VTI) | 47 500 | 50,00 |\n| CELI | Marie-Claude | Revenu fixe | FNB obligations à court terme (VSB) | 28 500 | 30,00 |\n| CELI | Marie-Claude | CPG | Certificat de placement garanti 18 mois | 19 000 | 20,00 |\n| **Total CELI Marie-Claude** | | | | **95 000** | **100,00** |\n| CELI | François | Actions internationales | FNB actions internationales (VTI) | 44 250 | 50,00 |\n| CELI | François | Liquidités | Compte épargne à intérêt élevé | 26 550 | 30,00 |\n| CELI | François | Revenu fixe | FNB obligations provinciales (VPB) | 17 700 | 20,00 |\n| **Total CELI François** | | | | **88 500** | **100,00** |\n| Non enregistré | Conjoint | Liquidités | Héritage – Compte épargne temporaire | 185 000 | 46,64 |\n| Non enregistré | Conjoint | Actions canadiennes | Fonds actions canadiennes Croissance | 95 000 | 23,96 |\n| Non enregistré | Conjoint | Revenu fixe | FNB obligations corporatives (XCB) | 75 000 | 18,91 |\n| Non enregistré | Conjoint | Actions canadiennes | Actions individuelles (Shopify, Banque Nationale) | 41 500 | 10,47 |\n| **Total Non enregistré** | | | | **396 500** | **100,00** |\n| REEE | Famille | Fonds équilibré | Fonds équilibré croissance | 111 000 | 60,00 |\n| REEE | Famille | Revenu fixe | FNB obligations canadiennes | 55 500 | 30,00 |\n| REEE | Famille | Liquidités | Compte épargne études | 18 500 | 10,00 |\n| **Total REEE** | | | | **185 000** | **100,00** |\n| **TOTAL PORTEFEUILLE** | | | | **1 475 000** | |\n\n### Répartition d'actifs\n\nLa répartition stratégique cible du portefeuille prévoit 8 % en liquidités, 37 % en revenu fixe, 32 % en actions canadiennes, 12 % en actions américaines, 8 % en actions internationales et 3 % en placements alternatifs.\n\nLa répartition tactique actuelle montre un écart significatif avec 16 % en liquidités (surpondération de 8 points), 35 % en revenu fixe, 30 % en actions canadiennes, 10 % en actions américaines, 6 % en actions internationales et 3 % en placements alternatifs. Cette surpondération en liquidités est principalement attribuable à l'héritage non encore investi.\n\n### Rendement des fonds\n\nLe tableau suivant présente les données de rendement des principaux fonds détenus dans le portefeuille du couple Bélanger.\n\n**Tableau 3 – Rendement des fonds du portefeuille Bélanger**\n\n| Fonds | Indice de référence | Rendement 1 an (%) | Rendement 3 ans (%) | Rendement 5 ans (%) | Écart-type 3 ans (%) | Bêta 3 ans | R² |\n|-------|---------------------|-------------------|---------------------|---------------------|---------------------|------------|----|\n| Fonds équilibré conservateur Desjardins | Indice mixte 30/70 | 4,25 | 5,78 | 6,92 | 8,45 | 0,72 | 0,89 |\n| Fonds actions canadiennes Dividendes Plus | S&P/TSX Capped Composite | 1,56 | 8,34 | 7,56 | 14,56 | 0,95 | 0,92 |\n| FNB actions américaines Croissance | S&P 500 (CAD) | 12,34 | 9,87 | 11,56 | 18,34 | 1,08 | 0,96 |\n| FNB obligations gouvernementales (XGB) | FTSE Canada Universe Bond | -2,34 | 1,45 | 2,98 | 4,56 | 0,15 | 0,78 |\n\n### Historique des cotisations\n\nLe couple maintient une discipline d'épargne constante depuis de nombreuses années, tel qu'illustré par l'historique récent des cotisations.\n\n**Tableau 4 – Historique des cotisations du portefeuille Bélanger**\n\n| Date | Valeur du portefeuille avant ($) | Cotisation ($) | Valeur du portefeuille après ($) |\n|------|----------------------------------|----------------|----------------------------------|\n| 1er janvier 2024 | 1 290 000 | 185 000 | 1 475 000 |\n| 31 décembre 2023 | 1 275 000 | 31 500 | 1 290 000 |\n| 1er janvier 2023 | 1 185 000 | 28 500 | 1 275 000 |\n\n### Préoccupations et points de discussion\n\nLors de la rencontre, Marie-Claude soulève plusieurs préoccupations importantes.\n\nPremièrement, concernant l'optimisation fiscale de l'héritage : « Comment utiliser au mieux les 185 000 $ hérités sans créer un fardeau fiscal ? Nous hésitons entre rembourser l'hypothèque, maximiser nos REER ou créer un fonds d'urgence plus substantiel. »\n\nDeuxièmement, le dilemme entre le remboursement hypothécaire et l'épargne-retraite : « Avec l'héritage reçu, vaut-il mieux rembourser entièrement notre hypothèque ou maximiser nos contributions REER ? Quel est l'impact fiscal de chaque option ? »\n\nTroisièmement, l'impact du RAP de Samuel sur leur planification : « Si nous aidons Samuel avec le RAP, comment cela affecte-t-il notre planification de retraite ? Y a-t-il des implications successorales à considérer pour assurer l'équité avec Amélie ? »\n\nFrançois ajoute : « Ma réduction de revenus prévue en 2025 m'inquiète. Comment planifier cette transition vers la semi-retraite tout en maintenant notre épargne-retraite sur la bonne voie ? »\n\nMarie-Claude précise également qu'elle hésite entre racheter des années de service dans son régime à prestations déterminées ou maximiser ses cotisations REER personnelles pour les années restantes avant sa retraite.\n\n### Recommandations du conseiller\n\nAprès analyse de la situation, vous avez formulé les recommandations suivantes au couple Bélanger.\n\nPour l'optimisation de l'héritage de 185 000 $, vous recommandez de répartir le montant comme suit : 50 000 $ pour le remboursement partiel de l'hypothèque, 60 000 $ pour la maximisation des REER (31 300 $ pour Marie-Claude et 12 800 $ pour François, utilisant leurs droits de cotisation disponibles) et 75 000 $ pour bonifier le fonds d'urgence et maintenir la liquidité nécessaire pour l'aide à Samuel. Cette stratégie optimise la réduction des intérêts non déductibles, maximise les avantages fiscaux des REER et maintient la liquidité requise.\n\nPour la restructuration de la répartition d'actifs, vous suggérez de rééquilibrer le portefeuille afin de réduire la surpondération en liquidités de 16 % à la cible de 8 % et d'augmenter l'exposition aux actions internationales pour améliorer la diversification géographique.\n\nConcernant la stratégie hypothécaire, vous recommandez de maintenir les paiements accélérés actuels et d'utiliser une partie de l'héritage pour réduire le solde, ce qui libérera 2 850 $ par mois pour l'épargne-retraite une fois l'hypothèque remboursée en 2027.\n\nPour l'aide à Samuel, vous proposez d'utiliser le RAP de Marie-Claude pour un montant de 35 000 $ combiné à un don de 15 000 $ provenant du compte non enregistré pour constituer la mise de fonds de 50 000 $. Le remboursement du RAP s'étalera sur la période pré-retraite de Marie-Claude, minimisant ainsi l'impact fiscal.\n\n### Données complémentaires pour l'analyse\n\nLe taux sans risque actuel est de 4,5 % et le rendement espéré du marché est de 8,5 %, ce qui implique une prime de risque des actions de 4 %. La duration moyenne des obligations du portefeuille est de 6,2 ans. La corrélation entre les marchés canadien et américain est de 0,78. Il reste 44 versements hypothécaires à effectuer au rythme actuel.\n\nMarie-Claude se décrit comme « très impliquée » dans la gestion de ses placements, révisant mensuellement son portefeuille et suivant l'actualité financière. Elle admet cependant être « anxieuse lors des corrections de marché » tout en maintenant une discipline d'épargne systématique. Son niveau de connaissances financières est intermédiaire – elle comprend les concepts de base mais recherche une validation professionnelle pour ses décisions importantes.\n\n---\n\n**Fin de l'étude de cas**",
+    "word_count": 2487,
+    "key_testable_elements": [
+      {
+        "element": "Calcul du remboursement REER recommandé (31 300 $ + 12 800 $ = 44 100 $, non 60 000 $ mentionné)",
+        "location": "Section Recommandations du conseiller",
+        "potential_question_type": "Calcul - droits de cotisation REER"
+      },
+      {
+        "element": "Écart entre répartition stratégique (8% liquidités) et tactique (16% liquidités)",
+        "location": "Section Répartition d'actifs",
+        "potential_question_type": "Analyse de répartition d'actifs"
+      },
+      {
+        "element": "Bêta de 1,08 pour le FNB actions américaines indiquant un risque supérieur au marché",
+        "location": "Tableau 3 - Rendement des fonds",
+        "potential_question_type": "Interprétation du bêta et risque systématique"
+      },
+      {
+        "element": "Taux marginal sur gains en capital (24,19%) vs dividendes canadiens (35,32%)",
+        "location": "Tableau 1 - Énoncé de politique de placement",
+        "potential_question_type": "Optimisation fiscale des types de revenus"
+      },
+      {
+        "element": "RAP maximum de 35 000 $ par personne",
+        "location": "Section Recommandations du conseiller",
+        "potential_question_type": "Règles du RAP"
+      },
+      {
+        "element": "Duration des obligations de 6,2 ans et impact sur sensibilité aux taux",
+        "location": "Section Données complémentaires",
+        "potential_question_type": "Calcul de sensibilité obligataire"
+      },
+      {
+        "element": "R² de 0,78 pour XGB indiquant corrélation modérée avec l'indice",
+        "location": "Tableau 3 - Rendement des fonds",
+        "potential_question_type": "Interprétation du coefficient de détermination"
+      },
+      {
+        "element": "Valeur nette de 2 224 500 $ (actifs 2 365 000 $ - passifs 140 500 $)",
+        "location": "Section Situation patrimoniale",
+        "potential_question_type": "Calcul de valeur nette"
+      },
+      {
+        "element": "Taux hypothécaire 5,65% vs rendement cible 6%",
+        "location": "Sections multiples",
+        "potential_question_type": "Analyse coût d'opportunité remboursement dette vs investissement"
+      },
+      {
+        "element": "Horizon de placement varié : 4 ans (Marie-Claude), 7 ans (François), 6 ans (chalet)",
+        "location": "Tableau 1 - Énoncé de politique de placement",
+        "potential_question_type": "Adéquation de la répartition d'actifs selon l'horizon"
+      },
+      {
+        "element": "Prime de risque des actions de 4% (8,5% - 4,5%)",
+        "location": "Section Données complémentaires",
+        "potential_question_type": "Calcul MEDAF/rendement espéré"
+      },
+      {
+        "element": "Tolérance maximale aux pertes de 15% par année",
+        "location": "Tableau 1 - Énoncé de politique de placement",
+        "potential_question_type": "Adéquation profil de risque et composition du portefeuille"
+      },
+      {
+        "element": "REEE de 185 000 $ avec enfants adultes - implications fiscales des retraits",
+        "location": "Tableau 2 - Portefeuille de placements",
+        "potential_question_type": "Règles fiscales REEE et PAE"
+      },
+      {
+        "element": "Corrélation Canada-US de 0,78 et bénéfices de diversification",
+        "location": "Section Données complémentaires",
+        "potential_question_type": "Calcul de réduction du risque par diversification"
+      },
+      {
+        "element": "Régime à prestations déterminées avec option de rachat vs REER",
+        "location": "Section Contexte familial et professionnel",
+        "potential_question_type": "Comparaison régimes de retraite"
+      }
+    ]
+  },
+  "source_files": {
+    "persona": "C:\\Users\\User\\Desktop\\DF_Pro_Content\\courses\\negp\\output\\case_study\\case_20260110_213329\\01_persona.json",
+    "financial_profile": "C:\\Users\\User\\Desktop\\DF_Pro_Content\\courses\\negp\\output\\case_study\\case_20260110_213329\\02_financial_profile.json"
+  },
+  "cost": {
+    "model": "claude-opus-4-5-20251101",
+    "input": "$0.1110",
+    "output": "$0.9009",
+    "total": "$1.0119"
+  },
+  "usage": {
+    "input_tokens": 7398,
+    "output_tokens": 12012
+  }
+}

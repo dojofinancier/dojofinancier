@@ -1,0 +1,331 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { 
+  MessageCircle,
+  Send,
+  Clock,
+  CheckCircle2,
+  FileText,
+  Loader2,
+} from "lucide-react";
+import { sendMessageAction, getMessageThreadsAction, getThreadMessagesAction } from "@/app/actions/messages";
+import { toast } from "sonner";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
+import { RichTextEditor } from "@/components/admin/courses/rich-text-editor";
+
+interface AskQuestionPageProps {
+  courseId: string;
+  courseTitle: string;
+}
+
+interface MessageThread {
+  id: string;
+  subject: string;
+  status: "OPEN" | "CLOSED";
+  createdAt: Date;
+  updatedAt: Date;
+  messages: Array<{
+    id: string;
+    content: string;
+    isFromStudent: boolean;
+    createdAt: Date;
+  }>;
+  _count: {
+    messages: number;
+  };
+}
+
+export function AskQuestionPage({ courseId, courseTitle }: AskQuestionPageProps) {
+  const router = useRouter();
+  const [threads, setThreads] = useState<MessageThread[]>([]);
+  const [newQuestion, setNewQuestion] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [expandedThreadId, setExpandedThreadId] = useState<string | null>(null);
+  const [threadMessages, setThreadMessages] = useState<Record<string, any[]>>({});
+
+  useEffect(() => {
+    fetchThreads();
+  }, [courseId]);
+
+  const fetchThreads = async () => {
+    try {
+      setLoading(true);
+      const result = await getMessageThreadsAction({ limit: 100 });
+      // Filter threads that are related to this course (via messages with contentItemId)
+      // For now, we'll show all threads - you can filter by course if needed
+      setThreads(result.items || []);
+    } catch (error) {
+      console.error("Error fetching threads:", error);
+      toast.error("Erreur lors du chargement des questions");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchThreadMessages = async (threadId: string) => {
+    try {
+      const result = await getThreadMessagesAction(threadId);
+      if (result) {
+        setThreadMessages((prev) => ({
+          ...prev,
+          [threadId]: result.messages || [],
+        }));
+      }
+    } catch (error) {
+      console.error("Error fetching thread messages:", error);
+      toast.error("Erreur lors du chargement des messages");
+    }
+  };
+
+  const handleSubmitQuestion = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newQuestion.trim()) return;
+
+    setSubmitting(true);
+    try {
+      const result = await sendMessageAction({
+        content: newQuestion.trim(),
+        contentItemId: null, // General course question
+        courseId: courseId, // Pass courseId for general questions
+      });
+
+      if (result.success) {
+        setNewQuestion("");
+        await fetchThreads();
+        toast.success("Votre question a été envoyée avec succès !");
+      } else {
+        toast.error(result.error || "Erreur lors de l'envoi de la question");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      toast.error("Erreur lors de l'envoi de la question");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleToggleThread = (threadId: string) => {
+    if (expandedThreadId === threadId) {
+      setExpandedThreadId(null);
+    } else {
+      setExpandedThreadId(threadId);
+      if (!threadMessages[threadId]) {
+        fetchThreadMessages(threadId);
+      }
+    }
+  };
+
+  const formatDate = (date: Date | string) => {
+    return format(new Date(date), "d MMMM yyyy, HH:mm", { locale: fr });
+  };
+
+  if (loading) {
+    return (
+      <div className="text-center py-12">
+        <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-primary" />
+        <p className="text-muted-foreground">Chargement de vos questions...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold mb-2">Poser une question</h1>
+        <p className="text-muted-foreground">
+          Obtenez de l'aide personnalisée pour le cours: {courseTitle}
+        </p>
+      </div>
+          {/* Submit New Question */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <MessageCircle className="h-5 w-5 text-primary mr-2" />
+                Poser une nouvelle question
+              </CardTitle>
+              <CardDescription>
+                Décrivez votre question ou votre problème de manière détaillée
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmitQuestion} className="space-y-4">
+                <div>
+                  <RichTextEditor
+                    content={newQuestion}
+                    onChange={setNewQuestion}
+                    placeholder="Décrivez votre question ou votre problème de manière détaillée..."
+                  />
+                </div>
+                <div className="flex justify-end">
+                  <Button
+                    type="submit"
+                    disabled={!newQuestion.trim() || submitting}
+                    className="flex items-center"
+                  >
+                    {submitting ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Envoi en cours...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="h-4 w-4 mr-2" />
+                        Envoyer la question
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+
+          {/* Your Questions */}
+          <div>
+            <h2 className="text-xl font-semibold mb-6 flex items-center">
+              <MessageCircle className="h-5 w-5 text-primary mr-2" />
+              Vos questions ({threads.length})
+            </h2>
+
+            {threads.length === 0 ? (
+              <Card className="text-center py-12">
+                <MessageCircle className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-muted-foreground mb-2">
+                  Aucune question posée
+                </h3>
+                <p className="text-muted-foreground">
+                  Posez votre première question ci-dessus pour obtenir de l'aide !
+                </p>
+              </Card>
+            ) : (
+              <div className="space-y-4">
+                {threads.map((thread) => {
+                  const isExpanded = expandedThreadId === thread.id;
+                  // Use loaded messages if available (chronological order), otherwise use thread messages (reverse them to chronological)
+                  const loadedMessages = threadMessages[thread.id];
+                  const messages = loadedMessages || (thread.messages ? [...thread.messages].reverse() : []);
+                  // Check if thread has any non-student messages (admin/instructor responses)
+                  const hasResponse = thread.messages?.some((msg) => !msg.isFromStudent) || false;
+                  
+                  return (
+                    <Card key={thread.id} className="overflow-hidden">
+                      <CardHeader>
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <CardTitle className="text-lg mb-2">
+                              {thread.subject}
+                            </CardTitle>
+                            <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                              <span>Posée le {formatDate(thread.createdAt)}</span>
+                              <div className="flex items-center">
+                                {hasResponse ? (
+                                  <>
+                                    <CheckCircle2 className="h-4 w-4 mr-1 text-green-500" />
+                                    <span className="text-green-600">Répondue</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Clock className="h-4 w-4 mr-1 text-yellow-500" />
+                                    <span className="text-yellow-600">En attente de réponse</span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <Button
+                          variant="ghost"
+                          onClick={() => handleToggleThread(thread.id)}
+                          className="w-full justify-between"
+                        >
+                          <span>{isExpanded ? "Masquer" : "Voir"} les messages</span>
+                          <span className="text-xs text-muted-foreground">
+                            {thread._count.messages} message(s)
+                          </span>
+                        </Button>
+
+                        {isExpanded && (
+                          <div className="mt-4 space-y-4 border-t pt-4">
+                            {messages.length === 0 ? (
+                              <div className="text-center py-4 text-muted-foreground">
+                                <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
+                                Chargement des messages...
+                              </div>
+                            ) : (
+                              messages.map((msg) => (
+                                <div
+                                  key={msg.id}
+                                  className={`flex ${msg.isFromStudent ? "justify-end" : "justify-start"}`}
+                                >
+                                  <div
+                                    className={`max-w-[80%] rounded-lg p-4 ${
+                                      msg.isFromStudent
+                                        ? "bg-primary text-primary-foreground"
+                                        : "bg-muted"
+                                    }`}
+                                  >
+                                    <div
+                                      className="prose prose-sm max-w-none"
+                                      dangerouslySetInnerHTML={{ __html: msg.content }}
+                                    />
+                                    <p className="text-xs opacity-70 mt-2">
+                                      {formatDate(msg.createdAt)}
+                                    </p>
+                                  </div>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Help Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <FileText className="h-5 w-5 text-primary mr-2" />
+                Comment poser une bonne question ?
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h4 className="font-medium mb-2">✅ À faire :</h4>
+                  <ul className="text-sm text-muted-foreground space-y-1">
+                    <li>• Soyez spécifique et détaillé</li>
+                    <li>• Mentionnez le chapitre ou le concept</li>
+                    <li>• Expliquez ce que vous avez déjà essayé</li>
+                    <li>• Posez une question claire et précise</li>
+                  </ul>
+                </div>
+                <div>
+                  <h4 className="font-medium mb-2">❌ À éviter :</h4>
+                  <ul className="text-sm text-muted-foreground space-y-1">
+                    <li>• Questions trop générales</li>
+                    <li>• Demander les réponses aux exercices</li>
+                    <li>• Questions non liées au cours</li>
+                    <li>• Messages trop courts ou vagues</li>
+                  </ul>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+    </div>
+  );
+}
+
+
