@@ -624,11 +624,7 @@ export async function getPublishedCourseBySlugAction(slug: string) {
       // Get all quizzes for this course
       const quizzes = await prisma.quiz.findMany({
         where: {
-          contentItem: {
-            module: {
-              courseId: course.id,
-            },
-          },
+          courseId: course.id,
         },
         include: {
           questions: {
@@ -644,11 +640,7 @@ export async function getPublishedCourseBySlugAction(slug: string) {
       // Get all learning activities for this course
       const learningActivities = await prisma.learningActivity.findMany({
         where: {
-          contentItem: {
-            module: {
-              courseId: course.id,
-            },
-          },
+          courseId: course.id,
         },
         select: {
           id: true,

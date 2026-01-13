@@ -775,6 +775,7 @@ export async function uploadQuizCSVToModulesAction(
           quiz = await prisma.quiz.create({
             data: {
               contentItemId: contentItem.id,
+              courseId, // Direct course link for efficient queries
               title: `Quiz Chapitre ${chapterNumber}`,
               passingScore: 70,
               timeLimit: 3600, // 60 minutes default

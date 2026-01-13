@@ -106,6 +106,7 @@ export async function uploadQuizCSVAction(
     const quiz = await prisma.quiz.create({
       data: {
         contentItemId: contentItem.id,
+        courseId, // Direct course link for efficient queries
         title: title || (isMockExam ? "Examen simulé" : "Quiz"),
         passingScore: passingScoreInt,
         timeLimit: timeLimitSeconds,

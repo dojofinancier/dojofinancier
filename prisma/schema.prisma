@@ -119,6 +119,8 @@ model Course {
   faqs                      CourseFAQ[]
   smartReviewProgress       SmartReviewProgress[]
   cohorts                   Cohort[] // Cohorts based on this course
+  learningActivities        LearningActivity[]
+  quizzes                   Quiz[]
 
   @@map("courses")
 }
@@ -213,6 +215,7 @@ model Video {
 model Quiz {
   id            String   @id @default(uuid())
   contentItemId String   @unique @map("content_item_id")
+  courseId      String   @map("course_id") // Direct link to course for efficient queries
   title         String
   passingScore  Int      @default(70) @map("passing_score")
   timeLimit     Int?     @map("time_limit") // seconds
@@ -222,10 +225,13 @@ model Quiz {
   updatedAt     DateTime @updatedAt @map("updated_at")
 
   // Relations
+  course      Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
   contentItem ContentItem    @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
   questions   QuizQuestion[]
   attempts    QuizAttempt[]
 
+  @@index([courseId])
+  @@index([courseId, isMockExam]) // For efficient exam queries
   @@map("quizzes")
 }
 
@@ -343,6 +349,7 @@ model CaseStudyAttempt {
 model LearningActivity {
   id             String               @id @default(uuid())
   contentItemId  String               @unique @map("content_item_id")
+  courseId       String               @map("course_id") // Direct link to course for efficient queries
   moduleId       String?              @map("module_id") // Tagged chapter/module
   activityType   LearningActivityType @map("activity_type")
   title          String
@@ -354,12 +361,14 @@ model LearningActivity {
   updatedAt      DateTime             @updatedAt @map("updated_at")
 
   // Relations
-  contentItem      ContentItem               @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
-  module           Module?                   @relation(fields: [moduleId], references: [id], onDelete: SetNull)
-  attempts         LearningActivityAttempt[]
+  course          Course                     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  contentItem     ContentItem                @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+  module          Module?                    @relation(fields: [moduleId], references: [id], onDelete: SetNull)
+  attempts        LearningActivityAttempt[]
   smartReviewItems SmartReviewItem[]
 
   @@index([moduleId])
+  @@index([courseId])
   @@map("learning_activities")
 }
 
@@ -505,6 +514,7 @@ enum FlashcardDifficulty {
 model Note {
   id            String   @id @default(uuid())
   contentItemId String?  @map("content_item_id")
+  courseId      String?  @map("course_id") // Direct link to course for efficient queries (derived from contentItem)
   userId        String?  @map("user_id")
   type          NoteType
   content       String   @db.Text
@@ -512,10 +522,13 @@ model Note {
   updatedAt     DateTime @updatedAt @map("updated_at")
 
   // Relations
+  course      Course?      @relation(fields: [courseId], references: [id], onDelete: Cascade)
   contentItem ContentItem? @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
   user        User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([contentItemId, type, userId]) // Ensures one admin note per content item, unique student notes
+  @@index([courseId])
+  @@index([userId, courseId]) // For student notes by course
   @@map("notes")
 }
 

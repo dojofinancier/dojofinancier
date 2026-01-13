@@ -20,11 +20,7 @@ export async function getAvailableExamsAction(courseId: string) {
 
     const exams = await prisma.quiz.findMany({
       where: {
-        contentItem: {
-          module: {
-            courseId: courseId,
-          },
-        },
+        courseId,
         isMockExam: true,
       },
       include: {

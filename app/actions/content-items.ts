@@ -180,6 +180,22 @@ export async function createContentItemAction(
       ...contentItemData,
     };
 
+    // Get courseId from module for nested creates (Quiz, Note)
+    let courseIdForNested: string | undefined;
+    if (validatedContentItem.contentType === "QUIZ" || validatedContentItem.contentType === "NOTE") {
+      const module = await prisma.module.findUnique({
+        where: { id: validatedContentItem.moduleId },
+        select: { courseId: true },
+      });
+      if (!module) {
+        return {
+          success: false,
+          error: "Module introuvable",
+        };
+      }
+      courseIdForNested = module.courseId;
+    }
+
     // Add nested relations only for specific content types
     if (validatedContentItem.contentType === "VIDEO" && video) {
       createData.video = {
@@ -187,13 +203,17 @@ export async function createContentItemAction(
       };
     } else if (validatedContentItem.contentType === "QUIZ" && quiz) {
       createData.quiz = {
-        create: quizSchema.parse(quiz),
+        create: {
+          ...quizSchema.parse(quiz),
+          courseId: courseIdForNested!, // Direct course link for efficient queries
+        },
       };
     } else if (validatedContentItem.contentType === "NOTE" && note) {
       createData.notes = {
         create: {
           type: NoteType.ADMIN,
           content: noteSchema.parse(note).content,
+          courseId: courseIdForNested, // Direct course link for efficient queries (nullable)
         },
       };
     }

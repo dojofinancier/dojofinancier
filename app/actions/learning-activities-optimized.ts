@@ -57,28 +57,13 @@ export async function getStudentLearningActivitiesWithAttemptsAction(
       };
     }
 
-    // Get module IDs (cached)
-    const moduleIds = await getCachedCourseModuleIds(courseId);
-
-    // Activities can be linked via direct moduleId OR via contentItem.moduleId
-    // Handle both cases to ensure we get all activities
+    // Use direct courseId field for efficient querying
     const where: any = {
-      OR: [
-        { moduleId: { in: moduleIds } }, // Direct moduleId
-        { 
-          contentItem: {
-            moduleId: { in: moduleIds }
-          }
-        }, // Via contentItem
-      ],
+      courseId,
     };
 
     if (moduleId) {
-      // If filtering by specific module, check both direct and via contentItem
-      where.OR = [
-        { moduleId: moduleId },
-        { contentItem: { moduleId: moduleId } },
-      ];
+      where.moduleId = moduleId;
     }
 
     // Load activities first

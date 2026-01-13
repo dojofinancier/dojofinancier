@@ -665,6 +665,7 @@ export async function importPracticeExamFromCSVAction(
       exam = await prisma.quiz.create({
         data: {
           contentItemId: contentItem.id,
+          courseId, // Direct course link for efficient queries
           title: examTitle || `Examen pratique - ${new Date().toLocaleDateString()}`,
           passingScore: 70,
           timeLimit: 120 * 60, // 120 minutes in seconds

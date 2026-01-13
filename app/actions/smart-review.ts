@@ -177,6 +177,7 @@ export async function getSmartReviewStatsAction(
     const activityCounts = await prisma.learningActivity.groupBy({
       by: ["moduleId"],
       where: {
+        courseId,
         moduleId: { in: completedModuleIds },
       },
       _count: true,
@@ -244,6 +245,7 @@ export async function getNextReviewItemAction(
     // Get all activities from completed modules
     const activities = await prisma.learningActivity.findMany({
       where: {
+        courseId,
         moduleId: { in: completedModuleIds },
       },
       include: {

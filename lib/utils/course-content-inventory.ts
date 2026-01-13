@@ -96,16 +96,11 @@ export async function getCourseContentInventory(
     where: { courseId },
   });
 
-  // Get mock exams (quizzes with isMockExam = true) - Quiz doesn't have courseId, 
-  // so we need to query through ContentItem -> Module
+  // Get mock exams (quizzes with isMockExam = true)
   const mockExams = await prisma.quiz.findMany({
     where: {
+      courseId,
       isMockExam: true,
-      contentItem: {
-        module: {
-          courseId: courseId,
-        },
-      },
     },
   });
 

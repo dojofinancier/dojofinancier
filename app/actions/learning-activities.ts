@@ -69,17 +69,9 @@ export async function getLearningActivitiesAction(
     const { requireAuth } = await import("@/lib/auth/require-auth");
     await requireAuth();
 
-    // Get all modules for the course to filter activities
-    const modules = await prisma.module.findMany({
-      where: { courseId },
-      select: { id: true },
-    });
-    const moduleIds = modules.map((m) => m.id);
-
+    // Use direct courseId field for efficient querying
     const where: any = {
-      contentItem: {
-        moduleId: { in: moduleIds },
-      },
+      courseId,
     };
 
     if (moduleId) {
@@ -227,9 +219,29 @@ export async function createLearningActivityAction(
     };
     const finalTitle = validatedData.title || activityTypeLabels[validatedData.activityType] || "Activité";
 
+    // Get courseId from contentItem -> module -> course
+    const contentItem = await prisma.contentItem.findUnique({
+      where: { id: validatedData.contentItemId },
+      select: {
+        module: {
+          select: {
+            courseId: true,
+          },
+        },
+      },
+    });
+
+    if (!contentItem?.module?.courseId) {
+      return {
+        success: false,
+        error: "Content item must be associated with a module that belongs to a course",
+      };
+    }
+
     const activity = await prisma.learningActivity.create({
       data: {
         contentItemId: validatedData.contentItemId,
+        courseId: contentItem.module.courseId,
         moduleId: validatedData.moduleId || null,
         activityType: validatedData.activityType,
         title: finalTitle,
