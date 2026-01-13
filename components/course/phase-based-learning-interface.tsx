@@ -24,9 +24,6 @@ import { ActivitiesTool } from "./tools/activities-tool";
 import { ExamsTool } from "./tools/exams-tool";
 import { QuestionBankTool } from "./tools/question-bank-tool";
 import { CaseStudiesTool } from "./tools/case-studies-tool";
-import { ExamPlayer } from "./exam-player";
-import { CaseStudyPlayer } from "./case-study-player";
-import { StudentAnalyticsDashboard } from "./student-analytics-dashboard";
 import { AskQuestionPage } from "./ask-question-page";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -37,6 +34,11 @@ const Phase1Learn = lazy(() => import("./phase1-learn").then(m => ({ default: m.
 const Phase2Review = lazy(() => import("./phase2-review").then(m => ({ default: m.Phase2Review })));
 const Phase3Practice = lazy(() => import("./phase3-practice").then(m => ({ default: m.Phase3Practice })));
 
+// Lazy load heavy components that are not always needed (uses recharts, complex state)
+const ExamPlayer = lazy(() => import("./exam-player").then(m => ({ default: m.ExamPlayer })));
+const CaseStudyPlayer = lazy(() => import("./case-study-player").then(m => ({ default: m.CaseStudyPlayer })));
+const StudentAnalyticsDashboard = lazy(() => import("./student-analytics-dashboard").then(m => ({ default: m.StudentAnalyticsDashboard })));
+
 // Skeleton loader for phase components
 const PhaseSkeleton = () => (
   <div className="space-y-4">
@@ -44,6 +46,18 @@ const PhaseSkeleton = () => (
     <Skeleton className="h-32 w-full" />
     <Skeleton className="h-32 w-full" />
     <Skeleton className="h-32 w-full" />
+  </div>
+);
+
+// Skeleton loader for exam/case study players
+const PlayerSkeleton = () => (
+  <div className="space-y-4 p-6">
+    <Skeleton className="h-10 w-1/2" />
+    <Skeleton className="h-64 w-full" />
+    <div className="flex gap-4">
+      <Skeleton className="h-10 w-24" />
+      <Skeleton className="h-10 w-24" />
+    </div>
   </div>
 );
 
@@ -379,12 +393,16 @@ export function PhaseBasedLearningInterface({ course, initialSettings }: PhaseBa
           {activePhase === "tools" && (
             <div>
               {selectedExamId ? (
-                <ExamPlayer examId={selectedExamId} onExit={handleExamExit} />
+                <Suspense fallback={<PlayerSkeleton />}>
+                  <ExamPlayer examId={selectedExamId} onExit={handleExamExit} />
+                </Suspense>
               ) : selectedCaseStudyId ? (
-                <CaseStudyPlayer
-                  caseStudyId={selectedCaseStudyId}
-                  onExit={() => setSelectedCaseStudyId(null)}
-                />
+                <Suspense fallback={<PlayerSkeleton />}>
+                  <CaseStudyPlayer
+                    caseStudyId={selectedCaseStudyId}
+                    onExit={() => setSelectedCaseStudyId(null)}
+                  />
+                </Suspense>
               ) : selectedTool ? (
                 <>
                   {selectedTool === "videos" && (
@@ -429,7 +447,9 @@ export function PhaseBasedLearningInterface({ course, initialSettings }: PhaseBa
           {activePhase === "progress" && (
             <div>
               <h1 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">Progrès et statistiques</h1>
-              <StudentAnalyticsDashboard courseId={course.id} />
+              <Suspense fallback={<PhaseSkeleton />}>
+                <StudentAnalyticsDashboard courseId={course.id} />
+              </Suspense>
             </div>
           )}
           {activePhase === "question" && (

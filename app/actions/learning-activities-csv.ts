@@ -392,9 +392,10 @@ export async function uploadLearningActivitiesCSVAction(
             continue;
         }
 
-        // Create learning activity
+        // Create learning activity - pass courseId directly to avoid lookup issues
         const result = await createLearningActivityAction({
           moduleId,
+          courseId, // Pass courseId directly from the upload context
           activityType: activityType as any,
           title: undefined, // Will be auto-generated
           instructions,

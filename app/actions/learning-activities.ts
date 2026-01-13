@@ -8,6 +8,7 @@ import { z } from "zod";
 
 const learningActivitySchema = z.object({
   moduleId: z.string().optional().nullable(),
+  courseId: z.string().optional(), // Direct courseId - preferred when available from caller
   activityType: z.enum([
     "SHORT_ANSWER",
     "FILL_IN_BLANK",
@@ -219,29 +220,37 @@ export async function createLearningActivityAction(
     };
     const finalTitle = validatedData.title || activityTypeLabels[validatedData.activityType] || "Activité";
 
-    // Get courseId from contentItem -> module -> course
-    const contentItem = await prisma.contentItem.findUnique({
-      where: { id: validatedData.contentItemId },
-      select: {
-        module: {
-          select: {
-            courseId: true,
+    // Get courseId - prefer direct courseId if provided, otherwise derive from contentItem
+    let finalCourseId = validatedData.courseId;
+    
+    if (!finalCourseId) {
+      // Fall back to deriving courseId from contentItem -> module -> course
+      const contentItem = await prisma.contentItem.findUnique({
+        where: { id: validatedData.contentItemId },
+        select: {
+          module: {
+            select: {
+              courseId: true,
+            },
           },
         },
-      },
-    });
+      });
 
-    if (!contentItem?.module?.courseId) {
-      return {
-        success: false,
-        error: "Content item must be associated with a module that belongs to a course",
-      };
+      if (!contentItem?.module?.courseId) {
+        console.error("createLearningActivityAction: Failed to find courseId for contentItem:", validatedData.contentItemId);
+        return {
+          success: false,
+          error: "Content item must be associated with a module that belongs to a course",
+        };
+      }
+      
+      finalCourseId = contentItem.module.courseId;
     }
 
     const activity = await prisma.learningActivity.create({
       data: {
         contentItemId: validatedData.contentItemId,
-        courseId: contentItem.module.courseId,
+        courseId: finalCourseId,
         moduleId: validatedData.moduleId || null,
         activityType: validatedData.activityType,
         title: finalTitle,

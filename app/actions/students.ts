@@ -84,51 +84,102 @@ export async function getStudentsAction(params: {
 
 /**
  * Get student details (admin only)
+ * Optimized: Fetches data in parallel with smaller payloads
  */
 export async function getStudentDetailsAction(studentId: string) {
   try {
     await requireAdmin();
 
-    const student = await prisma.user.findUnique({
-      where: { id: studentId, role: "STUDENT" },
-      include: {
-        enrollments: {
-          include: {
-            course: {
-              include: {
-                category: true,
+    // Fetch all data in parallel for better performance
+    const [student, enrollments, subscriptions, recentProgress] = await Promise.all([
+      // Student basic info
+      prisma.user.findUnique({
+        where: { id: studentId, role: "STUDENT" },
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          phone: true,
+          createdAt: true,
+          updatedAt: true,
+          suspendedAt: true,
+          role: true,
+        },
+      }),
+      // Enrollments with course info
+      prisma.enrollment.findMany({
+        where: { userId: studentId },
+        orderBy: { purchaseDate: "desc" },
+        select: {
+          id: true,
+          purchaseDate: true,
+          expiresAt: true,
+          orderNumber: true,
+          course: {
+            select: {
+              id: true,
+              title: true,
+              code: true,
+              category: {
+                select: { id: true, name: true },
               },
             },
           },
-          orderBy: { purchaseDate: "desc" },
         },
-        subscriptions: {
-          orderBy: { createdAt: "desc" },
+      }),
+      // Subscriptions
+      prisma.subscription.findMany({
+        where: { userId: studentId },
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          status: true,
+          currentPeriodEnd: true,
+          createdAt: true,
         },
-        progressTracking: {
-          include: {
-            contentItem: {
-              include: {
-                module: {
-                  include: {
-                    course: {
-                      select: {
-                        id: true,
-                        title: true,
-                      },
-                    },
+      }),
+      // Recent progress (limited fields)
+      prisma.progressTracking.findMany({
+        where: { userId: studentId },
+        orderBy: { lastAccessedAt: "desc" },
+        take: 50,
+        select: {
+          id: true,
+          timeSpent: true,
+          completedAt: true,
+          lastAccessedAt: true,
+          contentItem: {
+            select: {
+              id: true,
+              title: true,
+              contentType: true,
+              module: {
+                select: {
+                  id: true,
+                  title: true,
+                  course: {
+                    select: { id: true, title: true },
                   },
                 },
               },
             },
           },
-          orderBy: { lastAccessedAt: "desc" },
-          take: 50, // Recent activity
         },
-      },
-    });
+      }),
+    ]);
 
-    return student;
+    if (!student) {
+      return null;
+    }
+
+    // Return combined data in the expected format
+    return {
+      ...student,
+      enrollments,
+      subscriptions,
+      progressTracking: recentProgress,
+    };
   } catch (error) {
     await logServerError({
       errorMessage: `Failed to get student details: ${error instanceof Error ? error.message : "Unknown error"}`,

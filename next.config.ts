@@ -30,13 +30,14 @@ const nextConfig: NextConfig = {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              // Google Analytics (gtag) + Stripe
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://js.stripe.com https://m.stripe.network https://*.stripe.com",
-              "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://*.stripe.com",
-              // Allow GA beacons + Stripe + Supabase
-              "connect-src 'self' https://www.google-analytics.com https://region1.google-analytics.com https://*.stripe.com https://*.stripe.network https://*.supabase.co wss://*.supabase.co",
-              // GA may load tracking pixels
-              "img-src 'self' data: blob: https://*.stripe.com https://www.google-analytics.com",
+              // Google Analytics + Google Ads + Tag Manager + Stripe
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://googleads.g.doubleclick.net https://www.googleadservices.com https://js.stripe.com https://m.stripe.network https://*.stripe.com",
+              // Frames: Stripe + Google Tag Manager
+              "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://*.stripe.com https://www.googletagmanager.com https://td.doubleclick.net",
+              // Connections: GA + Google Ads + Stripe + Supabase
+              "connect-src 'self' https://www.google-analytics.com https://region1.google-analytics.com https://www.google.com https://googleads.g.doubleclick.net https://stats.g.doubleclick.net https://*.stripe.com https://*.stripe.network https://*.supabase.co wss://*.supabase.co",
+              // Images: GA tracking pixels + Google Ads + Stripe
+              "img-src 'self' data: blob: https://*.stripe.com https://www.google-analytics.com https://www.google.com https://googleads.g.doubleclick.net https://www.googleadservices.com https://www.google.ca https://www.google.fr",
               "style-src 'self' 'unsafe-inline'",
               "font-src 'self' data:",
             ].join("; "),

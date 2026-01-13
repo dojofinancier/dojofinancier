@@ -4,8 +4,9 @@ import { CourseCatalog } from "@/components/courses/course-catalog";
 import { CohortCatalog } from "@/components/cohorts/cohort-catalog";
 import { Suspense } from "react";
 
-// Note: Caching is handled automatically by Next.js 16 with cacheComponents enabled
-// The page will be cached and revalidated based on Next.js defaults
+// Cache configuration for performance
+// Revalidate the page every hour - courses/cohorts don't change frequently
+export const revalidate = 3600; // 1 hour in seconds
 
 async function CoursesSection() {
   const courses = await getPublishedCoursesAction({});
