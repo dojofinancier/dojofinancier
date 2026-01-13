@@ -121,6 +121,7 @@ model Course {
   cohorts                   Cohort[] // Cohorts based on this course
   learningActivities        LearningActivity[]
   quizzes                   Quiz[]
+  notes                     Note[]
 
   @@map("courses")
 }
