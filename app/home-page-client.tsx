@@ -357,6 +357,7 @@ function HomeFooter() {
               </h3>
               <ul className="space-y-3">
                 <li><Link href="/a-propos" className="text-sm font-mono hover:text-primary transition-colors">À propos</Link></li>
+                <li><Link href="/article" className="text-sm font-mono hover:text-primary transition-colors">Publications</Link></li>
                 <li><Link href="/contact" className="text-sm font-mono hover:text-primary transition-colors">Contact</Link></li>
               </ul>
             </div>

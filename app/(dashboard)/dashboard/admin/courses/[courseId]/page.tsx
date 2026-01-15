@@ -86,6 +86,8 @@ async function CourseDetailContent({ params }: CourseDetailPageProps) {
               recommendedStudyHoursMin: serializedCourse.recommendedStudyHoursMin ?? undefined,
               recommendedStudyHoursMax: serializedCourse.recommendedStudyHoursMax ?? undefined,
               componentVisibility: serializedCourse.componentVisibility as any,
+              heroImages: Array.isArray((course as any).heroImages) ? (course as any).heroImages : [],
+              displayOrder: (course as any).displayOrder ?? undefined,
             }}
           />
         </TabsContent>

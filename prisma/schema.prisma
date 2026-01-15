@@ -764,7 +764,7 @@ enum AppointmentStatus {
 model BlogArticle {
   id                  String     @id @default(uuid())
   slug                String     @unique
-  course              String     // Required field in seo_articles
+  course              String?    // Optional field in seo_articles
   sourceModule        Int?       @map("source_module")
   title               String
   h1                  String?
