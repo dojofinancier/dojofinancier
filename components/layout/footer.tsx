@@ -33,6 +33,14 @@ export function Footer() {
             </Link>
             <span className="text-muted-foreground/50">•</span>
             <Link 
+              href="/article" 
+              prefetch={true}
+              className="hover:text-foreground transition-colors underline-offset-4 hover:underline"
+            >
+              Articles
+            </Link>
+            <span className="text-muted-foreground/50">•</span>
+            <Link 
               href="/politique-de-confidentialite" 
               prefetch={true}
               className="hover:text-foreground transition-colors underline-offset-4 hover:underline"

@@ -135,7 +135,7 @@ export async function updateCourseAction(
     console.log("Updating course with data:", { courseId, validatedData });
 
     // Separate categoryId from other fields and handle it as a relation
-    const { categoryId, code, appointmentHourlyRate, orientationVideoUrl, heroImages, ...updateData } = validatedData;
+    const { categoryId, code, appointmentHourlyRate, orientationVideoUrl, heroImages, displayOrder, ...updateData } = validatedData;
     
     const prismaData: any = { ...updateData };
     
@@ -167,6 +167,11 @@ export async function updateCourseAction(
     // Handle orientationVideoUrl - explicitly set null if provided (even if null)
     if (orientationVideoUrl !== undefined) {
       prismaData.orientationVideoUrl = orientationVideoUrl;
+    }
+    
+    // Handle displayOrder - explicitly set null if provided (even if null)
+    if (displayOrder !== undefined) {
+      prismaData.displayOrder = displayOrder;
     }
     
     // Handle categoryId using the relation syntax

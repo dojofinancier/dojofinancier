@@ -375,6 +375,190 @@ div[id*="card-element"] {
   min-height: 40px !important;
 }
 
+/* Article Content Styles - for rendered markdown articles */
+.prose {
+  color: hsl(0 0% 20%);
+  max-width: 65ch;
+}
+
+.prose h1 {
+  font-size: 1.875rem !important;
+  font-weight: 700 !important;
+  margin-top: 2rem !important;
+  margin-bottom: 1rem !important;
+  line-height: 1.2 !important;
+  color: hsl(0 0% 9%) !important;
+}
+
+.prose h2 {
+  font-size: 1.5rem !important;
+  font-weight: 700 !important;
+  margin-top: 2rem !important;
+  margin-bottom: 1rem !important;
+  line-height: 1.3 !important;
+  color: hsl(0 0% 9%) !important;
+}
+
+.prose h3 {
+  font-size: 1.25rem !important;
+  font-weight: 600 !important;
+  margin-top: 1.5rem !important;
+  margin-bottom: 0.75rem !important;
+  line-height: 1.4 !important;
+  color: hsl(0 0% 9%) !important;
+}
+
+.prose p {
+  margin-top: 0 !important;
+  margin-bottom: 1rem !important;
+  line-height: 1.75 !important;
+  color: hsl(0 0% 27%) !important;
+}
+
+.prose ul {
+  list-style-type: disc !important;
+  margin-left: 1.5rem !important;
+  margin-top: 0 !important;
+  margin-bottom: 1rem !important;
+  padding-left: 0 !important;
+}
+
+.prose ol {
+  list-style-type: decimal !important;
+  margin-left: 1.5rem !important;
+  margin-top: 0 !important;
+  margin-bottom: 1rem !important;
+  padding-left: 0 !important;
+}
+
+.prose li {
+  margin-top: 0.5rem !important;
+  margin-bottom: 0.5rem !important;
+  color: hsl(0 0% 27%) !important;
+}
+
+.prose strong {
+  font-weight: 600 !important;
+  color: hsl(0 0% 9%) !important;
+}
+
+.prose a {
+  color: hsl(149.9516 168.4095% 24.2653%) !important;
+  text-decoration: none !important;
+}
+
+.prose a:hover {
+  text-decoration: underline !important;
+}
+
+.prose blockquote {
+  border-left: 4px solid hsl(0 0% 80%) !important;
+  padding-left: 1rem !important;
+  font-style: italic !important;
+  margin: 1.5rem 0 !important;
+  color: hsl(0 0% 40%) !important;
+}
+
+.prose code {
+  background-color: hsl(0 0% 95%) !important;
+  padding: 0.125rem 0.25rem !important;
+  border-radius: 0.25rem !important;
+  font-size: 0.875rem !important;
+  font-family: var(--font-mono) !important;
+}
+
+.prose pre {
+  background-color: hsl(0 0% 9%) !important;
+  color: hsl(0 0% 90%) !important;
+  padding: 1rem !important;
+  border-radius: 0.5rem !important;
+  overflow-x: auto !important;
+  margin: 1.5rem 0 !important;
+}
+
+.prose pre code {
+  background-color: transparent !important;
+  padding: 0 !important;
+  color: inherit !important;
+}
+
+.prose img {
+  border-radius: 0.5rem !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+  margin: 1.5rem 0 !important;
+  max-width: 100% !important;
+  height: auto !important;
+}
+
+.prose table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  margin: 1.5rem 0 !important;
+}
+
+.prose th {
+  border: 1px solid hsl(0 0% 80%) !important;
+  background-color: hsl(0 0% 96%) !important;
+  padding: 0.5rem !important;
+  text-align: left !important;
+  font-weight: 600 !important;
+}
+
+.prose td {
+  border: 1px solid hsl(0 0% 80%) !important;
+  padding: 0.5rem !important;
+}
+
+.prose-lg {
+  font-size: 1.125rem !important;
+  line-height: 1.75 !important;
+}
+
+.prose-lg h1 {
+  font-size: 2.25rem !important;
+}
+
+.prose-lg h2 {
+  font-size: 1.875rem !important;
+}
+
+.prose-lg h3 {
+  font-size: 1.5rem !important;
+}
+
+.prose-lg p {
+  margin-bottom: 1.25rem !important;
+}
+
+.prose-lg ul,
+.prose-lg ol {
+  margin-bottom: 1.25rem !important;
+}
+
+.prose-lg li {
+  margin-bottom: 0.625rem !important;
+}
+
+.prose-lg blockquote {
+  margin: 2rem 0 !important;
+}
+
+.prose-lg pre {
+  margin: 2rem 0 !important;
+}
+
+.prose-lg img {
+  margin: 2rem 0 !important;
+}
+
+.prose-lg table {
+  margin: 2rem 0 !important;
+}
+
+.prose.max-w-none {
+  max-width: none !important;
+}
+
 /* NOTE:
    We avoid global `:has([data-transparent-nav])` rules because Next.js can keep
    previous route segments mounted/cached during client navigation, which can

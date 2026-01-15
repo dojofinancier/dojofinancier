@@ -51,7 +51,7 @@ model User {
   dailyPlanEntries         DailyPlanEntry[]
   learningActivityAttempts LearningActivityAttempt[]
   questionBankAttempts     QuestionBankAttempt[]
-  caseStudyAttempts       CaseStudyAttempt[]
+  caseStudyAttempts        CaseStudyAttempt[]
 
   @@map("users")
 }
@@ -281,20 +281,20 @@ model QuizAttempt {
 
 // Case Studies
 model CaseStudy {
-  id            String   @id @default(uuid())
-  courseId      String   @map("course_id")
-  caseId        String   @unique @map("case_id") // Unique identifier from JSON (e.g., "negp_cas_20260110_213403")
-  caseNumber    Int      @map("case_number")
-  title         String
-  theme         String?
-  narrative     Json     // Full narrative structure from JSON
-  chapters      Json     // Array of chapter numbers [4, 5, 6]
-  passingScore  Int      @default(70) @map("passing_score")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  id           String   @id @default(uuid())
+  courseId     String   @map("course_id")
+  caseId       String   @unique @map("case_id") // Unique identifier from JSON (e.g., "negp_cas_20260110_213403")
+  caseNumber   Int      @map("case_number")
+  title        String
+  theme        String?
+  narrative    Json // Full narrative structure from JSON
+  chapters     Json // Array of chapter numbers [4, 5, 6]
+  passingScore Int      @default(70) @map("passing_score")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
   // Relations
-  course   Course            @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  course    Course              @relation(fields: [courseId], references: [id], onDelete: Cascade)
   questions CaseStudyQuestion[]
   attempts  CaseStudyAttempt[]
 
@@ -304,21 +304,21 @@ model CaseStudy {
 
 // Case Study Questions (always 10 questions per case)
 model CaseStudyQuestion {
-  id            String   @id @default(uuid())
-  caseStudyId   String   @map("case_study_id")
-  questionId    String   @map("question_id") // From JSON (e.g., "Q1", "Q2")
-  order         Int      // 1-10
-  question      String   @db.Text
-  options       Json     // { "A": "...", "B": "...", "C": "...", "D": "..." }
-  correctAnswer String   @map("correct_answer") // "A", "B", "C", or "D"
-  explanation   String?  @db.Text
-  questionType  String?  @map("question_type") // "comprehension", "calculation", "regulatory", "strategy"
-  difficulty    String?  // "easy", "medium", "hard"
-  chapterReference Json? @map("chapter_reference") // Array of chapter numbers
-  caseReference String?  @map("case_reference") @db.Text // Reference to section in case
-  calculationSteps String? @map("calculation_steps") @db.Text
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  id               String   @id @default(uuid())
+  caseStudyId      String   @map("case_study_id")
+  questionId       String   @map("question_id") // From JSON (e.g., "Q1", "Q2")
+  order            Int // 1-10
+  question         String   @db.Text
+  options          Json // { "A": "...", "B": "...", "C": "...", "D": "..." }
+  correctAnswer    String   @map("correct_answer") // "A", "B", "C", or "D"
+  explanation      String?  @db.Text
+  questionType     String?  @map("question_type") // "comprehension", "calculation", "regulatory", "strategy"
+  difficulty       String? // "easy", "medium", "hard"
+  chapterReference Json?    @map("chapter_reference") // Array of chapter numbers
+  caseReference    String?  @map("case_reference") @db.Text // Reference to section in case
+  calculationSteps String?  @map("calculation_steps") @db.Text
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
 
   // Relations
   caseStudy CaseStudy @relation(fields: [caseStudyId], references: [id], onDelete: Cascade)
@@ -329,14 +329,14 @@ model CaseStudyQuestion {
 
 // Case Study Attempts
 model CaseStudyAttempt {
-  id          String   @id @default(uuid())
-  userId      String   @map("user_id")
-  caseStudyId String   @map("case_study_id")
-  score       Int      // Percentage score
-  passed      Boolean
-  answers     Json     // { questionId: answer }
-  answersRevealed Boolean @default(false) @map("answers_revealed") // Whether user has revealed answers
-  completedAt DateTime @default(now()) @map("completed_at")
+  id              String   @id @default(uuid())
+  userId          String   @map("user_id")
+  caseStudyId     String   @map("case_study_id")
+  score           Int // Percentage score
+  passed          Boolean
+  answers         Json // { questionId: answer }
+  answersRevealed Boolean  @default(false) @map("answers_revealed") // Whether user has revealed answers
+  completedAt     DateTime @default(now()) @map("completed_at")
 
   // Relations
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -362,10 +362,10 @@ model LearningActivity {
   updatedAt      DateTime             @updatedAt @map("updated_at")
 
   // Relations
-  course          Course                     @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  contentItem     ContentItem                @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
-  module          Module?                    @relation(fields: [moduleId], references: [id], onDelete: SetNull)
-  attempts        LearningActivityAttempt[]
+  course           Course                    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  contentItem      ContentItem               @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+  module           Module?                   @relation(fields: [moduleId], references: [id], onDelete: SetNull)
+  attempts         LearningActivityAttempt[]
   smartReviewItems SmartReviewItem[]
 
   @@index([moduleId])
@@ -760,36 +760,53 @@ enum AppointmentStatus {
   CANCELLED
 }
 
-// Blog Articles
+// Blog Articles (mapped to seo_articles table)
 model BlogArticle {
-  id              String     @id @default(uuid())
-  title           String
-  slug            String     @unique
-  category        String?
-  content         String     @db.Text
-  h1              String?
-  metaDescription String?    @map("meta_description")
-  excerpt         String?    @db.Text
-  tags            String[]   @default([])
-  keywords        String[]   @default([])
-  internalLinks   Json?      @map("internal_links") // Array of { url: string, anchor: string }
-  externalLinks   Json?      @map("external_links") // Array of { url: string, anchor: string }
-  relatedArticles String[]   @default([]) @map("related_articles") // Array of article slugs
-  status          BlogStatus @default(DRAFT_OUTLINE)
-  publishedAt     DateTime?  @map("published_at")
-  createdAt       DateTime   @default(now()) @map("created_at")
-  updatedAt       DateTime   @updatedAt @map("updated_at")
+  id                  String     @id @default(uuid())
+  slug                String     @unique
+  course              String     // Required field in seo_articles
+  sourceModule        Int?       @map("source_module")
+  title               String
+  h1                  String?
+  content             String?    @db.Text
+  excerpt             String?    @db.Text
+  metaDescription     String?    @map("meta_description")
+  targetKeyword       String?    @map("target_keyword")
+  secondaryKeywords   String[]   @default([]) @map("secondary_keywords")
+  tags                String[]   @default([])
+  category            String?
+  wordCount           Int?       @map("word_count")
+  targetMarket        String     @map("target_market") // Text field: "professionals", "investors", "entrepreneurs", "general"
+  status              String?    // Text field in seo_articles
+  validationScore     Float?     @map("validation_score")
+  validationFeedback  String?    @map("validation_feedback")
+  published           Boolean?   @default(false)
+  isIndexable         Boolean?   @default(true) @map("is_indexable")
+  publishedAt         DateTime?  @map("published_at")
+  createdAt           DateTime?  @default(now()) @map("created_at")
+  updatedAt           DateTime?  @updatedAt @map("updated_at")
+  generationCost      Float?     @map("generation_cost")
+  tokensUsed          Json?      @map("tokens_used")
+  
+  // Semantic search: Store article embedding (pgvector)
+  embedding           Unsupported("vector(1536)")? // For text-embedding-3-small (1536 dimensions)
+  
+  // Optional: Track internal links metadata (for analytics)
+  internalLinksMetadata Json?    @map("internal_links_metadata")
+  // Format: [{ "targetSlug": "article-slug", "anchorText": "keyword", "context": "sentence", "similarity": 0.85 }]
 
-  @@map("blog_articles")
+  @@index([status, publishedAt])
+  @@index([targetMarket])
+  @@index([category])
+  @@index([published])
+  @@index([slug])
+  @@index([course])
+  @@map("seo_articles")
 }
 
-enum BlogStatus {
-  DRAFT_OUTLINE
-  DRAFT
-  CONTENT_GENERATED
-  LINKS_ADDED
-  PUBLISHED
-}
+// Note: target_market is stored as text in seo_articles table
+// Values: "professionals", "investors", "entrepreneurs", "general"
+// Status is also stored as text in seo_articles table
 
 // Coupons
 model Coupon {
