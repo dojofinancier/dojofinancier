@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { logServerError } from "./error-logs";
+import { logServerError } from "@/lib/utils/error-logging";
 
 const waitlistSchema = z.object({
   email: z.string().email("Email invalide"),
