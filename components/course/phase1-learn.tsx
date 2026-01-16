@@ -69,6 +69,7 @@ export function Phase1Learn({ courseId, course, settings, onModuleSelect }: Phas
         courseId={courseId}
         moduleId={selectedModuleId}
         onBack={handleBack}
+        componentVisibility={course?.componentVisibility as any}
       />
     );
   }

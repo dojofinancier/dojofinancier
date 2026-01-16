@@ -4,6 +4,8 @@ import { CohortProductPage } from "@/components/cohorts/cohort-product-page";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
 import { prisma } from "@/lib/prisma";
 import { Suspense } from "react";
+import { BrutalistNavbar } from "@/components/layout/brutalist-navbar";
+import { BrutalistNavbarClient } from "@/components/layout/brutalist-navbar-client";
 
 interface CohortDetailPageProps {
   params: Promise<{ slug: string }>;
@@ -40,15 +42,22 @@ async function CohortDetailContent({ params }: CohortDetailPageProps) {
 
 export default function CohortDetailPage(props: CohortDetailPageProps) {
   return (
-    <Suspense
-      fallback={
-        <div className="container mx-auto p-6">
-          <div className="text-muted-foreground">Chargement...</div>
-        </div>
-      }
-    >
-      <CohortDetailContent {...props} />
-    </Suspense>
+    <>
+      <Suspense
+        fallback={<BrutalistNavbarClient user={undefined} variant="transparent" dashboardUrl={null} />}
+      >
+        <BrutalistNavbar variant="transparent" />
+      </Suspense>
+      <Suspense
+        fallback={
+          <div className="container mx-auto p-6">
+            <div className="text-muted-foreground">Chargement...</div>
+          </div>
+        }
+      >
+        <CohortDetailContent {...props} />
+      </Suspense>
+    </>
   );
 }
 

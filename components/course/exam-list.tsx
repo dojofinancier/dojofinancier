@@ -64,8 +64,9 @@ export function ExamList({ courseId, onStartExam }: ExamListProps) {
       {exams.map((exam) => (
         <Card key={exam.id}>
           <CardHeader>
-            <div className="flex items-start justify-between">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div className="flex-1">
+
                 <CardTitle className="text-lg">{exam.title}</CardTitle>
                 {exam.examFormat && (
                   <CardDescription className="mt-2">{exam.examFormat}</CardDescription>
@@ -103,10 +104,11 @@ export function ExamList({ courseId, onStartExam }: ExamListProps) {
                   </div>
                 )}
               </div>
-              <Button onClick={() => onStartExam(exam.id)}>
+              <Button className="w-full sm:w-auto" onClick={() => onStartExam(exam.id)}>
                 <Play className="h-4 w-4 mr-2" />
                 {exam.latestAttempt ? "Reprendre" : "Commencer"}
               </Button>
+
             </div>
           </CardHeader>
         </Card>

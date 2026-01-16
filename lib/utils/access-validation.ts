@@ -42,6 +42,7 @@ const getCachedCourseInfo = unstable_cache(
 /**
  * Validates if a user has access to a course
  * Checks: enrollment expiration, subscription status, course published status, user suspension
+ * Also checks cohort enrollment if user is enrolled in a cohort linked to this course
  * Uses cached course metadata for performance (enrollment/subscription status is NOT cached)
  */
 export async function validateCourseAccess(
@@ -76,6 +77,32 @@ export async function validateCourseAccess(
       return {
         hasAccess: false,
         reason: "Ce cours n'est pas encore publié",
+      };
+    }
+
+    // Check cohort enrollment first (cohorts can grant access to base course content)
+    const cohortEnrollment = await prisma.cohortEnrollment.findFirst({
+      where: {
+        userId,
+        cohort: {
+          courseId: courseId, // Cohort linked to this course
+        },
+        expiresAt: {
+          gt: new Date(), // Not expired
+        },
+      },
+      orderBy: { expiresAt: "desc" },
+      select: {
+        id: true,
+        expiresAt: true,
+      },
+    });
+
+    if (cohortEnrollment) {
+      return {
+        hasAccess: true,
+        expiresAt: cohortEnrollment.expiresAt,
+        enrollmentId: cohortEnrollment.id,
       };
     }
 

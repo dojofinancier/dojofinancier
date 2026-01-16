@@ -70,6 +70,8 @@ type Course = {
   recommendedStudyHoursMin?: number | null;
   recommendedStudyHoursMax?: number | null;
   orientationVideoUrl?: string | null;
+  orientationText?: string | null;
+  componentVisibility?: any;
   modules: Array<{
     id: string;
     title: string;
@@ -84,15 +86,32 @@ type Course = {
   }>;
 };
 
+type TodaysPlanData = {
+  sections: {
+    sessionCourte: any[];
+    sessionLongue: any[];
+    sessionCourteSupplementaire: any[];
+    sessionLongueSupplementaire: any[];
+  };
+  totalBlocks: number;
+  phase1Module: { id: string; title: string; order: number } | null;
+};
+
 interface PhaseBasedLearningInterfaceProps {
   course: Course;
   initialSettings?: any; // Settings passed from server to avoid client-side fetch
+  initialTodaysPlan?: TodaysPlanData | null;
 }
+
 
 type Phase = "orientation" | "home" | "learn" | "review" | "practice" | "syllabus" | "tools" | "progress" | "question";
 type NavigationItem = "home" | "learn" | "review" | "practice" | "syllabus" | "tools" | "progress" | "question" | `module-${string}`;
 
-export function PhaseBasedLearningInterface({ course, initialSettings }: PhaseBasedLearningInterfaceProps) {
+export function PhaseBasedLearningInterface({
+  course,
+  initialSettings,
+  initialTodaysPlan,
+}: PhaseBasedLearningInterfaceProps) {
   const router = useRouter();
   const [activePhase, setActivePhase] = useState<Phase>("orientation");
   const [activeItem, setActiveItem] = useState<NavigationItem>("home");
@@ -150,9 +169,8 @@ export function PhaseBasedLearningInterface({ course, initialSettings }: PhaseBa
   
   const handleSettingsUpdated = () => {
     router.refresh();
-    // React Query will automatically refetch on router.refresh()
-    // Force StudyPlan to refresh
-    setStudyPlanRefreshKey(prev => prev + 1);
+    setStudyPlanRefreshKey((prev) => prev + 1);
+    setMobileMenuOpen(false);
   };
 
   const handleNavigate = (item: NavigationItem) => {
@@ -264,6 +282,7 @@ export function PhaseBasedLearningInterface({ course, initialSettings }: PhaseBa
             recommendedStudyHoursMin={course.recommendedStudyHoursMin}
             recommendedStudyHoursMax={course.recommendedStudyHoursMax}
             orientationVideoUrl={course.orientationVideoUrl}
+            orientationText={course.orientationText}
             firstModuleId={course.modules.length > 0 ? course.modules[0].id : null}
             onComplete={(isFirstCreation) => {
               if (!isFirstCreation) {
@@ -290,6 +309,7 @@ export function PhaseBasedLearningInterface({ course, initialSettings }: PhaseBa
           courseId={course.id}
           courseTitle={course.title}
           orientationVideoUrl={course.orientationVideoUrl}
+          orientationText={course.orientationText}
           firstModuleId={course.modules.length > 0 ? course.modules[0].id : null}
           onComplete={handleSettingsUpdated}
         />
@@ -341,7 +361,12 @@ export function PhaseBasedLearningInterface({ course, initialSettings }: PhaseBa
             <div className="space-y-4 sm:space-y-6">
               <BehindScheduleWarning courseId={course.id} />
               <div>
-                <TodaysPlan courseId={course.id} orientationVideoUrl={course.orientationVideoUrl} />
+                <TodaysPlan
+                  courseId={course.id}
+                  orientationVideoUrl={course.orientationVideoUrl}
+                  orientationText={course.orientationText}
+                  initialPlanData={initialTodaysPlan}
+                />
               </div>
               <div>
                 <StudyPlan courseId={course.id} refreshKey={studyPlanRefreshKey} />
@@ -355,6 +380,7 @@ export function PhaseBasedLearningInterface({ course, initialSettings }: PhaseBa
                   courseId={course.id}
                   moduleId={selectedModuleId}
                   onBack={handleModuleBack}
+                  componentVisibility={course.componentVisibility as any}
                 />
               ) : (
                 <>

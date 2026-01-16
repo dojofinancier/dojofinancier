@@ -109,8 +109,9 @@ export function CaseStudyList({ courseId, onStartCaseStudy }: CaseStudyListProps
       {caseStudies.map((caseStudy) => (
         <Card key={caseStudy.id}>
           <CardHeader>
-            <div className="flex items-start justify-between">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div className="flex-1">
+
                 <CardTitle className="text-lg">{caseStudy.title}</CardTitle>
                 {caseStudy.theme && (
                   <CardDescription className="mt-2">{caseStudy.theme}</CardDescription>
@@ -144,10 +145,11 @@ export function CaseStudyList({ courseId, onStartCaseStudy }: CaseStudyListProps
                   </div>
                 )}
               </div>
-              <Button onClick={() => onStartCaseStudy(caseStudy.id)}>
+              <Button className="w-full sm:w-auto" onClick={() => onStartCaseStudy(caseStudy.id)}>
                 <Play className="h-4 w-4 mr-2" />
                 {caseStudy.latestAttempt ? "Reprendre" : "Commencer"}
               </Button>
+
             </div>
           </CardHeader>
         </Card>

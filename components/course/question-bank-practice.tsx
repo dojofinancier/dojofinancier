@@ -261,26 +261,26 @@ export function QuestionBankPractice({ courseId }: QuestionBankPracticeProps) {
       {/* Stats Bar */}
       <Card>
         <CardContent className="py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-6">
-              <div>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="grid gap-3 sm:flex sm:items-center sm:gap-6">
+              <div className="rounded-lg border border-border/60 bg-muted/30 p-3 sm:border-0 sm:bg-transparent sm:p-0">
                 <div className="text-sm text-muted-foreground">Questions répondues</div>
                 <div className="text-lg font-semibold">
                   {answeredCount} / {questions.length}
                 </div>
               </div>
-              <div>
+              <div className="rounded-lg border border-border/60 bg-muted/30 p-3 sm:border-0 sm:bg-transparent sm:p-0">
                 <div className="text-sm text-muted-foreground">Score cumulatif</div>
                 <div className="text-lg font-semibold">{stats.score}%</div>
               </div>
-              <div>
+              <div className="rounded-lg border border-border/60 bg-muted/30 p-3 sm:border-0 sm:bg-transparent sm:p-0">
                 <div className="text-sm text-muted-foreground">Réponses correctes</div>
                 <div className="text-lg font-semibold text-green-600">
                   {stats.correctAnswers} / {stats.totalAttempts}
                 </div>
               </div>
             </div>
-            <Button variant="outline" onClick={handleReset}>
+            <Button className="w-full sm:w-auto" variant="outline" onClick={handleReset}>
               <RotateCcw className="h-4 w-4 mr-2" />
               Réinitialiser tout
             </Button>
@@ -320,11 +320,11 @@ export function QuestionBankPractice({ courseId }: QuestionBankPracticeProps) {
               const showFeedback = currentState.submitted && (isSelected || isCorrectOption);
 
               return (
-                <div key={key} className="flex items-start space-x-3">
+                <div key={key} className="flex items-start space-x-3 py-2">
                   <RadioGroupItem
                     value={key}
                     id={key}
-                    className={`mt-1 ${
+                    className={`self-center ${
                       showFeedback
                         ? isCorrectOption
                           ? "border-green-500"
@@ -336,7 +336,7 @@ export function QuestionBankPractice({ courseId }: QuestionBankPracticeProps) {
                   />
                   <Label
                     htmlFor={key}
-                    className={`flex-1 cursor-pointer ${
+                    className={`flex-1 cursor-pointer leading-relaxed text-base ${
                       showFeedback
                         ? isCorrectOption
                           ? "text-green-600 font-semibold"

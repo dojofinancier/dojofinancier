@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo, useCallback, memo } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -141,12 +141,14 @@ export function CourseProductPage({ course, isEnrolled }: CourseProductPageProps
 
   useEffect(() => {
     let raf = 0;
+    let ticking = false;
     const reduceMotion = typeof window !== "undefined"
       ? window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches
       : false;
     if (reduceMotion) return;
 
     const update = () => {
+      ticking = false;
       raf = 0;
       const y = window.scrollY || 0;
       // Slightly stronger so it's noticeable.
@@ -154,14 +156,18 @@ export function CourseProductPage({ course, isEnrolled }: CourseProductPageProps
       const accentY = Math.min(y * 0.16, 120);
       const mediaY = Math.min(y * 0.22, 140);
 
+      // Use requestAnimationFrame for smooth updates
       if (heroGridRef.current) heroGridRef.current.style.setProperty("--parallax-y", `${gridY}px`);
       if (heroAccentRef.current) heroAccentRef.current.style.setProperty("--parallax-y", `${accentY}px`);
       if (heroMediaRef.current) heroMediaRef.current.style.setProperty("--parallax-y", `${mediaY}px`);
     };
 
     const onScroll = () => {
-      if (raf) return;
-      raf = window.requestAnimationFrame(update);
+      if (!ticking) {
+        ticking = true;
+        if (raf) window.cancelAnimationFrame(raf);
+        raf = window.requestAnimationFrame(update);
+      }
     };
 
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -173,7 +179,7 @@ export function CourseProductPage({ course, isEnrolled }: CourseProductPageProps
     };
   }, []);
 
-  const handleAddToCart = () => {
+  const handleAddToCart = useCallback(() => {
     addToCart({
       id: course.id,
       type: "course",
@@ -185,31 +191,64 @@ export function CourseProductPage({ course, isEnrolled }: CourseProductPageProps
     setInCart(true);
     // Use window.location for full page reload to ensure navbar renders
     window.location.href = "/panier";
-  };
+  }, [course.id, course.slug, course.title, course.price]);
 
-  const handleGoToCart = () => {
+  const handleGoToCart = useCallback(() => {
     // Use window.location for full page reload to ensure navbar renders
     window.location.href = "/panier";
-  };
+  }, []);
 
-  const handleContinue = () => {
+  const handleContinue = useCallback(() => {
     router.push(`/apprendre/${course.slug || course.id}`);
-  };
+  }, [router, course.slug, course.id]);
 
-  const features = Array.isArray(course.features) ? course.features : [];
-  const testimonials = Array.isArray(course.testimonials) ? course.testimonials : [];
-  const faqs = Array.isArray(course.faqs) ? course.faqs : [];
+  // Memoize arrays to prevent unnecessary re-renders
+  const features = useMemo(() => Array.isArray(course.features) ? course.features : [], [course.features]);
+  const testimonials = useMemo(() => Array.isArray(course.testimonials) ? course.testimonials : [], [course.testimonials]);
+  const faqs = useMemo(() => Array.isArray(course.faqs) ? course.faqs : [], [course.faqs]);
 
-  // Get total content items
-  const totalVideos = course.modules.reduce((acc, m) => 
-    acc + m.contentItems.filter(c => c.contentType === "VIDEO").length, 0);
-  const totalQuizzes = course.modules.reduce((acc, m) => 
-    acc + m.contentItems.filter(c => c.contentType === "QUIZ").length, 0);
+  // Memoize expensive calculations
+  const totalVideos = useMemo(() => 
+    course.modules.reduce((acc, m) => 
+      acc + m.contentItems.filter(c => c.contentType === "VIDEO").length, 0),
+    [course.modules]
+  );
+  
+  const totalQuizzes = useMemo(() => 
+    course.modules.reduce((acc, m) => 
+      acc + m.contentItems.filter(c => c.contentType === "QUIZ").length, 0),
+    [course.modules]
+  );
 
   // Calculate total questions (quiz questions + question bank questions + learning activities)
-  const totalQuestions = (course.totalQuizQuestions || 0) + 
-                         (course.totalQuestionBankQuestions || 0) + 
-                         (course.totalLearningActivities || 0);
+  const totalQuestions = useMemo(() => 
+    (course.totalQuizQuestions || 0) + 
+    (course.totalQuestionBankQuestions || 0) + 
+    (course.totalLearningActivities || 0),
+    [course.totalQuizQuestions, course.totalQuestionBankQuestions, course.totalLearningActivities]
+  );
+
+  // Memoize hero image source for preloading
+  const heroImageSrc = useMemo(() => 
+    course.heroImages && course.heroImages.length > 0 
+      ? course.heroImages[0] 
+      : "/screenshots1.png",
+    [course.heroImages]
+  );
+
+  // Preload hero image for LCP improvement
+  useEffect(() => {
+    if (heroImageSrc) {
+      const link = document.createElement('link');
+      link.rel = 'preload';
+      link.as = 'image';
+      link.href = heroImageSrc;
+      document.head.appendChild(link);
+      return () => {
+        document.head.removeChild(link);
+      };
+    }
+  }, [heroImageSrc]);
 
   return (
     <>
@@ -354,9 +393,7 @@ export function CourseProductPage({ course, isEnrolled }: CourseProductPageProps
                 }}
               >
                 <Image
-                  src={course.heroImages && course.heroImages.length > 0 
-                    ? course.heroImages[0] 
-                    : "/screenshots1.png"}
+                  src={heroImageSrc}
                   alt={`${course.title} - Capture d'écran`}
                   fill
                   className="object-cover"

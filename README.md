@@ -212,6 +212,10 @@ STRIPE_WEBHOOK_SECRET="whsec_..."
 
 # App
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
+
+# Make.com Webhooks (for waitlist submissions)
+MAKE_WEBHOOK_INVESTISSEUR="https://hook.make.com/..."
+MAKE_WEBHOOK_ENTREPRENEUR="https://hook.make.com/..."
 ```
 
 ### Netlify Deployment

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -149,26 +149,32 @@ export function CohortProductPage({ cohort, isEnrolled }: CohortProductPageProps
 
   useEffect(() => {
     let raf = 0;
+    let ticking = false;
     const reduceMotion = typeof window !== "undefined"
       ? window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches
       : false;
     if (reduceMotion) return;
 
     const update = () => {
+      ticking = false;
       raf = 0;
       const y = window.scrollY || 0;
       const gridY = Math.min(y * 0.30, 170);
       const accentY = Math.min(y * 0.16, 120);
       const mediaY = Math.min(y * 0.22, 140);
 
+      // Use requestAnimationFrame for smooth updates
       if (heroGridRef.current) heroGridRef.current.style.setProperty("--parallax-y", `${gridY}px`);
       if (heroAccentRef.current) heroAccentRef.current.style.setProperty("--parallax-y", `${accentY}px`);
       if (heroMediaRef.current) heroMediaRef.current.style.setProperty("--parallax-y", `${mediaY}px`);
     };
 
     const onScroll = () => {
-      if (raf) return;
-      raf = window.requestAnimationFrame(update);
+      if (!ticking) {
+        ticking = true;
+        if (raf) window.cancelAnimationFrame(raf);
+        raf = window.requestAnimationFrame(update);
+      }
     };
 
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -180,7 +186,7 @@ export function CohortProductPage({ cohort, isEnrolled }: CohortProductPageProps
     };
   }, []);
 
-  const handleAddToCart = () => {
+  const handleAddToCart = useCallback(() => {
     if (!cohort.isEnrollmentOpen) {
       toast.error("Les inscriptions sont fermées pour cette cohorte");
       return;
@@ -200,29 +206,55 @@ export function CohortProductPage({ cohort, isEnrolled }: CohortProductPageProps
     toast.success("Ajouté au panier");
     setInCart(true);
     window.location.href = "/panier";
-  };
+  }, [cohort.id, cohort.slug, cohort.title, cohort.price, cohort.isEnrollmentOpen, cohort.spotsRemaining]);
 
-  const handleGoToCart = () => {
+  const handleGoToCart = useCallback(() => {
     window.location.href = "/panier";
-  };
+  }, []);
 
-  const handleContinue = () => {
+  const handleContinue = useCallback(() => {
     router.push(`/cohorte/${cohort.slug || cohort.id}/apprendre`);
-  };
+  }, [router, cohort.slug, cohort.id]);
 
-  const features = Array.isArray(cohort.features) ? cohort.features : [];
-  const testimonials = Array.isArray(cohort.testimonials) ? cohort.testimonials : [];
-  const faqs = Array.isArray(cohort.faqs) ? cohort.faqs : [];
-  const heroImages = Array.isArray(cohort.heroImages) ? cohort.heroImages : [];
+  // Memoize arrays to prevent unnecessary re-renders
+  const features = useMemo(() => Array.isArray(cohort.features) ? cohort.features : [], [cohort.features]);
+  const testimonials = useMemo(() => Array.isArray(cohort.testimonials) ? cohort.testimonials : [], [cohort.testimonials]);
+  const faqs = useMemo(() => Array.isArray(cohort.faqs) ? cohort.faqs : [], [cohort.faqs]);
+  const heroImages = useMemo(() => Array.isArray(cohort.heroImages) ? cohort.heroImages : [], [cohort.heroImages]);
 
-  // Get stats for display
-  const totalQuestions = cohort.totalQuestions || 0;
-  const totalFlashcards = cohort.totalFlashcards || 0;
-  const coachingSessions = 8; // Default number of coaching sessions
+  // Get stats for display - memoized
+  const totalQuestions = useMemo(() => cohort.totalQuestions || 0, [cohort.totalQuestions]);
+  const totalFlashcards = useMemo(() => cohort.totalFlashcards || 0, [cohort.totalFlashcards]);
+  const coachingSessions = useMemo(() => 8, []); // Default number of coaching sessions
 
-  const instructorName = cohort.instructor
-    ? `${cohort.instructor.firstName || ""} ${cohort.instructor.lastName || ""}`.trim() || cohort.instructor.email
-    : "Instructeur non assigné";
+  const instructorName = useMemo(() => 
+    cohort.instructor
+      ? `${cohort.instructor.firstName || ""} ${cohort.instructor.lastName || ""}`.trim() || cohort.instructor.email
+      : "Instructeur non assigné",
+    [cohort.instructor]
+  );
+
+  // Memoize hero image source for preloading
+  const heroImageSrc = useMemo(() => 
+    heroImages.length > 0 ? heroImages[0] : "/screenshots1.png",
+    [heroImages]
+  );
+
+  // Preload hero image for LCP improvement
+  useEffect(() => {
+    if (heroImageSrc) {
+      const link = document.createElement('link');
+      link.rel = 'preload';
+      link.as = 'image';
+      link.href = heroImageSrc;
+      document.head.appendChild(link);
+      return () => {
+        if (document.head.contains(link)) {
+          document.head.removeChild(link);
+        }
+      };
+    }
+  }, [heroImageSrc]);
 
   return (
     <>
@@ -418,9 +450,7 @@ export function CohortProductPage({ cohort, isEnrolled }: CohortProductPageProps
                 }}
               >
                 <Image
-                  src={heroImages.length > 0 
-                    ? heroImages[0] 
-                    : "/screenshots1.png"}
+                  src={heroImageSrc}
                   alt={`${cohort.title} - Capture d'écran`}
                   fill
                   className="object-cover"

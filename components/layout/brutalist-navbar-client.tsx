@@ -23,28 +23,44 @@ export function BrutalistNavbarClient({ user, variant = "transparent", dashboard
 
   useEffect(() => {
     if (variant !== "transparent") return;
-    
+
     const handleScroll = () => {
       setScrolled(window.scrollY > 50);
     };
+    handleScroll();
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, [variant]);
 
+
+
+  // Don't use bg-black class when transparent - use inline styles only
   const bgClass = variant === "solid" 
     ? "bg-black" 
     : scrolled 
       ? "bg-black" 
       : "bg-transparent";
 
+
   // Loading state (used as a Suspense fallback): avoid showing the wrong logged-out UI briefly.
   if (user === undefined) {
+    const loadingBgStyle = variant === "transparent" 
+      ? { 
+          backgroundColor: "#000",
+          backgroundImage: "linear-gradient(white 2px, transparent 2px), linear-gradient(90deg, white 2px, transparent 2px)",
+          backgroundSize: "80px 80px",
+        }
+      : variant === "solid"
+        ? { backgroundColor: "#000", background: "#000" }
+        : undefined;
+    
     return (
       <div
         className={`fixed top-0 left-0 right-0 z-50 transition-colors duration-200 ${bgClass}`}
+        style={loadingBgStyle}
         data-transparent-nav
       >
-        <nav className="border-b-4 border-white" data-transparent-nav>
+        <nav className="border-b-4 border-white bg-transparent" style={{ backgroundColor: "transparent" }} data-transparent-nav>
           <div className="flex h-20 items-center justify-between px-4 sm:px-8">
             <Link href="/" className="flex items-center hover:opacity-70 transition-opacity">
               <Image
@@ -73,12 +89,23 @@ export function BrutalistNavbarClient({ user, variant = "transparent", dashboard
     );
   }
 
+
+  const containerStyle = variant === "solid" 
+    ? { backgroundColor: "#000", background: "#000" }
+    : scrolled
+      ? { backgroundColor: "#000", background: "#000" }
+      : variant === "transparent"
+        ? { backgroundColor: "transparent", background: "transparent" }
+        : { backgroundColor: "transparent", background: "transparent" };
+
+
   return (
     <div 
       className={`fixed top-0 left-0 right-0 z-50 transition-colors duration-200 ${bgClass}`}
+      style={containerStyle}
       data-transparent-nav
     >
-      <nav className="border-b-4 border-white" data-transparent-nav>
+      <nav className="border-b-4 border-white bg-transparent" style={{ backgroundColor: "transparent" }} data-transparent-nav>
         <div className="flex h-20 items-center justify-between px-4 sm:px-8">
           <Link href="/" className="flex items-center hover:opacity-70 transition-opacity">
             <Image

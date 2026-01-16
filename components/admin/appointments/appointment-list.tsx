@@ -67,11 +67,23 @@ export function AppointmentList() {
         dateTo: dateTo ? new Date(dateTo) : undefined,
       });
       
+      const sortByNewest = (items: AppointmentItem[]) =>
+        [...items].sort((a, b) => {
+          const timeDiff = new Date(b.scheduledAt).getTime() - new Date(a.scheduledAt).getTime();
+          if (timeDiff !== 0) return timeDiff;
+          return b.id.localeCompare(a.id);
+        });
+
       if (cursor) {
-        setAppointments((prev) => [...prev, ...result.items]);
+        setAppointments((prev) => {
+          const merged = [...prev, ...result.items];
+          const unique = new Map(merged.map((item) => [item.id, item]));
+          return sortByNewest(Array.from(unique.values()));
+        });
       } else {
-        setAppointments(result.items);
+        setAppointments(sortByNewest(result.items));
       }
+
       setNextCursor(result.nextCursor);
       setHasMore(result.hasMore);
     } catch (error) {

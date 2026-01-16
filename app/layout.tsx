@@ -70,6 +70,10 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://m.stripe.com" />
         <link rel="dns-prefetch" href="https://m.stripe.network" />
         
+        {/* Preload critical resources for LCP improvement */}
+        <link rel="preload" href="/logo_light.png" as="image" type="image/png" />
+        <link rel="preload" href="/logo_dark.png" as="image" type="image/png" />
+        
         {/* Blocking script to prevent theme flash - runs before page renders */}
         <script
           dangerouslySetInnerHTML={{

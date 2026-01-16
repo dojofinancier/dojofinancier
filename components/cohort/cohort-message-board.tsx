@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,9 +28,12 @@ import {
 } from "@/app/actions/cohort-messages";
 import { uploadCohortFileAction } from "@/app/actions/cohort-file-upload";
 import { toast } from "sonner";
-import { RichTextEditor } from "@/components/admin/courses/rich-text-editor";
 import { Upload } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth/get-current-user";
+import { Skeleton } from "@/components/ui/skeleton";
+
+// Lazy load TipTap editor to reduce initial bundle size
+const RichTextEditor = lazy(() => import("@/components/admin/courses/rich-text-editor").then(m => ({ default: m.RichTextEditor })));
 
 type CohortMessage = {
   id: string;
@@ -58,12 +61,14 @@ interface CohortMessageBoardProps {
   cohortId: string;
   currentUserId?: string;
   currentUserRole?: string;
+  onUnreadCountChange?: (count: number) => void;
 }
 
 export function CohortMessageBoard({
   cohortId,
   currentUserId,
   currentUserRole,
+  onUnreadCountChange,
 }: CohortMessageBoardProps) {
   const [messages, setMessages] = useState<CohortMessage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -101,7 +106,10 @@ export function CohortMessageBoard({
   const loadUnreadCount = async () => {
     try {
       const result = await getCohortUnreadMessageCountAction(cohortId);
-      if (result.success && typeof result.count === "number") setUnreadCount(result.count);
+      if (result.success && typeof result.count === "number") {
+        setUnreadCount(result.count);
+        onUnreadCountChange?.(result.count);
+      }
     } catch (error) {
       // Silently fail
     }
@@ -388,11 +396,13 @@ export function CohortMessageBoard({
             <div className="space-y-4">
               <div>
                 <label className="text-sm font-medium mb-2 block">Contenu</label>
-                <RichTextEditor
-                  content={content}
-                  onChange={setContent}
-                  placeholder="Écrivez votre message..."
-                />
+                <Suspense fallback={<Skeleton className="h-32 w-full" />}>
+                  <RichTextEditor
+                    content={content}
+                    onChange={setContent}
+                    placeholder="Écrivez votre message..."
+                  />
+                </Suspense>
               </div>
               <div>
                 <label className="text-sm font-medium mb-2 block">Pièces jointes (max 32MB par fichier)</label>
@@ -699,11 +709,13 @@ export function CohortMessageBoard({
           <div className="space-y-4">
             <div>
               <label className="text-sm font-medium mb-2 block">Contenu</label>
-              <RichTextEditor
-                content={content}
-                onChange={setContent}
-                placeholder="Modifiez votre message..."
-              />
+              <Suspense fallback={<Skeleton className="h-32 w-full" />}>
+                <RichTextEditor
+                  content={content}
+                  onChange={setContent}
+                  placeholder="Modifiez votre message..."
+                />
+              </Suspense>
             </div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setEditDialogOpen(false)}>

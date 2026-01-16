@@ -16,15 +16,20 @@ import { FlashcardsTool } from "@/components/course/tools/flashcards-tool";
 import { ActivitiesTool } from "@/components/course/tools/activities-tool";
 import { ExamsTool } from "@/components/course/tools/exams-tool";
 import { QuestionBankTool } from "@/components/course/tools/question-bank-tool";
+import { CaseStudiesTool } from "@/components/course/tools/case-studies-tool";
 import { ExamPlayer } from "@/components/course/exam-player";
-import { StudentAnalyticsDashboard } from "@/components/course/student-analytics-dashboard";
 import { AskQuestionPage } from "@/components/course/ask-question-page";
+import { getCohortUnreadMessageCountAction } from "@/app/actions/cohort-messages";
 import type { Prisma } from "@prisma/client";
 
 // Lazy load phase components
 const Phase1Learn = lazy(() => import("@/components/course/phase1-learn").then(m => ({ default: m.Phase1Learn })));
 const Phase2Review = lazy(() => import("@/components/course/phase2-review").then(m => ({ default: m.Phase2Review })));
 const Phase3Practice = lazy(() => import("@/components/course/phase3-practice").then(m => ({ default: m.Phase3Practice })));
+
+// Lazy load heavy components
+const CaseStudyPlayer = lazy(() => import("@/components/course/case-study-player").then(m => ({ default: m.CaseStudyPlayer })));
+const StudentAnalyticsDashboard = lazy(() => import("@/components/course/student-analytics-dashboard").then(m => ({ default: m.StudentAnalyticsDashboard })));
 
 // Skeleton loader for phase components
 const PhaseSkeleton = () => (
@@ -159,6 +164,20 @@ export function CohortLearningInterface({
   const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null);
   const [selectedTool, setSelectedTool] = useState<string | null>(null);
   const [selectedExamId, setSelectedExamId] = useState<string | null>(null);
+  const [selectedCaseStudyId, setSelectedCaseStudyId] = useState<string | null>(null);
+  const [unreadMessageCount, setUnreadMessageCount] = useState(0);
+
+  // Load unread message count
+  const loadUnreadCount = async () => {
+    try {
+      const result = await getCohortUnreadMessageCountAction(cohort.id);
+      if (result.success && typeof result.count === "number") {
+        setUnreadMessageCount(result.count);
+      }
+    } catch (error) {
+      // Silently fail
+    }
+  };
 
   // Check URL params for navigation
   useEffect(() => {
@@ -179,8 +198,27 @@ export function CohortLearningInterface({
     // If no tab param, default stays as "coaching" (home)
   }, [searchParams]);
 
+  // Load unread count on mount and when cohort changes
+  useEffect(() => {
+    loadUnreadCount();
+    // Refresh unread count periodically (every 30 seconds)
+    const interval = setInterval(loadUnreadCount, 30000);
+    return () => clearInterval(interval);
+  }, [cohort.id]);
+
+  // Refresh unread count when navigating to messages tab
+  useEffect(() => {
+    if (activeItem === "messages") {
+      loadUnreadCount();
+    }
+  }, [activeItem]);
+
   // Get visibility settings (default to all visible if not set)
   const visibility = normalizeCohortVisibility(cohort.componentVisibility);
+
+  // Use base courseId for content queries - all content belongs to the base course
+  // Fall back to cohort.id if no base course is linked
+  const contentCourseId = cohort.courseId || cohort.id;
 
   // Transform cohort to course format
   const courseData = {
@@ -236,6 +274,14 @@ export function CohortLearningInterface({
     setSelectedExamId(null);
   };
 
+  const handleStartCaseStudy = (caseStudyId: string) => {
+    setSelectedCaseStudyId(caseStudyId);
+  };
+
+  const handleCaseStudyExit = () => {
+    setSelectedCaseStudyId(null);
+  };
+
   return (
     <div className="flex h-screen overflow-hidden">
       {/* Cohort Sidebar */}
@@ -250,6 +296,7 @@ export function CohortLearningInterface({
         }}
         activeItem={activeItem}
         onNavigate={handleNavigate}
+        unreadMessageCount={unreadMessageCount}
       />
 
       {/* Main Content */}
@@ -269,6 +316,7 @@ export function CohortLearningInterface({
                 cohortId={cohort.id}
                 currentUserId={currentUserId}
                 currentUserRole={currentUserRole}
+                onUnreadCountChange={setUnreadMessageCount}
               />
             </div>
           )}
@@ -276,9 +324,10 @@ export function CohortLearningInterface({
           {/* Module Detail (when a specific module is selected) */}
           {(activeItem.startsWith("module-") || (activeItem === "learn" && selectedModuleId)) && selectedModuleId && (
             <ModuleDetailPage
-              courseId={cohort.id}
+              courseId={contentCourseId}
               moduleId={selectedModuleId}
               onBack={handleModuleBack}
+              componentVisibility={visibility}
             />
           )}
 
@@ -288,7 +337,7 @@ export function CohortLearningInterface({
               <h1 className="text-2xl font-bold mb-6">Phase 1 - Apprendre</h1>
               <Suspense fallback={<PhaseSkeleton />}>
                 <Phase1Learn
-                  courseId={cohort.id}
+                  courseId={contentCourseId}
                   course={courseData}
                   settings={initialSettings}
                   onModuleSelect={(moduleId) => {
@@ -308,7 +357,7 @@ export function CohortLearningInterface({
             <div>
               <h1 className="text-2xl font-bold mb-6">Phase 2 - Réviser</h1>
               <Suspense fallback={<PhaseSkeleton />}>
-                <Phase2Review courseId={cohort.id} course={courseData} settings={initialSettings} />
+                <Phase2Review courseId={contentCourseId} course={courseData} settings={initialSettings} />
               </Suspense>
             </div>
           )}
@@ -318,7 +367,7 @@ export function CohortLearningInterface({
             <div>
               <h1 className="text-2xl font-bold mb-6">Phase 3 - Pratiquer</h1>
               <Suspense fallback={<PhaseSkeleton />}>
-                <Phase3Practice courseId={cohort.id} course={courseData} settings={initialSettings} />
+                <Phase3Practice courseId={contentCourseId} course={courseData} settings={initialSettings} />
               </Suspense>
             </div>
           )}
@@ -328,7 +377,7 @@ export function CohortLearningInterface({
             <div>
               <h1 className="text-2xl font-bold mb-6">Plan de cours</h1>
               <Suspense fallback={<PhaseSkeleton />}>
-                <Syllabus courseId={cohort.id} />
+                <Syllabus courseId={contentCourseId} />
               </Suspense>
             </div>
           )}
@@ -337,39 +386,55 @@ export function CohortLearningInterface({
           {activeItem === "tools" && (
             <div>
               {selectedExamId ? (
-                <ExamPlayer examId={selectedExamId} onExit={handleExamExit} />
+                <Suspense fallback={<PhaseSkeleton />}>
+                  <ExamPlayer examId={selectedExamId} onExit={handleExamExit} />
+                </Suspense>
+              ) : selectedCaseStudyId ? (
+                <Suspense fallback={<PhaseSkeleton />}>
+                  <CaseStudyPlayer
+                    caseStudyId={selectedCaseStudyId}
+                    onExit={handleCaseStudyExit}
+                  />
+                </Suspense>
               ) : selectedTool ? (
                 <>
                   {selectedTool === "videos" && (
-                    <VideosTool courseId={cohort.id} onBack={handleToolBack} />
+                    <VideosTool courseId={contentCourseId} onBack={handleToolBack} />
                   )}
                   {selectedTool === "notes" && (
-                    <NotesTool courseId={cohort.id} onBack={handleToolBack} />
+                    <NotesTool courseId={contentCourseId} onBack={handleToolBack} />
                   )}
                   {selectedTool === "quizzes" && (
-                    <QuizzesTool courseId={cohort.id} onBack={handleToolBack} />
+                    <QuizzesTool courseId={contentCourseId} onBack={handleToolBack} />
                   )}
                   {selectedTool === "flashcards" && (
-                    <FlashcardsTool courseId={cohort.id} onBack={handleToolBack} />
+                    <FlashcardsTool courseId={contentCourseId} onBack={handleToolBack} />
                   )}
                   {selectedTool === "activities" && (
-                    <ActivitiesTool courseId={cohort.id} onBack={handleToolBack} />
+                    <ActivitiesTool courseId={contentCourseId} onBack={handleToolBack} />
                   )}
                   {selectedTool === "exams" && (
                     <ExamsTool
-                      courseId={cohort.id}
+                      courseId={contentCourseId}
                       onBack={handleToolBack}
                       onStartExam={handleStartExam}
                     />
                   )}
                   {selectedTool === "question-bank" && (
-                    <QuestionBankTool courseId={cohort.id} onBack={handleToolBack} />
+                    <QuestionBankTool courseId={contentCourseId} onBack={handleToolBack} />
+                  )}
+                  {selectedTool === "case-studies" && (
+                    <CaseStudiesTool
+                      courseId={contentCourseId}
+                      onBack={handleToolBack}
+                      onStartCaseStudy={handleStartCaseStudy}
+                    />
                   )}
                 </>
               ) : (
                 <>
                   <h1 className="text-2xl font-bold mb-6">Outils d'apprentissage</h1>
-                  <LearningTools courseId={cohort.id} onToolSelect={handleToolSelect} />
+                  <LearningTools courseId={contentCourseId} onToolSelect={handleToolSelect} />
                 </>
               )}
             </div>
@@ -379,14 +444,16 @@ export function CohortLearningInterface({
           {activeItem === "progress" && (
             <div>
               <h1 className="text-2xl font-bold mb-6">Progrès et statistiques</h1>
-              <StudentAnalyticsDashboard courseId={cohort.id} />
+              <Suspense fallback={<PhaseSkeleton />}>
+                <StudentAnalyticsDashboard courseId={contentCourseId} />
+              </Suspense>
             </div>
           )}
 
           {/* Ask Question */}
           {activeItem === "question" && (
             <div>
-              <AskQuestionPage courseId={cohort.id} courseTitle={cohort.title} />
+              <AskQuestionPage courseId={contentCourseId} courseTitle={cohort.title} />
             </div>
           )}
         </div>

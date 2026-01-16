@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,11 +11,12 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { CalendarIcon, AlertCircle, Settings } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { CalendarIcon, AlertCircle, Loader2, Settings } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { initializeCourseSettingsAction, generateStudyPlanAction } from "@/app/actions/study-plan";
+import { initializeCourseSettingsAction } from "@/app/actions/study-plan";
 import { toast } from "sonner";
 import type { SelfRating } from "@prisma/client";
 import { useCourseSettings } from "@/lib/hooks/use-course-settings";
@@ -37,6 +39,8 @@ export function StudyPlanSettings({
   const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [loadingProgress, setLoadingProgress] = useState(0);
+  const queryClient = useQueryClient();
   const [examDate, setExamDate] = useState<Date | undefined>(undefined);
   const [studyHoursPerWeek, setStudyHoursPerWeek] = useState(6);
   const [selfRating, setSelfRating] = useState<SelfRating>("NOVICE");
@@ -51,14 +55,36 @@ export function StudyPlanSettings({
     setMounted(true);
   }, []);
 
+  useEffect(() => {
+    if (!loading) {
+      setLoadingProgress(0);
+      return;
+    }
+
+    setLoadingProgress(10);
+    const interval = setInterval(() => {
+      setLoadingProgress((prev) => {
+        if (prev >= 90) return prev;
+        const increment = Math.floor(Math.random() * 8) + 4;
+        return Math.min(prev + increment, 90);
+      });
+    }, 700);
+
+    return () => clearInterval(interval);
+  }, [loading]);
+
+  const applySettings = (nextSettings: any) => {
+    if (!nextSettings) return;
+    setExamDate(nextSettings.examDate ? new Date(nextSettings.examDate) : undefined);
+    setStudyHoursPerWeek(nextSettings.studyHoursPerWeek || 6);
+    setSelfRating(nextSettings.selfRating || "NOVICE");
+    setPreferredStudyDays((nextSettings.preferredStudyDays as number[]) || [1, 2, 3, 4, 5]);
+  };
+
   // Load settings into local state when dialog opens or settings change
   useEffect(() => {
-    if (open && settings) {
-      setExamDate(settings.examDate ? new Date(settings.examDate) : undefined);
-      setStudyHoursPerWeek(settings.studyHoursPerWeek || 6);
-      setSelfRating(settings.selfRating || "NOVICE");
-      setPreferredStudyDays((settings.preferredStudyDays as number[]) || [1, 2, 3, 4, 5]);
-    }
+    if (!open) return;
+    applySettings(settings);
   }, [open, settings]);
 
   const handleDayToggle = (day: number) => {
@@ -102,18 +128,27 @@ export function StudyPlanSettings({
       });
 
       if (result.success) {
-        // Regenerate study plan with new settings
-        const planResult = await generateStudyPlanAction(courseId);
-        
-        // Show warnings if any
-        if (planResult.warnings && planResult.warnings.length > 0) {
-          setWarnings(planResult.warnings);
+        if (result.data) {
+          setExamDate(result.data.examDate ? new Date(result.data.examDate) : examDate);
+          setStudyHoursPerWeek(result.data.studyHoursPerWeek || studyHoursPerWeek);
+          setSelfRating(result.data.selfRating || selfRating);
+          setPreferredStudyDays((result.data.preferredStudyDays as number[]) || preferredStudyDays);
+        }
+
+        if (result.warnings && result.warnings.length > 0) {
+          setWarnings(result.warnings);
           toast.success("Paramètres mis à jour avec succès! Le plan d'étude a été régénéré.");
         } else {
           toast.success("Paramètres mis à jour avec succès! Le plan d'étude a été régénéré.");
           setWarnings([]);
         }
-        // Close modal and refresh
+
+        if (result.data) {
+          queryClient.setQueryData(["course-settings", courseId], result.data);
+        } else {
+          queryClient.invalidateQueries({ queryKey: ["course-settings", courseId] });
+        }
+
         setOpen(false);
         onUpdate?.();
       } else {
@@ -161,6 +196,23 @@ export function StudyPlanSettings({
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-6">
+            {loading && (
+              <div className="rounded-lg border bg-muted/40 p-4 space-y-3">
+                <div className="flex items-center gap-3">
+                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                  <div>
+                    <p className="font-semibold">Régénération du plan d'étude</p>
+                    <p className="text-sm text-muted-foreground">Analyse et génération en cours…</p>
+                  </div>
+                </div>
+                <Progress value={loadingProgress} />
+                <div className="grid gap-1 text-sm text-muted-foreground">
+                  <div className={loadingProgress > 20 ? "text-foreground" : undefined}>Analyse du programme</div>
+                  <div className={loadingProgress > 45 ? "text-foreground" : undefined}>Organisation des sessions</div>
+                  <div className={loadingProgress > 70 ? "text-foreground" : undefined}>Finalisation du plan</div>
+                </div>
+              </div>
+            )}
             {error && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />

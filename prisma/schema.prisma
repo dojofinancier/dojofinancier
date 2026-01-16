@@ -100,6 +100,7 @@ model Course {
   recommendedStudyHoursMin Int?        @default(6) @map("recommended_study_hours_min") // Minimum recommended study hours per week
   recommendedStudyHoursMax Int?        @default(10) @map("recommended_study_hours_max") // Maximum recommended study hours per week
   orientationVideoUrl      String?     @map("orientation_video_url") // Vimeo URL for orientation video (Phase 0)
+  orientationText          String?     @map("orientation_text") @db.Text // Rich text explainer for Phase 0 when no video is provided
   createdAt                DateTime    @default(now()) @map("created_at")
   updatedAt                DateTime    @updatedAt @map("updated_at")
 

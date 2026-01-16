@@ -11,7 +11,10 @@ function getChromeForPathname(pathname: string): ChromeMode {
     pathname === "/" ||
     pathname === "/contact" ||
     pathname.startsWith("/formations") ||
-    pathname.startsWith("/investisseur")
+    // Only investisseur pages that are NOT waitlist pages
+    (pathname.startsWith("/investisseur") && !pathname.includes("/waitlist")) ||
+    // Only cohort product pages, not learning dashboard
+    (pathname.startsWith("/cohorte") && !pathname.includes("/apprendre"))
   ) return "brutalist";
   return "default";
 }

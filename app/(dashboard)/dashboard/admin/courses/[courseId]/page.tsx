@@ -88,6 +88,7 @@ async function CourseDetailContent({ params }: CourseDetailPageProps) {
               componentVisibility: serializedCourse.componentVisibility as any,
               heroImages: Array.isArray((course as any).heroImages) ? (course as any).heroImages : [],
               displayOrder: (course as any).displayOrder ?? undefined,
+              orientationText: (course as any).orientationText ?? undefined,
             }}
           />
         </TabsContent>

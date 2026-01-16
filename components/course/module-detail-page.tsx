@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Play, FileText, CheckCircle2, ArrowLeft, Video as VideoIcon } from "lucide-react";
+import { Loader2, Play, FileText, CheckCircle2, ArrowLeft, Video as VideoIcon, Download } from "lucide-react";
 import { toast } from "sonner";
 import { getModuleContentAction } from "@/app/actions/module-content";
 import { markModuleAsLearnedAction } from "@/app/actions/study-plan";
@@ -21,6 +21,11 @@ interface ModuleDetailPageProps {
   courseId: string;
   moduleId: string;
   onBack: () => void;
+  componentVisibility?: {
+    videos?: boolean;
+    quizzes?: boolean;
+    notes?: boolean;
+  } | null;
 }
 
 type Video = {
@@ -61,14 +66,29 @@ type Quiz = {
   };
 };
 
-export function ModuleDetailPage({ courseId, moduleId, onBack }: ModuleDetailPageProps) {
+export function ModuleDetailPage({ courseId, moduleId, onBack, componentVisibility }: ModuleDetailPageProps) {
+  // Get component visibility settings (default to enabled if not set)
+  const videosEnabled = componentVisibility?.videos !== false; // Default to true if not set
+  const quizzesEnabled = componentVisibility?.quizzes !== false; // Default to true if not set
+  const notesEnabled = componentVisibility?.notes !== false; // Default to true if not set
+  
   const [loading, setLoading] = useState(true);
   const [module, setModule] = useState<any>(null);
   const [videos, setVideos] = useState<Video[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [progress, setProgress] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<"videos" | "notes" | "quiz">("videos");
+  
+  // Determine initial tab based on what's enabled and available
+  const getInitialTab = (): "videos" | "notes" | "quiz" => {
+    // Only show videos tab if enabled AND there are videos
+    if (videosEnabled && videos.length > 0) return "videos";
+    if (notesEnabled) return "notes";
+    if (quizzesEnabled) return "quiz";
+    return "notes"; // Fallback
+  };
+  
+  const [activeTab, setActiveTab] = useState<"videos" | "notes" | "quiz">(getInitialTab());
   const [quizAnswers, setQuizAnswers] = useState<Record<string, Record<string, string>>>({});
   const [quizSubmitted, setQuizSubmitted] = useState<Record<string, boolean>>({});
   const [submittingQuiz, setSubmittingQuiz] = useState<string | null>(null);
@@ -89,6 +109,18 @@ export function ModuleDetailPage({ courseId, moduleId, onBack }: ModuleDetailPag
       setActiveTab(tab);
     }
   }, [moduleId]);
+
+  // Update active tab if videos tab is selected but there are no videos
+  useEffect(() => {
+    if (activeTab === "videos" && (!videosEnabled || videos.length === 0)) {
+      // Switch to first available tab
+      if (notesEnabled) {
+        setActiveTab("notes");
+      } else if (quizzesEnabled) {
+        setActiveTab("quiz");
+      }
+    }
+  }, [activeTab, videosEnabled, videos.length, notesEnabled, quizzesEnabled]);
 
   const loadStudentNote = async () => {
     try {
@@ -163,6 +195,53 @@ export function ModuleDetailPage({ courseId, moduleId, onBack }: ModuleDetailPag
     } finally {
       setMarkingComplete(false);
     }
+  };
+
+  const handleDownloadNotePdf = (noteItem: Note) => {
+    const title = `${module?.title || "Note"} - Note ${noteItem.order + 1}`;
+    const html = `<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>${title}</title>
+    <style>
+      body { font-family: "Inter", Arial, sans-serif; margin: 32px; color: #111827; }
+      h1 { font-size: 20px; margin-bottom: 16px; }
+      .note-content { line-height: 1.75; }
+      .note-content p { margin: 0 0 16px 0; }
+      .note-content h1 { font-size: 24px; margin: 24px 0 16px; }
+      .note-content h2 { font-size: 20px; margin: 20px 0 12px; }
+      .note-content h3 { font-size: 18px; margin: 16px 0 10px; }
+      .note-content ul, .note-content ol { margin: 16px 0; padding-left: 24px; }
+      .note-content li { margin-bottom: 8px; }
+      @media print { body { margin: 0.5in; } }
+    </style>
+  </head>
+  <body>
+    <h1>${title}</h1>
+    <div class="note-content">${noteItem.note.content}</div>
+  </body>
+</html>`;
+
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "fixed";
+    iframe.style.right = "0";
+    iframe.style.bottom = "0";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "0";
+    iframe.setAttribute("aria-hidden", "true");
+    iframe.srcdoc = html;
+
+    iframe.onload = () => {
+      const printWindow = iframe.contentWindow;
+      if (!printWindow) return;
+      printWindow.focus();
+      printWindow.print();
+      setTimeout(() => iframe.remove(), 1000);
+    };
+
+    document.body.appendChild(iframe);
   };
 
   const handleQuizAnswerChange = (quizId: string, questionId: string, answer: string) => {
@@ -311,30 +390,30 @@ export function ModuleDetailPage({ courseId, moduleId, onBack }: ModuleDetailPag
 
       {/* Content Tabs */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="videos">
-            <VideoIcon className="h-4 w-4 mr-2" />
-            Vidéos
-          </TabsTrigger>
-          <TabsTrigger value="notes">
-            <FileText className="h-4 w-4 mr-2" />
-            Notes du cours
-          </TabsTrigger>
-          <TabsTrigger value="quiz">
-            <Play className="h-4 w-4 mr-2" />
-            Quiz
-          </TabsTrigger>
+        <TabsList className={`grid w-full ${videosEnabled && videos.length > 0 && quizzesEnabled && notesEnabled ? 'grid-cols-3' : videosEnabled && videos.length > 0 && quizzesEnabled ? 'grid-cols-2' : videosEnabled && videos.length > 0 && notesEnabled ? 'grid-cols-2' : quizzesEnabled && notesEnabled ? 'grid-cols-2' : 'grid-cols-1'}`}>
+          {videosEnabled && videos.length > 0 && (
+            <TabsTrigger value="videos">
+              <VideoIcon className="h-4 w-4 mr-2" />
+              Vidéos
+            </TabsTrigger>
+          )}
+          {notesEnabled && (
+            <TabsTrigger value="notes">
+              <FileText className="h-4 w-4 mr-2" />
+              Notes du cours
+            </TabsTrigger>
+          )}
+          {quizzesEnabled && (
+            <TabsTrigger value="quiz">
+              <Play className="h-4 w-4 mr-2" />
+              Quiz
+            </TabsTrigger>
+          )}
         </TabsList>
 
-        {/* Videos Tab */}
-        <TabsContent value="videos" className="mt-6">
-          {videos.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <p className="text-muted-foreground">Aucune vidéo disponible pour ce module.</p>
-              </CardContent>
-            </Card>
-          ) : (
+        {/* Videos Tab - Only show if videos are enabled and available */}
+        {videosEnabled && videos.length > 0 && (
+          <TabsContent value="videos" className="mt-6">
             <div className="space-y-4">
               {videos.map((videoItem) => {
                 const embedUrl = getVimeoEmbedUrl(videoItem.video.vimeoUrl);
@@ -362,8 +441,8 @@ export function ModuleDetailPage({ courseId, moduleId, onBack }: ModuleDetailPag
                 );
               })}
             </div>
-          )}
-        </TabsContent>
+          </TabsContent>
+        )}
 
         {/* Notes Tab */}
         <TabsContent value="notes" className="mt-6">
@@ -377,8 +456,16 @@ export function ModuleDetailPage({ courseId, moduleId, onBack }: ModuleDetailPag
             <div className="space-y-4">
               {notes.map((noteItem) => (
                 <Card key={noteItem.id}>
-                  <CardHeader>
-                    <CardTitle></CardTitle>
+                  <CardHeader className="flex flex-row items-center justify-between gap-3">
+                    <CardTitle>Note {noteItem.order + 1}</CardTitle>
+                    <Button
+                      variant="outline"
+                      className="hidden md:inline-flex"
+                      onClick={() => handleDownloadNotePdf(noteItem)}
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Télécharger PDF
+                    </Button>
                   </CardHeader>
                   <CardContent>
                     <div 
@@ -463,11 +550,11 @@ export function ModuleDetailPage({ courseId, moduleId, onBack }: ModuleDetailPag
                             const optionValue = currentQuestion.options[key];
                             const optionLetter = getOptionLetter(key, keyIndex);
                             return (
-                              <div key={key} className="flex items-start space-x-3">
-                                <RadioGroupItem value={key} id={`${currentQuestion.id}-${key}`} />
+                              <div key={key} className="flex items-start space-x-3 py-2">
+                                <RadioGroupItem value={key} id={`${currentQuestion.id}-${key}`} className="self-center" />
                                 <Label
                                   htmlFor={`${currentQuestion.id}-${key}`}
-                                  className="flex-1 cursor-pointer leading-relaxed"
+                                  className="flex-1 cursor-pointer leading-relaxed text-base"
                                 >
                                   <span className="font-medium">{optionLetter}:</span> {optionValue}
                                 </Label>

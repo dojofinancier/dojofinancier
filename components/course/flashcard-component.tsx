@@ -152,7 +152,7 @@ export function FlashcardComponent({ courseId, contentItemId }: FlashcardCompone
           transform: rotateY(180deg);
         }
       `}</style>
-      <Card>
+      <Card className="border-0 shadow-none sm:border sm:shadow">
         <CardHeader>
           <div className="flex items-center justify-between mb-4">
             <CardTitle>Flashcards</CardTitle>
@@ -220,7 +220,7 @@ export function FlashcardComponent({ courseId, contentItemId }: FlashcardCompone
                   isFlipped ? "opacity-0 pointer-events-none" : "opacity-100"
                 }`}
               >
-                <Card className="h-full flex items-center justify-center">
+                <Card className="h-full flex items-center justify-center border-0 shadow-none sm:border sm:shadow">
                   <CardContent className="text-center p-6">
                     <p className="text-lg font-medium">{currentCard.front}</p>
                     <p className="text-sm text-muted-foreground mt-4">
@@ -236,7 +236,7 @@ export function FlashcardComponent({ courseId, contentItemId }: FlashcardCompone
                   isFlipped ? "opacity-100" : "opacity-0 pointer-events-none"
                 }`}
               >
-                <Card className="h-full flex items-center justify-center bg-primary text-primary-foreground">
+                <Card className="h-full flex items-center justify-center bg-primary text-primary-foreground border-0 shadow-none sm:border sm:shadow">
                   <CardContent className="text-center p-6">
                     <p className="text-lg font-medium">{currentCard.back}</p>
                     <p className="text-sm opacity-80 mt-4">
@@ -271,7 +271,7 @@ export function FlashcardComponent({ courseId, contentItemId }: FlashcardCompone
         )}
 
         {/* Navigation */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 sm:gap-0 pt-4 border-t">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 sm:gap-0 pt-4 border-t border-border/40 sm:border-border">
           <Button
             variant="outline"
             onClick={handlePrevious}

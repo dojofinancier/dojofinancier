@@ -161,7 +161,7 @@ export function StudyPlan({ courseId, refreshKey }: StudyPlanProps) {
                       variant="ghost"
                       className="w-full justify-between p-4 h-auto hover:bg-transparent"
                     >
-                      <div className="flex items-center gap-2 sm:gap-3 flex-1 text-left min-w-0">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3 flex-1 text-left min-w-0">
                         <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
                           {isExpanded ? (
                             <ChevronDown className="h-4 w-4" />
@@ -193,7 +193,7 @@ export function StudyPlan({ courseId, refreshKey }: StudyPlanProps) {
                             {format(weekEnd, "d MMM yyyy", { locale: fr })}
                           </p>
                         </div>
-                        <div className="text-right flex-shrink-0 ml-2">
+                        <div className="flex w-full items-center justify-between text-xs sm:w-auto sm:flex-col sm:items-end sm:text-right sm:ml-2">
                           <div className="text-xs sm:text-sm font-medium whitespace-nowrap">
                             {week.completedTasks} / {week.totalTasks} complété
                           </div>
@@ -212,13 +212,13 @@ export function StudyPlan({ courseId, refreshKey }: StudyPlanProps) {
                           <h4 className="text-sm font-semibold mb-2">
                             Phase 1 - Apprendre
                           </h4>
-                          <div className="space-y-2 ml-6">
+                          <div className="space-y-3 sm:space-y-2 ml-0 sm:ml-6">
                             {groupedTasks.LEARN.map((task, index) => (
                               <div
                                 key={`${task.moduleId || 'task'}-${index}`}
-                                className="p-3 border rounded bg-background"
+                                className="p-3 rounded-lg border border-border/60 bg-muted/30 shadow-sm sm:bg-background sm:shadow-none"
                               >
-                                <div className="flex items-start justify-between gap-2">
+                                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                                   <div className="flex items-center gap-2 flex-1">
                                     <Checkbox
                                       checked={task.status === "COMPLETED"}
@@ -318,7 +318,9 @@ export function StudyPlan({ courseId, refreshKey }: StudyPlanProps) {
                                       {task.description}
                                     </div>
                                   </div>
-                                  {getStatusBadge(task.status)}
+                                  <div className="flex items-center justify-between sm:justify-end">
+                                    {getStatusBadge(task.status)}
+                                  </div>
                                 </div>
                               </div>
                             ))}
@@ -332,13 +334,13 @@ export function StudyPlan({ courseId, refreshKey }: StudyPlanProps) {
                           <h4 className="text-sm font-semibold mb-2">
                             Phase 2 - Réviser
                           </h4>
-                          <div className="space-y-2 ml-6">
+                          <div className="space-y-3 sm:space-y-2 ml-0 sm:ml-6">
                             {groupedTasks.REVIEW.map((task, index) => (
                               <div
                                 key={`review-${index}`}
-                                className="p-3 border rounded bg-background"
+                                className="p-3 rounded-lg border border-border/60 bg-muted/30 shadow-sm sm:bg-background sm:shadow-none"
                               >
-                                <div className="flex items-start justify-between gap-2">
+                                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                                   <div className="flex items-center gap-2 flex-1">
                                     <Checkbox
                                       checked={task.status === "COMPLETED"}
@@ -438,7 +440,9 @@ export function StudyPlan({ courseId, refreshKey }: StudyPlanProps) {
                                       {task.description}
                                     </div>
                                   </div>
-                                  {getStatusBadge(task.status)}
+                                  <div className="flex items-center justify-between sm:justify-end">
+                                    {getStatusBadge(task.status)}
+                                  </div>
                                 </div>
                               </div>
                             ))}
@@ -452,13 +456,13 @@ export function StudyPlan({ courseId, refreshKey }: StudyPlanProps) {
                           <h4 className="text-sm font-semibold mb-2">
                             Phase 3 - Pratiquer
                           </h4>
-                          <div className="space-y-2 ml-6">
+                          <div className="space-y-3 sm:space-y-2 ml-0 sm:ml-6">
                             {groupedTasks.PRACTICE.map((task, index) => (
                               <div
                                 key={`practice-${index}`}
-                                className="p-3 border rounded bg-background"
+                                className="p-3 rounded-lg border border-border/60 bg-muted/30 shadow-sm sm:bg-background sm:shadow-none"
                               >
-                                <div className="flex items-start justify-between gap-2">
+                                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                                   <div className="flex items-center gap-2 flex-1">
                                     <Checkbox
                                       checked={task.status === "COMPLETED"}
@@ -558,7 +562,9 @@ export function StudyPlan({ courseId, refreshKey }: StudyPlanProps) {
                                       {task.description}
                                     </div>
                                   </div>
-                                  {getStatusBadge(task.status)}
+                                  <div className="flex items-center justify-between sm:justify-end">
+                                    {getStatusBadge(task.status)}
+                                  </div>
                                 </div>
                               </div>
                             ))}

@@ -163,7 +163,7 @@ function ClientPathsSection() {
       features: ["Gestion de portefeuille", "Analyse fondamentale", "Stratégies"],
       color: "bg-white",
       textColor: "text-black",
-      link: "/investisseur",
+      link: "/investisseur/waitlist",
     },
     {
       id: "ent",
@@ -174,7 +174,7 @@ function ClientPathsSection() {
       features: ["Finance corporative", "Planification", "Levée de fonds"],
       color: "bg-black",
       textColor: "text-white",
-      link: "/formations?category=entrepreneurs",
+      link: "/entrepreneur/waitlist",
     },
   ];
 

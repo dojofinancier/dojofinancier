@@ -1,6 +1,7 @@
 import { getCourseContentAction } from "@/app/actions/courses";
 import { getPublishedCourseBySlugAction } from "@/app/actions/courses";
-import { getUserCourseSettingsAction } from "@/app/actions/study-plan";
+import { getTodaysPlanAction, getUserCourseSettingsAction } from "@/app/actions/study-plan";
+
 import { notFound, redirect } from "next/navigation";
 import { CourseLearningInterface } from "@/components/course/learning-interface";
 import { PhaseBasedLearningInterface } from "@/components/course/phase-based-learning-interface";
@@ -30,10 +31,12 @@ export default async function CourseLearningPage({
     const actualCourseId = courseBySlug.id;
 
     // Fetch course content and settings in parallel for better performance
-    const [courseResult, settingsResult] = await Promise.all([
+    const [courseResult, settingsResult, todaysPlanResult] = await Promise.all([
       getCourseContentAction(actualCourseId),
       getUserCourseSettingsAction(actualCourseId).catch(() => ({ success: false, data: null })), // Don't fail if settings don't exist
+      getTodaysPlanAction(actualCourseId).catch(() => ({ success: false, data: null })),
     ]);
+
 
     const result = courseResult;
 
@@ -102,6 +105,7 @@ export default async function CourseLearningPage({
           <PhaseBasedLearningInterface
             course={result.data}
             initialSettings={settingsResult.success ? settingsResult.data : null}
+            initialTodaysPlan={todaysPlanResult.success ? todaysPlanResult.data : null}
           />
         </Suspense>
       );

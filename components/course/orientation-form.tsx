@@ -9,7 +9,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, AlertCircle } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { CalendarIcon, AlertCircle, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -26,6 +27,7 @@ interface OrientationFormProps {
   recommendedStudyHoursMin?: number | null;
   recommendedStudyHoursMax?: number | null;
   orientationVideoUrl?: string | null;
+  orientationText?: string | null;
   firstModuleId?: string | null;
   onComplete?: (isFirstCreation: boolean) => void;
 }
@@ -36,11 +38,13 @@ export function OrientationForm({
   recommendedStudyHoursMin = 6,
   recommendedStudyHoursMax = 10,
   orientationVideoUrl,
+  orientationText,
   firstModuleId,
   onComplete,
 }: OrientationFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [loadingProgress, setLoadingProgress] = useState(0);
   const [examDate, setExamDate] = useState<Date | undefined>(undefined);
   const [studyHoursPerWeek, setStudyHoursPerWeek] = useState(6);
   const [selfRating, setSelfRating] = useState<SelfRating>("NOVICE");
@@ -72,6 +76,24 @@ export function OrientationForm({
       }
     }
   }, [settings]);
+
+  useEffect(() => {
+    if (!loading) {
+      setLoadingProgress(0);
+      return;
+    }
+
+    setLoadingProgress(10);
+    const interval = setInterval(() => {
+      setLoadingProgress((prev) => {
+        if (prev >= 90) return prev;
+        const increment = Math.floor(Math.random() * 8) + 4;
+        return Math.min(prev + increment, 90);
+      });
+    }, 700);
+
+    return () => clearInterval(interval);
+  }, [loading]);
 
   const handleDayToggle = (day: number) => {
     setPreferredStudyDays((prev) =>
@@ -156,6 +178,7 @@ export function OrientationForm({
         courseId={courseId}
         courseTitle={courseTitle}
         orientationVideoUrl={orientationVideoUrl}
+        orientationText={orientationText}
         firstModuleId={firstModuleId}
         onComplete={() => {
           onComplete?.(true);
@@ -166,30 +189,75 @@ export function OrientationForm({
 
   if (loadingSettings) {
     return (
-      <div className="container mx-auto px-4 py-8 max-w-3xl">
-        <Card>
-          <CardHeader>
-            <CardTitle>Phase 0 - Orientation</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground">Chargement des paramètres...</p>
-          </CardContent>
-        </Card>
-      </div>
+      <>
+        {loading && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+            <Card className="w-full max-w-lg shadow-lg">
+              <CardContent className="py-6 space-y-4">
+                <div className="flex items-center gap-3">
+                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                  <div>
+                    <p className="font-semibold">Création du plan d'étude</p>
+                    <p className="text-sm text-muted-foreground">Analyse et génération en cours…</p>
+                  </div>
+                </div>
+                <Progress value={loadingProgress} />
+                <div className="grid gap-2 text-sm text-muted-foreground">
+                  <div className={loadingProgress > 20 ? "text-foreground" : undefined}>Analyse du programme</div>
+                  <div className={loadingProgress > 45 ? "text-foreground" : undefined}>Organisation des sessions</div>
+                  <div className={loadingProgress > 70 ? "text-foreground" : undefined}>Finalisation du plan</div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+        <div className="container mx-auto px-4 py-8 max-w-3xl">
+          <Card>
+            <CardHeader>
+              <CardTitle>Phase 0 - Orientation</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">Chargement des paramètres...</p>
+            </CardContent>
+          </Card>
+        </div>
+      </>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-3xl">
-      <Card>
-        <CardHeader>
-          <CardTitle>Phase 0 - Orientation</CardTitle>
-          <CardDescription>
-            Configurez votre plan d'étude personnalisé pour {courseTitle}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
+    <>
+      {loading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <Card className="w-full max-w-lg shadow-lg">
+            <CardContent className="py-6 space-y-4">
+              <div className="flex items-center gap-3">
+                <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                <div>
+                  <p className="font-semibold">Création du plan d'étude</p>
+                  <p className="text-sm text-muted-foreground">Analyse et génération en cours…</p>
+                </div>
+              </div>
+              <Progress value={loadingProgress} />
+              <div className="grid gap-2 text-sm text-muted-foreground">
+                <div className={loadingProgress > 20 ? "text-foreground" : undefined}>Analyse du programme</div>
+                <div className={loadingProgress > 45 ? "text-foreground" : undefined}>Organisation des sessions</div>
+                <div className={loadingProgress > 70 ? "text-foreground" : undefined}>Finalisation du plan</div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+      <div className="container mx-auto px-4 py-8 max-w-3xl">
+        <Card>
+          <CardHeader>
+            <CardTitle>Phase 0 - Orientation</CardTitle>
+            <CardDescription>
+              Configurez votre plan d'étude personnalisé pour {courseTitle}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-6">
             {error && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
@@ -313,6 +381,7 @@ export function OrientationForm({
         </CardContent>
       </Card>
     </div>
+  </>
   );
 }
 

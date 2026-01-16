@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,10 @@ import { sendMessageAction, getMessageThreadsAction, getThreadMessagesAction } f
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { RichTextEditor } from "@/components/admin/courses/rich-text-editor";
+import { Skeleton } from "@/components/ui/skeleton";
+
+// Lazy load TipTap editor to reduce initial bundle size
+const RichTextEditor = lazy(() => import("@/components/admin/courses/rich-text-editor").then(m => ({ default: m.RichTextEditor })));
 
 interface AskQuestionPageProps {
   courseId: string;
@@ -157,11 +160,13 @@ export function AskQuestionPage({ courseId, courseTitle }: AskQuestionPageProps)
             <CardContent>
               <form onSubmit={handleSubmitQuestion} className="space-y-4">
                 <div>
-                  <RichTextEditor
-                    content={newQuestion}
-                    onChange={setNewQuestion}
-                    placeholder="Décrivez votre question ou votre problème de manière détaillée..."
-                  />
+                  <Suspense fallback={<Skeleton className="h-32 w-full" />}>
+                    <RichTextEditor
+                      content={newQuestion}
+                      onChange={setNewQuestion}
+                      placeholder="Décrivez votre question ou votre problème de manière détaillée..."
+                    />
+                  </Suspense>
                 </div>
                 <div className="flex justify-end">
                   <Button

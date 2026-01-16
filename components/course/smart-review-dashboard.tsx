@@ -110,12 +110,13 @@ export function SmartReviewDashboard({ courseId, course, settings }: SmartReview
   const reviewedActivities = stats?.chapterStats.reduce((sum, c) => sum + c.activitiesReviewed, 0) || 0;
   const totalReviewed = reviewedFlashcards + reviewedActivities;
 
-  const hasCompletedChapters = (stats?.completedChapters.length || 0) > 0;
+  const chapterStats = stats?.chapterStats ?? [];
+  const hasCompletedChapters = (stats?.completedChapters?.length || 0) > 0;
 
   return (
     <div className="space-y-6">
       {/* Overview Card */}
-      <Card>
+      <Card className="border-0 shadow-none sm:border sm:shadow">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Brain className="h-5 w-5 text-primary" />
@@ -129,25 +130,25 @@ export function SmartReviewDashboard({ courseId, course, settings }: SmartReview
         <CardContent className="space-y-4">
           {/* Stats Summary */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center p-3 bg-muted/50 rounded-lg">
+            <div className="text-center p-3 rounded-lg sm:bg-muted/50 sm:border sm:border-border/40">
               <div className="text-2xl font-bold text-primary">
-                {isLoading ? "..." : stats?.completedChapters.length || 0}
+                {isLoading ? "..." : stats?.completedChapters?.length || 0}
               </div>
               <div className="text-xs text-muted-foreground">Chapitres débloqués</div>
             </div>
-            <div className="text-center p-3 bg-muted/50 rounded-lg">
+            <div className="text-center p-3 rounded-lg sm:bg-muted/50 sm:border sm:border-border/40">
               <div className="text-2xl font-bold">
                 {isLoading ? "..." : totalItems}
               </div>
               <div className="text-xs text-muted-foreground">Items disponibles</div>
             </div>
-            <div className="text-center p-3 bg-muted/50 rounded-lg">
+            <div className="text-center p-3 rounded-lg sm:bg-muted/50 sm:border sm:border-border/40">
               <div className="text-2xl font-bold text-green-600">
                 {isLoading ? "..." : totalReviewed}
               </div>
               <div className="text-xs text-muted-foreground">Items vus</div>
             </div>
-            <div className="text-center p-3 bg-muted/50 rounded-lg">
+            <div className="text-center p-3 rounded-lg sm:bg-muted/50 sm:border sm:border-border/40">
               <div className="text-2xl font-bold">
                 {isLoading ? "..." : stats?.totalItemsReviewed || 0}
               </div>
@@ -175,32 +176,32 @@ export function SmartReviewDashboard({ courseId, course, settings }: SmartReview
       </Card>
 
       {/* Chapter Stats */}
-      {stats && stats.chapterStats.length > 0 && (
-        <Card>
+      {chapterStats.length > 0 && (
+        <Card className="border-0 shadow-none sm:border sm:shadow">
           <CardHeader>
             <CardTitle className="text-lg">Progression par chapitre</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {stats.chapterStats
+              {chapterStats
                 .sort((a, b) => a.moduleOrder - b.moduleOrder)
                 .map((chapter) => (
                   <div
                     key={chapter.moduleId}
-                    className="flex items-center justify-between p-3 border rounded-lg"
+                    className="flex flex-col gap-2 p-2 sm:p-3 rounded-lg sm:border sm:border-border/60 sm:bg-background sm:flex-row sm:items-center sm:justify-between"
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
                       <CheckCircle2 className="h-4 w-4 text-green-500" />
-                      <span className="font-medium text-sm truncate max-w-[200px] md:max-w-none">
+                      <span className="font-medium text-base sm:text-sm sm:truncate sm:max-w-[200px] md:max-w-none">
                         {chapter.moduleTitle}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-xs">
+                    <div className="flex flex-wrap gap-2 sm:justify-end">
+                      <Badge variant="outline" className="text-sm sm:text-xs">
                         <Zap className="h-3 w-3 mr-1" />
                         {chapter.flashcardsReviewed}/{chapter.totalFlashcards}
                       </Badge>
-                      <Badge variant="outline" className="text-xs">
+                      <Badge variant="outline" className="text-sm sm:text-xs">
                         <BookOpen className="h-3 w-3 mr-1" />
                         {chapter.activitiesReviewed}/{chapter.totalActivities}
                       </Badge>
@@ -214,7 +215,7 @@ export function SmartReviewDashboard({ courseId, course, settings }: SmartReview
 
       {/* Locked Chapters Info */}
       {course.modules && stats && (
-        <Card className="border-dashed">
+        <Card className="border-0 shadow-none sm:border-dashed sm:shadow-none">
           <CardContent className="pt-6">
             <div className="text-center text-muted-foreground">
               <p className="text-sm">

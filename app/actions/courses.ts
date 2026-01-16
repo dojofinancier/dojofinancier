@@ -37,6 +37,7 @@ const courseSchema = z.object({
     (val) => !val || val === "" || z.string().url().safeParse(val).success,
     { message: "L'URL doit être une URL valide" }
   ).transform((val) => val === "" ? null : val),
+  orientationText: z.string().optional().nullable(),
   heroImages: z.array(z.string()).optional().default([]),
 });
 
@@ -135,7 +136,7 @@ export async function updateCourseAction(
     console.log("Updating course with data:", { courseId, validatedData });
 
     // Separate categoryId from other fields and handle it as a relation
-    const { categoryId, code, appointmentHourlyRate, orientationVideoUrl, heroImages, displayOrder, ...updateData } = validatedData;
+    const { categoryId, code, appointmentHourlyRate, orientationVideoUrl, orientationText, heroImages, displayOrder, ...updateData } = validatedData;
     
     const prismaData: any = { ...updateData };
     
@@ -167,6 +168,11 @@ export async function updateCourseAction(
     // Handle orientationVideoUrl - explicitly set null if provided (even if null)
     if (orientationVideoUrl !== undefined) {
       prismaData.orientationVideoUrl = orientationVideoUrl;
+    }
+    
+    // Handle orientationText - explicitly set null if provided (even if null)
+    if (orientationText !== undefined) {
+      prismaData.orientationText = orientationText;
     }
     
     // Handle displayOrder - explicitly set null if provided (even if null)
@@ -569,115 +575,118 @@ function isUUID(str: string): boolean {
 /**
  * Get published course by slug or ID (public, no auth required)
  * Supports both slug-based URLs and UUID-based URLs for backward compatibility
+ * Cached for 5 minutes to improve server response time
  */
 export async function getPublishedCourseBySlugAction(slug: string) {
   try {
-    // If it's a UUID, look up by ID (backward compatibility)
-    // Otherwise, look up by slug
-    const whereClause = isUUID(slug)
-      ? { id: slug, published: true }
-      : { slug: slug, published: true };
+    // Use cached version for better performance
+    const getCachedCourse = unstable_cache(
+      async (courseSlug: string) => {
+        // If it's a UUID, look up by ID (backward compatibility)
+        // Otherwise, look up by slug
+        const whereClause = isUUID(courseSlug)
+          ? { id: courseSlug, published: true }
+          : { slug: courseSlug, published: true };
 
-    const course = await prisma.course.findFirst({
-      where: whereClause,
-      include: {
-        category: true,
-        modules: {
-          orderBy: { order: "asc" },
+        const course = await prisma.course.findFirst({
+          where: whereClause,
           include: {
-            contentItems: {
+            category: true,
+            modules: {
               orderBy: { order: "asc" },
+              include: {
+                contentItems: {
+                  orderBy: { order: "asc" },
+                  select: {
+                    id: true,
+                    contentType: true,
+                    order: true,
+                  },
+                },
+              },
+            },
+            faqs: {
+              orderBy: { order: "asc" },
+            },
+            questionBanks: {
+              include: {
+                questions: {
+                  select: {
+                    id: true,
+                  },
+                },
+              },
+            },
+            flashcards: {
               select: {
                 id: true,
-                contentType: true,
-                order: true,
+              },
+            },
+            _count: {
+              select: {
+                enrollments: true,
+                modules: true,
               },
             },
           },
-        },
-        faqs: {
-          orderBy: { order: "asc" },
-        },
-        questionBanks: {
-          include: {
-            questions: {
-              select: {
-                id: true,
-              },
-            },
-          },
-        },
-        flashcards: {
-          select: {
-            id: true,
-          },
-        },
-        _count: {
-          select: {
-            enrollments: true,
-            modules: true,
-          },
-        },
-      },
-    });
+        });
 
-    // Get quiz questions and learning activities counts
-    let totalQuizQuestions = 0;
-    let totalLearningActivities = 0;
-    
-    if (course) {
-      // Get all quizzes for this course
-      const quizzes = await prisma.quiz.findMany({
-        where: {
-          courseId: course.id,
-        },
-        include: {
-          questions: {
+        if (!course) {
+          return null;
+        }
+
+        // Batch queries for better performance - run in parallel
+        const [quizzes, learningActivities] = await Promise.all([
+          prisma.quiz.findMany({
+            where: {
+              courseId: course.id,
+            },
+            include: {
+              questions: {
+                select: {
+                  id: true,
+                },
+              },
+            },
+          }),
+          prisma.learningActivity.findMany({
+            where: {
+              courseId: course.id,
+            },
             select: {
               id: true,
             },
+          }),
+        ]);
+        
+        const totalQuizQuestions = quizzes.reduce((acc, quiz) => acc + quiz.questions.length, 0);
+        const totalLearningActivities = learningActivities.length;
+
+        // Calculate total question bank questions
+        const totalQuestionBankQuestions = course.questionBanks.reduce(
+          (acc, qb) => acc + qb.questions.length,
+          0
+        );
+
+        // Convert Decimal fields to numbers for client components
+        return {
+          ...course,
+          price: course.price.toNumber(),
+          appointmentHourlyRate: course.appointmentHourlyRate?.toNumber() ?? null,
+          _count: {
+            ...course._count,
+            flashcards: course.flashcards.length,
           },
-        },
-      });
-      
-      totalQuizQuestions = quizzes.reduce((acc, quiz) => acc + quiz.questions.length, 0);
-      
-      // Get all learning activities for this course
-      const learningActivities = await prisma.learningActivity.findMany({
-        where: {
-          courseId: course.id,
-        },
-        select: {
-          id: true,
-        },
-      });
-      
-      totalLearningActivities = learningActivities.length;
-    }
-
-    if (!course) {
-      return null;
-    }
-
-    // Calculate total question bank questions
-    const totalQuestionBankQuestions = course.questionBanks.reduce(
-      (acc, qb) => acc + qb.questions.length,
-      0
+          totalQuizQuestions,
+          totalQuestionBankQuestions,
+          totalLearningActivities,
+        };
+      },
+      ["published-course"],
+      { revalidate: 300, tags: ["courses"] } // 5 minutes cache
     );
 
-    // Convert Decimal fields to numbers for client components
-    return {
-      ...course,
-      price: course.price.toNumber(),
-      appointmentHourlyRate: course.appointmentHourlyRate?.toNumber() ?? null,
-      _count: {
-        ...course._count,
-        flashcards: course.flashcards.length,
-      },
-      totalQuizQuestions,
-      totalQuestionBankQuestions,
-      totalLearningActivities,
-    };
+    return await getCachedCourse(slug);
   } catch (error) {
     await logServerError({
       errorMessage: `Failed to get published course by slug: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -774,6 +783,7 @@ export async function getCourseContentAction(courseId: string) {
         recommendedStudyHoursMin: true,
         recommendedStudyHoursMax: true,
         orientationVideoUrl: true,
+        orientationText: true,
         modules: {
           orderBy: { order: "asc" },
           select: {
@@ -842,6 +852,7 @@ export async function getCourseContentAction(courseId: string) {
       recommendedStudyHoursMin: course.recommendedStudyHoursMin ?? 6,
       recommendedStudyHoursMax: course.recommendedStudyHoursMax ?? 10,
       orientationVideoUrl: course.orientationVideoUrl ?? null,
+      orientationText: course.orientationText ?? null,
       modules: course.modules.map((module) => ({
         ...module,
         contentItems: module.contentItems.map((item) => ({

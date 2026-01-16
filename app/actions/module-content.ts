@@ -141,6 +141,29 @@ export async function getModuleContentAction(moduleId: string): Promise<ModuleCo
       };
     }
 
+    // Get the module to find the course and check componentVisibility
+    const module = await prisma.module.findUnique({
+      where: { id: moduleId },
+      select: {
+        course: {
+          select: {
+            id: true,
+            componentVisibility: true,
+          },
+        },
+      },
+    });
+
+    // Get component visibility settings (default to enabled if not set)
+    const componentVisibility = (module?.course?.componentVisibility as any) || {};
+    const videosEnabled = componentVisibility.videos !== false; // Default to true if not set
+
+    // Filter videos based on componentVisibility
+    const filteredData = {
+      ...cachedData,
+      videos: videosEnabled ? cachedData.videos : [],
+    };
+
     // Get user's progress for this module (not cached, user-specific)
     const moduleProgress = await prisma.moduleProgress.findUnique({
       where: {
@@ -154,7 +177,7 @@ export async function getModuleContentAction(moduleId: string): Promise<ModuleCo
     return {
       success: true,
       data: {
-        ...cachedData,
+        ...filteredData,
         progress: moduleProgress,
       },
     };

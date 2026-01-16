@@ -1,16 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { BookOpen, User, Calendar, HelpCircle, Menu, GraduationCap } from "lucide-react";
-import { CoursesTab } from "./tabs/courses-tab";
-import { CohortsTab } from "./tabs/cohorts-tab";
-import { ProfileTab } from "./tabs/profile-tab";
-import { AppointmentsTab } from "./tabs/appointments-tab";
-import { SupportTab } from "./tabs/support-tab";
+const CoursesTab = lazy(() => import("./tabs/courses-tab").then((m) => ({ default: m.CoursesTab })));
+const CohortsTab = lazy(() => import("./tabs/cohorts-tab").then((m) => ({ default: m.CohortsTab })));
+const ProfileTab = lazy(() => import("./tabs/profile-tab").then((m) => ({ default: m.ProfileTab })));
+const AppointmentsTab = lazy(() => import("./tabs/appointments-tab").then((m) => ({ default: m.AppointmentsTab })));
+const SupportTab = lazy(() => import("./tabs/support-tab").then((m) => ({ default: m.SupportTab })));
 
 type User = {
   id: string;
@@ -59,6 +59,12 @@ interface StudentDashboardProps {
   initialEnrollments: Enrollment[];
   initialCohortEnrollments?: CohortEnrollment[];
 }
+
+const TabLoading = () => (
+  <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+    Chargement...
+  </div>
+);
 
 export function StudentDashboard({
   user,
@@ -216,17 +222,33 @@ export function StudentDashboard({
       {/* Tab Content */}
       <div className="mt-6">
         {activeTab === "courses" && (
-          <CoursesTab
-            enrollments={initialEnrollments}
-            cohortEnrollments={[]}
-          />
+          <Suspense fallback={<TabLoading />}>
+            <CoursesTab
+              enrollments={initialEnrollments}
+              cohortEnrollments={[]}
+            />
+          </Suspense>
         )}
         {activeTab === "cohorts" && (
-          <CohortsTab cohortEnrollments={initialCohortEnrollments} />
+          <Suspense fallback={<TabLoading />}>
+            <CohortsTab cohortEnrollments={initialCohortEnrollments} />
+          </Suspense>
         )}
-        {activeTab === "profile" && <ProfileTab user={user} />}
-        {activeTab === "appointments" && <AppointmentsTab />}
-        {activeTab === "support" && <SupportTab />}
+        {activeTab === "profile" && (
+          <Suspense fallback={<TabLoading />}>
+            <ProfileTab user={user} />
+          </Suspense>
+        )}
+        {activeTab === "appointments" && (
+          <Suspense fallback={<TabLoading />}>
+            <AppointmentsTab />
+          </Suspense>
+        )}
+        {activeTab === "support" && (
+          <Suspense fallback={<TabLoading />}>
+            <SupportTab />
+          </Suspense>
+        )}
       </div>
     </div>
   );

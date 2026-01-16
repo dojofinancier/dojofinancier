@@ -486,7 +486,7 @@ export function PaymentForm({
       {/* Payment Card Element */}
       <div className="space-y-2">
         <Label>Numéro de carte</Label>
-        <div className="flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 [&_.StripeElement]:h-full [&_.StripeElement_iframe]:h-full [&_.StripeElement_iframe]:min-h-0">
+        <div className="relative z-0 flex h-10 w-full items-center overflow-hidden rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 [&_.StripeElement]:h-full [&_.StripeElement_iframe]:h-full [&_.StripeElement_iframe]:min-h-0">
           <div className="flex-1 h-full">
             <CardElement
               options={cardElementOptions}
@@ -521,7 +521,12 @@ export function PaymentForm({
         </div>
       </div>
 
-      <Button type="submit" className="w-full" disabled={isProcessing || !stripe}>
+        <Button
+          type="submit"
+          className="w-full cursor-pointer hover:scale-100 active:scale-100 relative z-10 touch-manipulation"
+          disabled={isProcessing || !stripe}
+        >
+
         {isProcessing ? "Traitement..." : `Payer ${amount.toFixed(2)} $`}
       </Button>
     </form>

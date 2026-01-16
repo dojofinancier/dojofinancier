@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Video, FileText, Play, Layers, Brain, FileQuestion, BookOpen, Briefcase } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getCourseAction } from "@/app/actions/courses";
+import { getCaseStudiesAction } from "@/app/actions/case-studies";
 import { useEffect, useState } from "react";
 
 interface LearningToolsProps {
@@ -72,6 +73,8 @@ const allTools = [
 
 export function LearningTools({ courseId, onToolSelect }: LearningToolsProps) {
   const [course, setCourse] = useState<any>(null);
+  const [hasCaseStudies, setHasCaseStudies] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadCourse();
@@ -79,23 +82,41 @@ export function LearningTools({ courseId, onToolSelect }: LearningToolsProps) {
 
   const loadCourse = async () => {
     try {
-      const result = await getCourseAction(courseId);
-      if (result) {
-        setCourse(result);
+      setLoading(true);
+      const [courseResult, caseStudiesResult] = await Promise.all([
+        getCourseAction(courseId),
+        getCaseStudiesAction(courseId),
+      ]);
+
+      if (courseResult) {
+        setCourse(courseResult);
+      }
+
+      if (caseStudiesResult.success && caseStudiesResult.data) {
+        setHasCaseStudies(caseStudiesResult.data.length > 0);
       }
     } catch (error) {
       console.error("Error loading course:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
   // Filter tools based on component visibility
-  const caseStudiesEnabled = course?.componentVisibility?.caseStudies ?? false;
+  const componentVisibility = course?.componentVisibility || {};
+  const videosEnabled = course ? componentVisibility.videos !== false : false;
+  const notesEnabled = course ? componentVisibility.notes !== false : false;
+  const quizzesEnabled = course ? componentVisibility.quizzes !== false : false;
+  const flashcardsEnabled = course ? componentVisibility.flashcards !== false : false;
+  const caseStudiesEnabled = hasCaseStudies;
+
   const tools = allTools.filter((tool) => {
-    if (tool.id === "case-studies") {
-      return caseStudiesEnabled;
-    }
-    // For other tools, check their visibility if needed
-    // For now, we'll show all other tools by default
+    if (tool.id === "videos") return videosEnabled;
+    if (tool.id === "notes") return notesEnabled;
+    if (tool.id === "quizzes") return quizzesEnabled;
+    if (tool.id === "flashcards") return flashcardsEnabled;
+    if (tool.id === "case-studies") return caseStudiesEnabled;
+    // Activities, exams, and question-bank are always available
     return true;
   });
 
@@ -108,33 +129,41 @@ export function LearningTools({ courseId, onToolSelect }: LearningToolsProps) {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {tools.map((tool) => {
-          const Icon = tool.icon;
-          return (
-            <Card
-              key={tool.id}
-              className="cursor-pointer hover:shadow-lg transition-shadow"
-              onClick={() => onToolSelect(tool.id)}
-            >
-              <CardHeader>
-                <div className="flex items-center gap-3 mb-2">
-                  <div className={`p-2 rounded-lg bg-muted ${tool.color}`}>
-                    <Icon className="h-6 w-6" />
+      {loading ? (
+        <Card>
+          <CardContent className="py-10 text-center text-muted-foreground">
+            Chargement des outils...
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {tools.map((tool) => {
+            const Icon = tool.icon;
+            return (
+              <Card
+                key={tool.id}
+                className="cursor-pointer hover:shadow-lg transition-shadow"
+                onClick={() => onToolSelect(tool.id)}
+              >
+                <CardHeader>
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className={`p-2 rounded-lg bg-muted ${tool.color}`}>
+                      <Icon className="h-6 w-6" />
+                    </div>
+                    <CardTitle className="text-lg">{tool.title}</CardTitle>
                   </div>
-                  <CardTitle className="text-lg">{tool.title}</CardTitle>
-                </div>
-                <CardDescription>{tool.description}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button variant="outline" className="w-full">
-                  Accéder
-                </Button>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+                  <CardDescription>{tool.description}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button variant="outline" className="w-full">
+                    Accéder
+                  </Button>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

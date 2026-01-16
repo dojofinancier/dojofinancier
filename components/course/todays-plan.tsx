@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,18 +19,37 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import DOMPurify from "dompurify";
+
+
+interface TodaysPlanData {
+  sections: {
+    sessionCourte: any[];
+    sessionLongue: any[];
+    sessionCourteSupplementaire: any[];
+    sessionLongueSupplementaire: any[];
+  };
+  totalBlocks: number;
+  phase1Module: { id: string; title: string; order: number } | null;
+}
 
 interface TodaysPlanProps {
   courseId: string;
   orientationVideoUrl?: string | null;
+  orientationText?: string | null;
+  initialPlanData?: TodaysPlanData | null;
 }
 
-export function TodaysPlan({ courseId, orientationVideoUrl }: TodaysPlanProps) {
+export function TodaysPlan({ courseId, orientationVideoUrl, orientationText, initialPlanData }: TodaysPlanProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [isPending, startTransition] = useTransition();
-  const { data: planData, isLoading: loading, refetch } = useTodaysPlan(courseId);
+  const { data: planData, isLoading: loading, refetch } = useTodaysPlan(
+    courseId,
+    initialPlanData ?? undefined
+  );
   const [orientationOpen, setOrientationOpen] = useState(false);
+
 
   // Helper function to extract Vimeo embed URL (kept local to avoid coupling)
   const getVimeoEmbedUrl = (vimeoUrl: string): string => {
@@ -46,8 +66,105 @@ export function TodaysPlan({ courseId, orientationVideoUrl }: TodaysPlanProps) {
   };
 
   const orientationEmbedUrl = orientationVideoUrl ? getVimeoEmbedUrl(orientationVideoUrl) : null;
+  const [sanitizedText, setSanitizedText] = useState<string>("");
+  const hasOrientationText = Boolean(orientationText && sanitizedText);
+  const orientationButtonTitle = orientationEmbedUrl
+    ? "Voir la vidéo d’orientation"
+    : orientationText
+      ? "Voir le texte d’orientation"
+      : "Aucune orientation configurée pour ce cours";
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && orientationText) {
+      const clean = DOMPurify.sanitize(orientationText, {
+        ALLOWED_TAGS: [
+          "p", "br", "strong", "em", "u", "s", "h1", "h2", "h3", "h4", "h5", "h6",
+          "ul", "ol", "li", "blockquote", "pre", "code", "a", "img", "span", "div",
+          "table", "thead", "tbody", "tr", "th", "td", "hr", "sup", "sub",
+        ],
+        ALLOWED_ATTR: [
+          "href", "target", "rel", "src", "alt", "title", "class", "style",
+          "width", "height", "align",
+        ],
+        ALLOW_DATA_ATTR: false,
+      });
+      setSanitizedText(clean);
+    }
+  }, [orientationText]);
+
+  const renderOrientationContent = (showTips = false) => (
+    <div className="space-y-6 mt-4">
+      <div>
+        <h3 className="text-lg font-semibold mb-2">Les trois phases d'apprentissage</h3>
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Phase 1 - Apprendre</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm text-muted-foreground">
+              Première passe complète du syllabus avec vidéos, notes et mini-tests.
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Phase 2 - Réviser</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm text-muted-foreground">
+              Consolidation via rappel actif et répétition espacée avec flashcards et quiz.
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Phase 3 - Pratiquer</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm text-muted-foreground">
+              Tests de préparation avec exercices et examens simulés.
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+      {orientationEmbedUrl ? (
+        <div className="space-y-4">
+          <div className="border rounded-lg overflow-hidden bg-black">
+            <div style={{ padding: "56.25% 0 0 0", position: "relative" }}>
+              <iframe
+                src={orientationEmbedUrl}
+                frameBorder="0"
+                allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share"
+                referrerPolicy="strict-origin-when-cross-origin"
+                style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%" }}
+                title="Vidéo d’orientation"
+              />
+            </div>
+          </div>
+          {showTips && (
+            <div className="text-sm text-muted-foreground space-y-2">
+              <p>Cette vidéo couvre notamment :</p>
+              <ul className="list-disc list-inside space-y-1 ml-2">
+                <li>Le format de l’examen</li>
+                <li>La stratégie d’étude recommandée</li>
+                <li>Comment utiliser la plateforme efficacement</li>
+              </ul>
+            </div>
+          )}
+        </div>
+      ) : hasOrientationText ? (
+        <div className="border rounded-lg p-6 bg-muted/50">
+          <div
+            className="prose prose-sm max-w-none prose-headings:font-bold prose-p:text-gray-700 prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-strong:text-gray-900 prose-ul:list-disc prose-ol:list-decimal"
+            dangerouslySetInnerHTML={{ __html: sanitizedText }}
+          />
+        </div>
+      ) : (
+        <div className="text-sm text-muted-foreground">
+          Aucune vidéo ou texte d’orientation n’est configuré pour ce cours.
+        </div>
+      )}
+    </div>
+  );
 
   const handleStartTask = (entryId: string, taskType: TaskType) => {
+
     // Navigate immediately (non-blocking)
     if (taskType === TaskType.LEARN) {
       router.push(`/apprendre/${courseId}?phase=learn`);
@@ -130,49 +247,34 @@ export function TodaysPlan({ courseId, orientationVideoUrl }: TodaysPlanProps) {
         <Dialog open={orientationOpen} onOpenChange={setOrientationOpen}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Vidéo d’orientation</DialogTitle>
+              <DialogTitle>Planifier votre étude</DialogTitle>
               <DialogDescription>
                 Conseils d’étude + rappel du format de l’examen (toujours accessible).
               </DialogDescription>
+
             </DialogHeader>
 
-            {orientationEmbedUrl ? (
-              <div className="space-y-4 mt-4">
-                <div className="border rounded-lg overflow-hidden bg-black">
-                  <div style={{ padding: "56.25% 0 0 0", position: "relative" }}>
-                    <iframe
-                      src={orientationEmbedUrl}
-                      frameBorder="0"
-                      allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share"
-                      referrerPolicy="strict-origin-when-cross-origin"
-                      style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%" }}
-                      title="Vidéo d’orientation"
-                    />
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="mt-4 text-sm text-muted-foreground">
-                Aucune vidéo d’orientation n’est configurée pour ce cours.
-              </div>
-            )}
+            {renderOrientationContent()}
           </DialogContent>
+
         </Dialog>
 
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <CardTitle>Plan du jour</CardTitle>
               <Button
                 type="button"
                 size="sm"
                 variant="outline"
+                className="w-full sm:w-auto"
                 onClick={() => setOrientationOpen(true)}
-                disabled={!orientationEmbedUrl}
+                title={orientationButtonTitle}
               >
-                Vidéo d’orientation
+                Instructions
               </Button>
             </div>
+
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground">Chargement...</p>
@@ -188,38 +290,21 @@ export function TodaysPlan({ courseId, orientationVideoUrl }: TodaysPlanProps) {
         <Dialog open={orientationOpen} onOpenChange={setOrientationOpen}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Vidéo d’orientation</DialogTitle>
+              <DialogTitle>Planifier votre étude</DialogTitle>
               <DialogDescription>
                 Conseils d’étude + rappel du format de l’examen (toujours accessible).
               </DialogDescription>
+
             </DialogHeader>
 
-            {orientationEmbedUrl ? (
-              <div className="space-y-4 mt-4">
-                <div className="border rounded-lg overflow-hidden bg-black">
-                  <div style={{ padding: "56.25% 0 0 0", position: "relative" }}>
-                    <iframe
-                      src={orientationEmbedUrl}
-                      frameBorder="0"
-                      allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share"
-                      referrerPolicy="strict-origin-when-cross-origin"
-                      style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%" }}
-                      title="Vidéo d’orientation"
-                    />
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="mt-4 text-sm text-muted-foreground">
-                Aucune vidéo d’orientation n’est configurée pour ce cours.
-              </div>
-            )}
+            {renderOrientationContent()}
           </DialogContent>
+
         </Dialog>
 
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <CardTitle>Plan du jour</CardTitle>
                 <CardDescription>Aucune tâche planifiée pour aujourd'hui</CardDescription>
@@ -228,12 +313,14 @@ export function TodaysPlan({ courseId, orientationVideoUrl }: TodaysPlanProps) {
                 type="button"
                 size="sm"
                 variant="outline"
+                className="w-full sm:w-auto"
                 onClick={() => setOrientationOpen(true)}
-                disabled={!orientationEmbedUrl}
+                title={orientationButtonTitle}
               >
-                Vidéo d’orientation
+                Instructions
               </Button>
             </div>
+
           </CardHeader>
         </Card>
       </>
@@ -254,25 +341,26 @@ export function TodaysPlan({ courseId, orientationVideoUrl }: TodaysPlanProps) {
     const inProgress = task.status === PlanEntryStatus.IN_PROGRESS;
 
     return (
-      <div className="p-4 border rounded-lg space-y-2">
-        <div className="flex items-center justify-between">
+      <div className="p-4 border rounded-lg space-y-3 sm:space-y-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="font-semibold">{title}</div>
-          <div className="text-sm text-muted-foreground">
+          <div className="text-xs sm:text-sm text-muted-foreground">
             {blockCount} bloc{blockCount > 1 ? "s" : ""} (~{blockCount * 25} min)
           </div>
         </div>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2 flex-1">
             <div className="text-muted-foreground">{getTaskIcon(task.taskType)}</div>
             <div className="text-sm">
               {getTaskLabel(task.taskType, task, phase1Module)}
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap gap-2 sm:justify-end">
             {getStatusBadge(task.status)}
             {task.status === PlanEntryStatus.PENDING && (
               <Button
                 size="sm"
+                className="w-full sm:w-auto"
                 onClick={() => handleStartTask(task.id, task.taskType)}
               >
                 <Play className="h-4 w-4 mr-1" />
@@ -283,6 +371,7 @@ export function TodaysPlan({ courseId, orientationVideoUrl }: TodaysPlanProps) {
               <Button
                 size="sm"
                 variant="outline"
+                className="w-full sm:w-auto"
                 onClick={() => handleCompleteTask(task.id)}
               >
                 <CheckCircle2 className="h-4 w-4 mr-1" />
@@ -295,6 +384,7 @@ export function TodaysPlan({ courseId, orientationVideoUrl }: TodaysPlanProps) {
           </div>
         </div>
       </div>
+
     );
   };
 
@@ -303,46 +393,20 @@ export function TodaysPlan({ courseId, orientationVideoUrl }: TodaysPlanProps) {
       <Dialog open={orientationOpen} onOpenChange={setOrientationOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Vidéo d’orientation</DialogTitle>
+            <DialogTitle>Planifier votre étude</DialogTitle>
             <DialogDescription>
               Conseils d’étude + rappel du format de l’examen (toujours accessible).
             </DialogDescription>
           </DialogHeader>
 
-          {orientationEmbedUrl ? (
-            <div className="space-y-4 mt-4">
-              <div className="border rounded-lg overflow-hidden bg-black">
-                <div style={{ padding: "56.25% 0 0 0", position: "relative" }}>
-                  <iframe
-                    src={orientationEmbedUrl}
-                    frameBorder="0"
-                    allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share"
-                    referrerPolicy="strict-origin-when-cross-origin"
-                    style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%" }}
-                    title="Vidéo d’orientation"
-                  />
-                </div>
-              </div>
-              <div className="text-sm text-muted-foreground space-y-2">
-                <p>Cette vidéo couvre notamment :</p>
-                <ul className="list-disc list-inside space-y-1 ml-2">
-                  <li>Le format de l’examen</li>
-                  <li>La stratégie d’étude recommandée</li>
-                  <li>Comment utiliser la plateforme efficacement</li>
-                </ul>
-              </div>
-            </div>
-          ) : (
-            <div className="mt-4 text-sm text-muted-foreground">
-              Aucune vidéo d’orientation n’est configurée pour ce cours.
-            </div>
-          )}
+          {renderOrientationContent(true)}
         </DialogContent>
+
       </Dialog>
 
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <CardTitle>Plan du jour</CardTitle>
               <CardDescription>
@@ -354,17 +418,14 @@ export function TodaysPlan({ courseId, orientationVideoUrl }: TodaysPlanProps) {
               type="button"
               size="sm"
               variant="outline"
+              className="w-full sm:w-auto"
               onClick={() => setOrientationOpen(true)}
-              disabled={!orientationEmbedUrl}
-              title={
-                orientationEmbedUrl
-                  ? "Voir la vidéo d’orientation"
-                  : "Aucune vidéo d’orientation configurée pour ce cours"
-              }
+              title={orientationButtonTitle}
             >
-              Vidéo d’orientation
+              Instructions
             </Button>
           </div>
+
         </CardHeader>
         <CardContent>
           <div className="space-y-4">

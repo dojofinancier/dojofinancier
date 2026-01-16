@@ -41,7 +41,7 @@ export async function Navbar() {
   }
 
   return (
-    <nav className="border-b overflow-hidden">
+    <nav className="border-b overflow-hidden bg-background">
       <div className="container mx-auto flex h-16 items-center justify-between px-2 sm:px-4 max-w-full">
         <div className="flex items-center gap-2 sm:gap-8 min-w-0 flex-shrink">
           <Logo />

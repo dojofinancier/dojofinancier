@@ -19,6 +19,7 @@ import {
   MessageCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 
 type Cohort = {
   id: string;
@@ -53,12 +54,14 @@ interface CohortSidebarProps {
   cohort: Cohort;
   activeItem?: NavigationItem;
   onNavigate?: (item: NavigationItem) => void;
+  unreadMessageCount?: number;
 }
 
 export function CohortSidebar({
   cohort,
   activeItem = "coaching",
   onNavigate,
+  unreadMessageCount = 0,
 }: CohortSidebarProps) {
   const [mounted, setMounted] = useState(false);
   const [isPhase1Open, setIsPhase1Open] = useState(true);
@@ -128,7 +131,7 @@ export function CohortSidebar({
             <Button
               variant={activeItem === "messages" ? "default" : "outline"}
               className={cn(
-                "w-full font-semibold transition-all duration-200 border-2",
+                "w-full font-semibold transition-all duration-200 border-2 relative",
                 isCollapsed ? "justify-center p-2" : "justify-start",
                 activeItem === "messages" && "bg-primary text-primary-foreground border-primary",
                 "hover:[&_svg]:scale-110"
@@ -138,6 +141,17 @@ export function CohortSidebar({
             >
               <MessageSquare className={cn("h-5 w-5 transition-transform duration-200", !isCollapsed && "mr-2")} />
               {!isCollapsed && "Tableau de messages"}
+              {unreadMessageCount > 0 && (
+                <Badge
+                  variant="destructive"
+                  className={cn(
+                    "absolute -top-1 -right-1 h-5 min-w-5 flex items-center justify-center px-1 text-xs font-semibold",
+                    isCollapsed && "-top-0.5 -right-0.5"
+                  )}
+                >
+                  {unreadMessageCount > 99 ? "99+" : unreadMessageCount}
+                </Badge>
+              )}
             </Button>
           )}
 

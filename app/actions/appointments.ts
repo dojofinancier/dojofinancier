@@ -196,7 +196,7 @@ export async function getAppointmentsAction(params: {
       where,
       take: limit + 1,
       cursor,
-      orderBy: { scheduledAt: "asc" },
+      orderBy: [{ scheduledAt: "desc" }, { id: "desc" }],
       select: {
         id: true,
         scheduledAt: true,

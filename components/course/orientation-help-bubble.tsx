@@ -63,7 +63,7 @@ export function OrientationHelpBubble({
           className="rounded-full h-12 w-12 sm:h-14 sm:w-14 shadow-lg hover:shadow-xl transition-all duration-200 bg-primary hover:bg-primary/90"
           aria-label="Voir la vidéo d'orientation"
         >
-          <HelpCircle className="h-5 w-5 sm:h-6 sm:w-6" />
+          <HelpCircle className="h-7 w-7 sm:h-8 sm:w-8" />
         </Button>
       </div>
 

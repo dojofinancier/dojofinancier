@@ -7,6 +7,9 @@
     color: var(--foreground);
     font-feature-settings: "rlig" 1, "calt" 1;
   }
+  img {
+    background-color: transparent;
+  }
 }
 
 :root {
@@ -568,4 +571,26 @@ div[id*="card-element"] {
 /* Hide standard chrome when a page uses the brutalist navbar */
 html[data-chrome="brutalist"] body nav.border-b.overflow-hidden {
   display: none !important;
+}
+
+/* Ensure transparent navbar has no background */
+[data-transparent-nav] {
+  background-color: transparent !important;
+  background: transparent !important;
+}
+
+[data-transparent-nav] nav {
+  background-color: transparent !important;
+  background: transparent !important;
+}
+
+/* When navbar is transparent and not scrolled, ensure no white background shows */
+[data-transparent-nav]:not(.bg-black) {
+  background-color: transparent !important;
+  background: transparent !important;
+}
+
+[data-transparent-nav]:not(.bg-black) nav {
+  background-color: transparent !important;
+  background: transparent !important;
 }

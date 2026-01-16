@@ -436,9 +436,10 @@ export function ExamPlayer({ examId, onExit }: ExamPlayerProps) {
               const optionValue = currentQuestion.options[key];
               const optionLetter = getOptionLetter(key, index);
               return (
-                <div key={key} className="flex items-start space-x-3">
-                  <RadioGroupItem value={key} id={key} className="mt-1" />
-                  <Label htmlFor={key} className="flex-1 cursor-pointer">
+                <div key={key} className="flex items-start space-x-3 py-2">
+                  <RadioGroupItem value={key} id={key} className="self-center" />
+                  <Label htmlFor={key} className="flex-1 cursor-pointer leading-relaxed text-base">
+
                     <span className="font-medium">{optionLetter}:</span> {optionValue}
                   </Label>
                 </div>

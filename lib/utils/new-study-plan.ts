@@ -223,7 +223,8 @@ async function generatePhase1Blocks(
   weeksForPhase1: number,
   phase1BlocksPerWeek: number,
   preferredDays: number[],
-  examDate: Date
+  examDate: Date,
+  videosEnabled: boolean = true
 ): Promise<NewStudyBlock[]> {
   const blocks: NewStudyBlock[] = [];
 
@@ -284,9 +285,12 @@ async function generatePhase1Blocks(
 
     for (const module of modulesThisWeek) {
       // Identify content by relations or contentType as fallback
-      const videos = module.contentItems.filter(
-        (c) => c.video || c.contentType === "VIDEO"
-      );
+      // Only include videos if they are enabled in componentVisibility
+      const videos = videosEnabled
+        ? module.contentItems.filter(
+            (c) => c.video || c.contentType === "VIDEO"
+          )
+        : [];
       const notes = module.contentItems.filter(
         (c) => (c.notes && c.notes.length > 0) || c.contentType === "NOTE"
       );
@@ -295,7 +299,7 @@ async function generatePhase1Blocks(
       );
 
       console.log(
-        `[generatePhase1Blocks] Module ${module.title}: ${videos.length} videos, ${notes.length} notes, ${quizzes.length} quizzes`
+        `[generatePhase1Blocks] Module ${module.title}: ${videos.length} videos (enabled: ${videosEnabled}), ${notes.length} notes, ${quizzes.length} quizzes`
       );
 
       // Get preferred date for this week, but ensure it's before Phase 1 end date
@@ -315,27 +319,30 @@ async function generatePhase1Blocks(
         isOffPlatform: true,
       });
 
-      // 2. Videos (2 blocks each) - if none, create a placeholder to ensure visibility
-      if (videos.length === 0) {
-        blocks.push({
-          date: new Date(scheduleDate),
-          taskType: TaskType.LEARN,
-          targetModuleId: module.id,
-          targetContentItemId: `video-placeholder-${module.id}`,
-          estimatedBlocks: 2,
-          order: 0,
-        });
-      } else {
-        for (const video of videos) {
-          if (scheduleDate <= phase1EndDate) {
-            blocks.push({
-              date: new Date(scheduleDate),
-              taskType: TaskType.LEARN,
-              targetModuleId: module.id,
-              targetContentItemId: video.id,
-              estimatedBlocks: 2,
-              order: 0,
-            });
+      // 2. Videos (2 blocks each) - only if videos are enabled
+      // Skip video blocks entirely if videos are disabled
+      if (videosEnabled) {
+        if (videos.length === 0) {
+          blocks.push({
+            date: new Date(scheduleDate),
+            taskType: TaskType.LEARN,
+            targetModuleId: module.id,
+            targetContentItemId: `video-placeholder-${module.id}`,
+            estimatedBlocks: 2,
+            order: 0,
+          });
+        } else {
+          for (const video of videos) {
+            if (scheduleDate <= phase1EndDate) {
+              blocks.push({
+                date: new Date(scheduleDate),
+                taskType: TaskType.LEARN,
+                targetModuleId: module.id,
+                targetContentItemId: video.id,
+                estimatedBlocks: 2,
+                order: 0,
+              });
+            }
           }
         }
       }
@@ -596,6 +603,16 @@ export async function generateNewStudyPlan(
 ): Promise<NewStudyPlanResult> {
   const warnings: string[] = [];
 
+  // Get course to check componentVisibility
+  const course = await prisma.course.findUnique({
+    where: { id: courseId },
+    select: { componentVisibility: true },
+  });
+
+  // Get component visibility settings (default to enabled if not set)
+  const componentVisibility = course?.componentVisibility as any || {};
+  const videosEnabled = componentVisibility.videos !== false; // Default to true if not set
+
   // Get modules
   const modules = await prisma.module.findMany({
     where: { courseId },
@@ -703,7 +720,8 @@ export async function generateNewStudyPlan(
       phase1Req.weeksForPhase1,
       phase1Req.phase1BlocksPerWeek,
       preferredDays,
-      examDate
+      examDate,
+      videosEnabled
     );
     console.log(`[generateNewStudyPlan] Phase 1: Generated ${phase1Blocks.length} blocks`);
     console.log(`[generateNewStudyPlan] Phase 1 blocks breakdown:`, {

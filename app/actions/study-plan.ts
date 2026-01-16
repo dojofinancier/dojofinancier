@@ -323,23 +323,17 @@ export async function generateStudyPlanAction(courseId: string) {
     const modules = await prisma.module.findMany({
       where: { courseId: courseId },
       orderBy: { order: "asc" },
-      select: { id: true, order: true },
+      select: { id: true },
     });
 
-    for (const module of modules) {
-      await prisma.moduleProgress.upsert({
-        where: {
-          userId_moduleId: {
-            userId: user.id,
-            moduleId: module.id,
-          },
-        },
-        create: {
+    if (modules.length > 0) {
+      await prisma.moduleProgress.createMany({
+        data: modules.map((module) => ({
           userId: user.id,
           courseId: courseId,
           moduleId: module.id,
-        },
-        update: {},
+        })),
+        skipDuplicates: true,
       });
     }
 
@@ -393,6 +387,113 @@ const getCachedUserCourseSettings = unstable_cache(
   { revalidate: 300, tags: ["user-course-settings"] } // 5 minutes
 );
 
+const getCachedTodaysPlan = unstable_cache(
+  async (userId: string, courseId: string, dayKey: string) => {
+    const today = new Date(`${dayKey}T00:00:00`);
+    today.setHours(0, 0, 0, 0);
+
+    const settings = await prisma.userCourseSettings.findUnique({
+      where: {
+        userId_courseId: {
+          userId,
+          courseId,
+        },
+      },
+    });
+
+    if (!settings || !settings.planCreatedAt) {
+      return { success: false, error: "Plan d'étude non configuré" };
+    }
+
+    const { calculateWeek1StartDate } = await import("@/lib/utils/study-plan");
+    const week1StartDate = calculateWeek1StartDate(settings.planCreatedAt);
+
+    const daysDiff = Math.floor(
+      (today.getTime() - week1StartDate.getTime()) / (1000 * 60 * 60 * 24)
+    );
+    const currentWeek = Math.floor(daysDiff / 7) + 1;
+
+    const weekStart = new Date(week1StartDate);
+    weekStart.setDate(week1StartDate.getDate() + (currentWeek - 1) * 7);
+    weekStart.setHours(0, 0, 0, 0);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    weekEnd.setHours(23, 59, 59, 999);
+
+    const weekEntries = await prisma.dailyPlanEntry.findMany({
+      where: {
+        userId,
+        courseId,
+        date: {
+          gte: weekStart,
+          lte: weekEnd,
+        },
+      },
+      include: {
+        module: {
+          select: {
+            id: true,
+            title: true,
+            order: true,
+          },
+        },
+      },
+      orderBy: {
+        order: "asc",
+      },
+    });
+
+    const moduleProgress = await prisma.moduleProgress.findMany({
+      where: {
+        userId,
+        courseId,
+      },
+      select: {
+        moduleId: true,
+        learnStatus: true,
+      },
+    });
+
+    const doneModules = new Set(
+      moduleProgress
+        .filter((p) => p.learnStatus === "LEARNED")
+        .map((p) => p.moduleId)
+    );
+
+    const phase1Entries = weekEntries.filter(
+      (e) => e.taskType === TaskType.LEARN && e.targetModuleId && !doneModules.has(e.targetModuleId)
+    );
+
+    const firstPhase1ModuleId = phase1Entries[0]?.targetModuleId;
+    const phase1Tasks = firstPhase1ModuleId
+      ? phase1Entries.filter((e) => e.targetModuleId === firstPhase1ModuleId)
+      : [];
+
+    const phase2Tasks = weekEntries.filter((e) => e.taskType === TaskType.REVIEW);
+
+    const allTasks = [...phase1Tasks, ...phase2Tasks];
+    const selectedTasks = allTasks.slice(0, 6).map(task => ({
+      ...task,
+      status: task.status || PlanEntryStatus.PENDING,
+    }));
+
+    const sections = formatTodaysPlanSections(selectedTasks, phase2Tasks);
+
+    return {
+      success: true,
+      data: {
+        sections,
+        totalBlocks: selectedTasks.reduce((sum, t) => sum + t.estimatedBlocks, 0),
+        phase1Module: firstPhase1ModuleId
+          ? phase1Tasks[0]?.module
+          : null,
+      },
+    };
+  },
+  ["todays-plan"],
+  { revalidate: 300, tags: ["todays-plan"] }
+);
+
 export async function getUserCourseSettingsAction(courseId: string) {
   try {
     const user = await requireAuth();
@@ -418,117 +519,9 @@ export async function getUserCourseSettingsAction(courseId: string) {
 export async function getTodaysPlanAction(courseId: string) {
   try {
     const user = await requireAuth();
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const dayKey = new Date().toISOString().split("T")[0];
 
-    // Get user settings to find current week
-    const settings = await prisma.userCourseSettings.findUnique({
-      where: {
-        userId_courseId: {
-          userId: user.id,
-          courseId: courseId,
-        },
-      },
-    });
-
-    if (!settings || !settings.planCreatedAt) {
-      return { success: false, error: "Plan d'étude non configuré" };
-    }
-
-    // Calculate Week 1 start date
-    const { calculateWeek1StartDate } = await import("@/lib/utils/study-plan");
-    const week1StartDate = calculateWeek1StartDate(settings.planCreatedAt);
-
-    // Get current week number
-    const daysDiff = Math.floor(
-      (today.getTime() - week1StartDate.getTime()) / (1000 * 60 * 60 * 24)
-    );
-    const currentWeek = Math.floor(daysDiff / 7) + 1;
-
-    // Get week start and end dates
-    const weekStart = new Date(week1StartDate);
-    weekStart.setDate(week1StartDate.getDate() + (currentWeek - 1) * 7);
-    weekStart.setHours(0, 0, 0, 0);
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekStart.getDate() + 6);
-    weekEnd.setHours(23, 59, 59, 999);
-
-    // Get all plan entries for current week
-    const weekEntries = await prisma.dailyPlanEntry.findMany({
-      where: {
-        userId: user.id,
-        courseId: courseId,
-        date: {
-          gte: weekStart,
-          lte: weekEnd,
-        },
-      },
-      include: {
-        module: {
-          select: {
-            id: true,
-            title: true,
-            order: true,
-          },
-        },
-      },
-      orderBy: {
-        order: "asc",
-      },
-    });
-
-    // Get module progress to find done modules
-    const moduleProgress = await prisma.moduleProgress.findMany({
-      where: {
-        userId: user.id,
-        courseId: courseId,
-      },
-      select: {
-        moduleId: true,
-        learnStatus: true,
-      },
-    });
-
-    const doneModules = new Set(
-      moduleProgress
-        .filter((p) => p.learnStatus === "LEARNED")
-        .map((p) => p.moduleId)
-    );
-
-    // Filter Phase 1: Show only one module (first not done)
-    const phase1Entries = weekEntries.filter(
-      (e) => e.taskType === TaskType.LEARN && e.targetModuleId && !doneModules.has(e.targetModuleId)
-    );
-
-    // Get first Phase 1 module
-    const firstPhase1ModuleId = phase1Entries[0]?.targetModuleId;
-    const phase1Tasks = firstPhase1ModuleId
-      ? phase1Entries.filter((e) => e.targetModuleId === firstPhase1ModuleId)
-      : [];
-
-    // Get Phase 2 tasks (all)
-    const phase2Tasks = weekEntries.filter((e) => e.taskType === TaskType.REVIEW);
-
-    // Combine tasks
-    const allTasks = [...phase1Tasks, ...phase2Tasks];
-    const selectedTasks = allTasks.slice(0, 6).map(task => ({
-      ...task,
-      status: task.status || PlanEntryStatus.PENDING,
-    }));
-
-    // Format into 4 sections - ensure session courte supplémentaire is Phase 2
-    const sections = formatTodaysPlanSections(selectedTasks, phase2Tasks);
-
-    return {
-      success: true,
-      data: {
-        sections,
-        totalBlocks: selectedTasks.reduce((sum, t) => sum + t.estimatedBlocks, 0),
-        phase1Module: firstPhase1ModuleId
-          ? phase1Tasks[0]?.module
-          : null,
-      },
-    };
+    return await getCachedTodaysPlan(user.id, courseId, dayKey);
   } catch (error) {
     console.error("Error getting today's plan:", error);
     return { success: false, error: "Erreur lors de la récupération du plan du jour" };

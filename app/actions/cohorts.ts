@@ -633,144 +633,153 @@ export async function getCohortAction(cohortId: string) {
 /**
  * Get a published cohort by slug (public, no auth required)
  * Used for public product pages
+ * Cached for 5 minutes to improve server response time
  */
 export async function getPublishedCohortBySlugAction(slug: string) {
   try {
-    // If it's a UUID, look up by ID (backward compatibility)
-    // Otherwise, look up by slug
-    const whereClause = isUUID(slug)
-      ? { id: slug, published: true }
-      : { slug: slug, published: true };
+    // Use cached version for better performance
+    const getCachedCohort = unstable_cache(
+      async (cohortSlug: string) => {
+        // If it's a UUID, look up by ID (backward compatibility)
+        // Otherwise, look up by slug
+        const whereClause = isUUID(cohortSlug)
+          ? { id: cohortSlug, published: true }
+          : { slug: cohortSlug, published: true };
 
-    const cohort = await prisma.cohort.findFirst({
-      where: whereClause,
-      include: {
-        instructor: {
-          select: {
-            id: true,
-            email: true,
-            firstName: true,
-            lastName: true,
-          },
-        },
-        cohortModules: {
-          orderBy: { order: "asc" },
+        const cohort = await prisma.cohort.findFirst({
+          where: whereClause,
           include: {
-            module: {
+            instructor: {
+              select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+              },
+            },
+            cohortModules: {
+              orderBy: { order: "asc" },
               include: {
-                contentItems: {
-                  orderBy: { order: "asc" },
-                  select: {
-                    id: true,
-                    contentType: true,
-                    order: true,
+                module: {
+                  include: {
+                    contentItems: {
+                      orderBy: { order: "asc" },
+                      select: {
+                        id: true,
+                        contentType: true,
+                        order: true,
+                      },
+                    },
                   },
                 },
               },
             },
+            faqs: {
+              orderBy: { order: "asc" },
+            },
+            _count: {
+              select: {
+                enrollments: true,
+              },
+            },
           },
-        },
-        faqs: {
-          orderBy: { order: "asc" },
-        },
-        _count: {
-          select: {
-            enrollments: true,
-          },
-        },
+        });
+
+        if (!cohort) {
+          return null;
+        }
+
+        // Check if enrollment closing date has passed
+        const now = new Date();
+        const isEnrollmentOpen = cohort.enrollmentClosingDate > now;
+        const spotsRemaining = cohort.maxStudents - cohort._count.enrollments;
+
+        // Calculate total questions and flashcards from the linked course
+        let totalQuestions = 0;
+        let totalFlashcards = 0;
+
+        if (cohort.courseId) {
+          // Batch queries for better performance - run in parallel
+          const [quizzes, questionBanks, flashcardCount] = await Promise.all([
+            prisma.quiz.findMany({
+              where: {
+                contentItem: {
+                  module: {
+                    courseId: cohort.courseId,
+                  },
+                },
+              },
+              include: {
+                questions: {
+                  select: {
+                    id: true,
+                  },
+                },
+              },
+            }),
+            prisma.questionBank.findMany({
+              where: {
+                courseId: cohort.courseId,
+              },
+              include: {
+                questions: {
+                  select: {
+                    id: true,
+                  },
+                },
+              },
+            }),
+            prisma.flashcard.count({
+              where: {
+                courseId: cohort.courseId,
+              },
+            }),
+          ]);
+
+          // Count quiz questions
+          totalQuestions += quizzes.reduce((acc, quiz) => acc + quiz.questions.length, 0);
+          
+          // Count question bank questions
+          totalQuestions += questionBanks.reduce((acc, bank) => acc + bank.questions.length, 0);
+          
+          totalFlashcards = flashcardCount;
+        }
+
+        // Convert Decimal to number for serialization
+        // Parse JSON fields properly
+        const features = Array.isArray(cohort.features) 
+          ? cohort.features 
+          : (typeof cohort.features === 'string' ? JSON.parse(cohort.features) : []);
+        const testimonials = Array.isArray(cohort.testimonials) 
+          ? cohort.testimonials 
+          : (typeof cohort.testimonials === 'string' ? JSON.parse(cohort.testimonials) : []);
+        const heroImages = Array.isArray(cohort.heroImages) 
+          ? cohort.heroImages 
+          : (typeof cohort.heroImages === 'string' ? JSON.parse(cohort.heroImages) : []);
+
+        return {
+          ...cohort,
+          price: cohort.price.toNumber(),
+          features: features as any[],
+          testimonials: testimonials as any[],
+          heroImages: heroImages as string[],
+          isEnrollmentOpen,
+          spotsRemaining: Math.max(0, spotsRemaining),
+          totalQuestions,
+          totalFlashcards,
+          cohortModules: cohort.cohortModules?.map((cm: any) => ({
+            ...cm,
+            module: cm.module ? {
+              ...cm.module,
+            } : cm.module,
+          })) || [],
+        };
       },
-    });
+      ["published-cohort"],
+      { revalidate: 300, tags: ["cohorts"] } // 5 minutes cache
+    );
 
-    if (!cohort) {
-      return null;
-    }
-
-    // Check if enrollment closing date has passed
-    const now = new Date();
-    const isEnrollmentOpen = cohort.enrollmentClosingDate > now;
-    const spotsRemaining = cohort.maxStudents - cohort._count.enrollments;
-
-    // Calculate total questions and flashcards from the linked course
-    let totalQuestions = 0;
-    let totalFlashcards = 0;
-
-    if (cohort.courseId) {
-      // Get all quizzes for this course and count their questions
-      const quizzes = await prisma.quiz.findMany({
-        where: {
-          contentItem: {
-            module: {
-              courseId: cohort.courseId,
-            },
-          },
-        },
-        include: {
-          questions: {
-            select: {
-              id: true,
-            },
-          },
-        },
-      });
-
-      // Get all question banks for this course and count their questions
-      const questionBanks = await prisma.questionBank.findMany({
-        where: {
-          courseId: cohort.courseId,
-        },
-        include: {
-          questions: {
-            select: {
-              id: true,
-            },
-          },
-        },
-      });
-
-      // Count quiz questions
-      totalQuestions += quizzes.reduce((acc, quiz) => acc + quiz.questions.length, 0);
-      
-      // Count question bank questions
-      totalQuestions += questionBanks.reduce((acc, bank) => acc + bank.questions.length, 0);
-
-      // Get flashcard count
-      const flashcardCount = await prisma.flashcard.count({
-        where: {
-          courseId: cohort.courseId,
-        },
-      });
-      totalFlashcards = flashcardCount;
-    }
-
-    // Convert Decimal to number for serialization
-    // Parse JSON fields properly
-    const features = Array.isArray(cohort.features) 
-      ? cohort.features 
-      : (typeof cohort.features === 'string' ? JSON.parse(cohort.features) : []);
-    const testimonials = Array.isArray(cohort.testimonials) 
-      ? cohort.testimonials 
-      : (typeof cohort.testimonials === 'string' ? JSON.parse(cohort.testimonials) : []);
-    const heroImages = Array.isArray(cohort.heroImages) 
-      ? cohort.heroImages 
-      : (typeof cohort.heroImages === 'string' ? JSON.parse(cohort.heroImages) : []);
-
-    return {
-      ...cohort,
-      price: cohort.price.toNumber(),
-      features: features as any[],
-      testimonials: testimonials as any[],
-      heroImages: heroImages as string[],
-      isEnrollmentOpen,
-      spotsRemaining: Math.max(0, spotsRemaining),
-      totalQuestions,
-      totalFlashcards,
-      cohortModules: cohort.cohortModules?.map((cm: any) => ({
-        ...cm,
-        module: cm.module ? {
-          ...cm.module,
-        } : cm.module,
-      })) || [],
-    };
+    return await getCachedCohort(slug);
   } catch (error) {
     await logServerError({
       errorMessage: `Failed to get published cohort by slug: ${error instanceof Error ? error.message : "Unknown error"}`,

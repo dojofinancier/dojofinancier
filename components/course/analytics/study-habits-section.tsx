@@ -1,8 +1,26 @@
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from "recharts";
-import { Calendar, Clock, TrendingUp } from "lucide-react";
+import dynamic from "next/dynamic";
+import { Calendar, Clock, TrendingUp, Loader2 } from "lucide-react";
+
+// Dynamically import recharts to reduce initial bundle size
+const BarChart = dynamic(
+  () => import("recharts").then((mod) => mod.BarChart),
+  { ssr: false, loading: () => <div className="h-64 flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div> }
+);
+const LineChart = dynamic(
+  () => import("recharts").then((mod) => mod.LineChart),
+  { ssr: false, loading: () => <div className="h-64 flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div> }
+);
+const Bar = dynamic(() => import("recharts").then((mod) => mod.Bar), { ssr: false });
+const Line = dynamic(() => import("recharts").then((mod) => mod.Line), { ssr: false });
+const XAxis = dynamic(() => import("recharts").then((mod) => mod.XAxis), { ssr: false });
+const YAxis = dynamic(() => import("recharts").then((mod) => mod.YAxis), { ssr: false });
+const CartesianGrid = dynamic(() => import("recharts").then((mod) => mod.CartesianGrid), { ssr: false });
+const Tooltip = dynamic(() => import("recharts").then((mod) => mod.Tooltip), { ssr: false });
+const Legend = dynamic(() => import("recharts").then((mod) => mod.Legend), { ssr: false });
+const ResponsiveContainer = dynamic(() => import("recharts").then((mod) => mod.ResponsiveContainer), { ssr: false });
 
 interface StudyHabitsSectionProps {
   data: {

@@ -72,16 +72,6 @@ export function AppointmentsTab() {
     return () => clearTimeout(timer);
   }, [loadAppointments]);
 
-  // Also refresh when component mounts (e.g., after redirect)
-  useEffect(() => {
-    // Small delay to ensure page is fully loaded
-    const timer = setTimeout(() => {
-      loadAppointments();
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [loadAppointments]);
-
-
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "PENDING":

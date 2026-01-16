@@ -1,25 +1,47 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, Play, Calendar, BookOpen } from "lucide-react";
 import { completeOrientationAction } from "@/app/actions/study-plan";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import DOMPurify from "dompurify";
 
 interface OrientationVideoProps {
   courseId: string;
   courseTitle: string;
   orientationVideoUrl?: string | null;
+  orientationText?: string | null;
   firstModuleId?: string | null;
   onComplete?: () => void;
 }
 
-export function OrientationVideo({ courseId, courseTitle, orientationVideoUrl, firstModuleId, onComplete }: OrientationVideoProps) {
+export function OrientationVideo({ courseId, courseTitle, orientationVideoUrl, orientationText, firstModuleId, onComplete }: OrientationVideoProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [videoWatched, setVideoWatched] = useState(false);
+  const [sanitizedText, setSanitizedText] = useState<string>("");
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && orientationText) {
+      // Sanitize HTML content using DOMPurify
+      const clean = DOMPurify.sanitize(orientationText, {
+        ALLOWED_TAGS: [
+          'p', 'br', 'strong', 'em', 'u', 's', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+          'ul', 'ol', 'li', 'blockquote', 'pre', 'code', 'a', 'img', 'span', 'div',
+          'table', 'thead', 'tbody', 'tr', 'th', 'td', 'hr', 'sup', 'sub'
+        ],
+        ALLOWED_ATTR: [
+          'href', 'target', 'rel', 'src', 'alt', 'title', 'class', 'style',
+          'width', 'height', 'align'
+        ],
+        ALLOW_DATA_ATTR: false,
+      });
+      setSanitizedText(clean);
+    }
+  }, [orientationText]);
 
   // Helper function to extract Vimeo embed URL (same as module-detail-page.tsx)
   const getVimeoEmbedUrl = (vimeoUrl: string): string => {
@@ -176,7 +198,7 @@ export function OrientationVideo({ courseId, courseTitle, orientationVideoUrl, f
               </div>
             </div>
 
-            {/* Video Player */}
+            {/* Video Player or Text Explainer */}
             {embedUrl ? (
               <>
                 <div className="border rounded-lg overflow-hidden bg-black">
@@ -207,6 +229,35 @@ export function OrientationVideo({ courseId, courseTitle, orientationVideoUrl, f
                       <>
                         <Play className="h-4 w-4 mr-2" />
                         Marquer comme regardée
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </>
+            ) : orientationText && sanitizedText ? (
+              <>
+                <div className="border rounded-lg p-6 bg-muted/50">
+                  <div 
+                    className="prose prose-sm max-w-none prose-headings:font-bold prose-p:text-gray-700 prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-strong:text-gray-900 prose-ul:list-disc prose-ol:list-decimal"
+                    dangerouslySetInnerHTML={{ __html: sanitizedText }}
+                  />
+                </div>
+                <div className="flex items-center justify-center space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setVideoWatched(!videoWatched)}
+                    className={videoWatched ? "bg-primary text-primary-foreground" : ""}
+                  >
+                    {videoWatched ? (
+                      <>
+                        <CheckCircle2 className="h-4 w-4 mr-2" />
+                        Lu et compris
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="h-4 w-4 mr-2" />
+                        Marquer comme lu
                       </>
                     )}
                   </Button>

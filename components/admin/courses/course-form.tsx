@@ -53,6 +53,7 @@ const courseFormSchema = z.object({
   recommendedStudyHoursMin: z.string().optional(),
   recommendedStudyHoursMax: z.string().optional(),
   orientationVideoUrl: z.string().optional().nullable(),
+  orientationText: z.string().optional().nullable(),
   heroImages: z.string().optional(),
   displayOrder: z.string().optional(),
 });
@@ -97,6 +98,7 @@ export function CourseForm({ courseId, initialData }: CourseFormProps) {
   const [categories, setCategories] = useState<CourseCategory[]>([]);
   const [loading, setLoading] = useState(false);
   const [description, setDescription] = useState(initialData?.description || "");
+  const [orientationText, setOrientationText] = useState((initialData as any)?.orientationText || "");
   const [componentVisibility, setComponentVisibility] = useState({
     videos: initialData?.componentVisibility?.videos ?? true,
     quizzes: initialData?.componentVisibility?.quizzes ?? true,
@@ -128,6 +130,7 @@ export function CourseForm({ courseId, initialData }: CourseFormProps) {
       recommendedStudyHoursMin: (initialData as any)?.recommendedStudyHoursMin?.toString() || "6",
       recommendedStudyHoursMax: (initialData as any)?.recommendedStudyHoursMax?.toString() || "10",
       orientationVideoUrl: (initialData as any)?.orientationVideoUrl || "",
+      orientationText: (initialData as any)?.orientationText || "",
       heroImages: Array.isArray((initialData as any)?.heroImages) 
         ? (initialData as any).heroImages.join("\n") 
         : "",
@@ -160,6 +163,7 @@ export function CourseForm({ courseId, initialData }: CourseFormProps) {
         description: description || undefined,
         componentVisibility,
         orientationVideoUrl: data.orientationVideoUrl ?? null,
+        orientationText: orientationText || null,
       };
 
       let result;
@@ -374,11 +378,24 @@ export function CourseForm({ courseId, initialData }: CourseFormProps) {
           type="url"
         />
         <p className="text-xs text-muted-foreground">
-          URL Vimeo de la vidéo d'orientation (5-10 minutes) qui sera montrée aux étudiants lors de la Phase 0
+          URL Vimeo de la vidéo d'orientation (5-10 minutes) qui sera montrée aux étudiants lors de la Phase 0. Si aucune URL n'est fournie, le texte d'orientation ci-dessous sera affiché à la place.
         </p>
         {errors.orientationVideoUrl && (
           <p className="text-sm text-destructive">{errors.orientationVideoUrl.message}</p>
         )}
+      </div>
+
+      {/* Orientation Text (for Phase 0 when no video) */}
+      <div className="space-y-2">
+        <Label htmlFor="orientationText">Texte d'orientation (Phase 0)</Label>
+        <RichTextEditor
+          content={orientationText}
+          onChange={setOrientationText}
+          placeholder="Texte d'explication pour la Phase 0 (affiché si aucune vidéo n'est fournie)..."
+        />
+        <p className="text-xs text-muted-foreground">
+          Texte d'explication affiché aux étudiants lors de la Phase 0 si aucune vidéo d'orientation n'est fournie. Utilisez ce champ pour expliquer le format de l'examen, la note de passage, et comment utiliser la plateforme.
+        </p>
       </div>
 
       {/* Hero Images */}

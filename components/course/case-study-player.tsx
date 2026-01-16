@@ -171,7 +171,8 @@ export function CaseStudyPlayer({ caseStudyId, onExit }: CaseStudyPlayerProps) {
       <div className="space-y-4">
         {narrative.introduction_box && (
           <div className="p-4 bg-muted rounded-lg border-l-4 border-primary">
-            <p className="text-sm whitespace-pre-wrap">{narrative.introduction_box}</p>
+                <p className="text-base sm:text-sm whitespace-pre-wrap">{narrative.introduction_box}</p>
+
           </div>
         )}
 
@@ -180,11 +181,12 @@ export function CaseStudyPlayer({ caseStudyId, onExit }: CaseStudyPlayerProps) {
             {section.title && (
               <h3 className="text-lg font-semibold">{section.title}</h3>
             )}
-            {section.content && (
-              <div className="text-sm whitespace-pre-wrap prose prose-sm max-w-none">
-                {section.content}
-              </div>
-            )}
+              {section.content && (
+                <div className="text-base sm:text-sm whitespace-pre-wrap prose prose-sm max-w-none">
+                  {section.content}
+                </div>
+              )}
+
             {section.tables && section.tables.length > 0 && (
               <div className="space-y-4">
                 {section.tables.map((table: any, tableIndex: number) => (
@@ -254,23 +256,23 @@ export function CaseStudyPlayer({ caseStudyId, onExit }: CaseStudyPlayerProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl font-semibold">{caseStudy.title}</h2>
           {caseStudy.theme && (
             <p className="text-sm text-muted-foreground mt-1">{caseStudy.theme}</p>
           )}
         </div>
-        <Button variant="outline" onClick={onExit}>
+        <Button className="w-full sm:w-auto" variant="outline" onClick={onExit}>
           <X className="h-4 w-4 mr-2" />
           Quitter
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Fixed Narrative Panel */}
-        <div className="lg:col-span-1">
-          <Card className="sticky top-4 max-h-[calc(100vh-2rem)]">
+
+        <div className="space-y-4">
+          {/* Narrative Panel - Full Width on Top */}
+          <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base">Récit du cas</CardTitle>
@@ -293,25 +295,24 @@ export function CaseStudyPlayer({ caseStudyId, onExit }: CaseStudyPlayerProps) {
               </div>
             </CardHeader>
             <CardContent className="p-4">
-              <ScrollArea className="h-[calc(100vh-250px)]">
+              <ScrollArea className="h-[40vh] sm:h-[45vh] lg:h-[50vh]">
                 {renderNarrative()}
               </ScrollArea>
             </CardContent>
           </Card>
-        </div>
 
-        {/* Questions Panel */}
-        <div className="lg:col-span-2 space-y-4">
+          {/* Questions Panel - Full Width Below */}
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>
-                  Question {currentQuestionIndex + 1} sur {caseStudy.questions.length}
-                </CardTitle>
-                <Badge variant="outline">
-                  {answeredCount} / {caseStudy.questions.length} répondues
-                </Badge>
-              </div>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <CardTitle>
+                    Question {currentQuestionIndex + 1} sur {caseStudy.questions.length}
+                  </CardTitle>
+                  <Badge variant="outline" className="w-fit">
+                    {answeredCount} / {caseStudy.questions.length} répondues
+                  </Badge>
+                </div>
+
               <Progress value={progress} className="mt-2" />
             </CardHeader>
             <CardContent className="space-y-6">
@@ -326,11 +327,11 @@ export function CaseStudyPlayer({ caseStudyId, onExit }: CaseStudyPlayerProps) {
                     {Object.entries(currentQuestion.options)
                       .sort(([a], [b]) => a.localeCompare(b))
                       .map(([key, value]) => (
-                        <div key={key} className="flex items-start space-x-3">
-                          <RadioGroupItem value={key} id={key} className="mt-1" />
+                        <div key={key} className="flex items-start space-x-3 py-2">
+                          <RadioGroupItem value={key} id={key} className="self-center" />
                           <Label
                             htmlFor={key}
-                            className="flex-1 cursor-pointer leading-relaxed"
+                            className="flex-1 cursor-pointer leading-relaxed text-base"
                           >
                             <span className="font-medium mr-2">{key}:</span>
                             {value}
@@ -338,58 +339,61 @@ export function CaseStudyPlayer({ caseStudyId, onExit }: CaseStudyPlayerProps) {
                         </div>
                       ))}
                   </div>
+
                 </RadioGroup>
               </div>
 
-              <div className="flex items-center justify-between pt-4 border-t">
-                <Button
-                  variant="outline"
-                  onClick={handlePrevious}
-                  disabled={currentQuestionIndex === 0}
-                >
-                  <ChevronLeft className="h-4 w-4 mr-2" />
-                  Précédent
-                </Button>
+              <div className="flex flex-col gap-3 pt-4 border-t sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <Button
+                    variant="outline"
+                    onClick={handlePrevious}
+                    disabled={currentQuestionIndex === 0}
+                    className="w-full sm:w-auto"
+                  >
+                    <ChevronLeft className="h-4 w-4 mr-2" />
+                    Précédent
+                  </Button>
+                  {currentQuestionIndex < caseStudy.questions.length - 1 ? (
+                    <Button className="w-full sm:w-auto" onClick={handleNext}>
+                      Suivant
+                      <ChevronRight className="h-4 w-4 ml-2" />
+                    </Button>
+                  ) : (
+                    <Button className="w-full sm:w-auto" onClick={handleSubmit} disabled={submitting}>
+                      {submitting ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Soumission...
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="h-4 w-4 mr-2" />
+                          Soumettre
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </div>
 
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2 sm:justify-end">
                   {caseStudy.questions.map((q, idx) => (
                     <Button
                       key={q.id}
                       variant={answers[q.id] ? "default" : "outline"}
                       size="sm"
-                      className="w-10 h-10 p-0"
+                      className="h-9 w-9 p-0"
                       onClick={() => setCurrentQuestionIndex(idx)}
                     >
                       {idx + 1}
                     </Button>
                   ))}
                 </div>
-
-                {currentQuestionIndex < caseStudy.questions.length - 1 ? (
-                  <Button onClick={handleNext}>
-                    Suivant
-                    <ChevronRight className="h-4 w-4 ml-2" />
-                  </Button>
-                ) : (
-                  <Button onClick={handleSubmit} disabled={submitting}>
-                    {submitting ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Soumission...
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle2 className="h-4 w-4 mr-2" />
-                        Soumettre
-                      </>
-                    )}
-                  </Button>
-                )}
               </div>
+
             </CardContent>
           </Card>
         </div>
-      </div>
     </div>
   );
 }
