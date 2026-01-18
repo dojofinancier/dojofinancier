@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { validateCouponAction, applyCouponDiscountAction } from "@/app/actions/coupons";
 import { logServerError } from "@/lib/utils/error-logging";
 import { createEnrollmentAction } from "@/app/actions/enrollments";
+import { sendPaymentSuccessWebhook } from "@/lib/webhooks/make";
 import { z } from "zod";
 
 const createPaymentIntentSchema = z.object({
@@ -573,6 +574,49 @@ export async function createEnrollmentFromPaymentIntentAction(
         };
       }
 
+      // Send webhook as fallback if webhook handler hasn't fired yet
+      // This ensures webhook fires even if Stripe webhook is delayed or fails
+      // Note: The webhook handler has idempotency check, so if it fires later, it won't create duplicates
+      if (enrollmentResult.data && enrollmentResult.data.paymentIntentId) {
+        // Fire and forget - send webhook in background
+        (async () => {
+          try {
+            const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+            const metadata = paymentIntent.metadata || {};
+            
+            const originalAmount = parseFloat(metadata.originalAmount || "0");
+            const discountAmount = parseFloat(metadata.discountAmount || "0");
+            const finalAmount = parseFloat(metadata.finalAmount || paymentIntent.amount.toString()) / 100;
+            const couponCode = metadata.couponCode || null;
+
+            const enrollment = enrollmentResult.data;
+            const userName = `${enrollment.user.firstName || ''} ${enrollment.user.lastName || ''}`.trim() || enrollment.user.email;
+
+            sendPaymentSuccessWebhook({
+              paymentIntentId: paymentIntentId,
+              userId: enrollment.userId,
+              cohortId: enrollment.cohortId,
+              cohortTitle: enrollment.cohort?.title,
+              enrollmentId: enrollment.id,
+              orderNumber: enrollment.orderNumber,
+              amount: finalAmount || originalAmount,
+              originalAmount: originalAmount || finalAmount,
+              discountAmount: discountAmount,
+              couponCode: couponCode,
+              type: "cohort",
+              userName: userName,
+              userEmail: enrollment.user.email,
+              userPhone: enrollment.user.phone,
+              timestamp: new Date().toISOString(),
+            }).catch((error) => {
+              console.error("Failed to send payment webhook from cohort fallback:", error);
+            });
+          } catch (error) {
+            console.error("Failed to send cohort fallback webhook:", error);
+          }
+        })();
+      }
+
       return {
         success: true,
         data: enrollmentResult.data,
@@ -632,8 +676,48 @@ export async function createEnrollmentFromPaymentIntentAction(
         };
       }
 
-      // Note: Payment webhook is sent from createEnrollmentAction when paymentIntentId exists
+      // Send webhook as fallback if webhook handler hasn't fired yet
       // This ensures webhook fires even if Stripe webhook is delayed or fails
+      // Note: The webhook handler has idempotency check, so if it fires later, it won't create duplicates
+      if (enrollmentResult.data && enrollmentResult.data.paymentIntentId) {
+        // Fire and forget - send webhook in background
+        (async () => {
+          try {
+            const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+            const metadata = paymentIntent.metadata || {};
+            
+            const originalAmount = parseFloat(metadata.originalAmount || "0");
+            const discountAmount = parseFloat(metadata.discountAmount || "0");
+            const finalAmount = parseFloat(metadata.finalAmount || paymentIntent.amount.toString()) / 100;
+            const couponCode = metadata.couponCode || null;
+
+            const enrollment = enrollmentResult.data;
+            const userName = `${enrollment.user.firstName || ''} ${enrollment.user.lastName || ''}`.trim() || enrollment.user.email;
+
+            sendPaymentSuccessWebhook({
+              paymentIntentId: paymentIntentId,
+              userId: enrollment.userId,
+              courseId: enrollment.courseId,
+              courseTitle: enrollment.course.title,
+              enrollmentId: enrollment.id,
+              orderNumber: enrollment.orderNumber,
+              amount: finalAmount || originalAmount,
+              originalAmount: originalAmount || finalAmount,
+              discountAmount: discountAmount,
+              couponCode: couponCode,
+              type: "course",
+              userName: userName,
+              userEmail: enrollment.user.email,
+              userPhone: enrollment.user.phone,
+              timestamp: new Date().toISOString(),
+            }).catch((error) => {
+              console.error("Failed to send payment webhook from fallback:", error);
+            });
+          } catch (error) {
+            console.error("Failed to send fallback webhook:", error);
+          }
+        })();
+      }
 
       return {
         success: true,

@@ -5,8 +5,6 @@ import { requireAuth, requireAdmin } from "@/lib/auth/require-auth";
 import { z } from "zod";
 import { logServerError } from "@/lib/utils/error-logging";
 import type { PaginatedResult } from "@/lib/utils/pagination";
-import { sendPaymentSuccessWebhook } from "@/lib/webhooks/make";
-import { stripe } from "@/lib/stripe/server";
 
 /**
  * Get the next order number for enrollments
@@ -100,54 +98,9 @@ export async function createEnrollmentAction(
       },
     });
 
-    // Send payment webhook asynchronously (non-blocking) if paymentIntentId exists
-    // This ensures webhook fires for both new users (checkout) and logged-in users
-    if (validatedData.paymentIntentId) {
-      // Fire and forget - don't await, don't block the response
-      (async () => {
-        try {
-          // Fetch payment intent metadata for webhook data
-          const paymentIntent = await stripe.paymentIntents.retrieve(validatedData.paymentIntentId!);
-          const metadata = paymentIntent.metadata || {};
-          
-          const originalAmount = parseFloat(metadata.originalAmount || "0");
-          const discountAmount = parseFloat(metadata.discountAmount || "0");
-          const finalAmount = parseFloat(metadata.finalAmount || paymentIntent.amount.toString()) / 100; // Convert cents to dollars
-          const couponCode = metadata.couponCode || null;
-
-          // Extract user details from enrollment
-          const userName = `${enrollment.user.firstName || ''} ${enrollment.user.lastName || ''}`.trim() || enrollment.user.email;
-          const userEmail = enrollment.user.email;
-          const userPhone = enrollment.user.phone;
-
-          // Extract course title from enrollment
-          const courseTitle = enrollment.course.title;
-
-          sendPaymentSuccessWebhook({
-            paymentIntentId: validatedData.paymentIntentId!,
-            userId: enrollment.userId,
-            courseId: enrollment.courseId,
-            courseTitle: courseTitle,
-            enrollmentId: enrollment.id,
-            orderNumber: enrollment.orderNumber,
-            amount: finalAmount || originalAmount, // Amount in dollars
-            originalAmount: originalAmount || finalAmount, // Amount in dollars
-            discountAmount: discountAmount, // Amount in dollars
-            couponCode: couponCode,
-            type: "course",
-            userName: userName,
-            userEmail: userEmail,
-            userPhone: userPhone,
-            timestamp: new Date().toISOString(),
-          }).catch((error) => {
-            console.error("Failed to send payment webhook from enrollment action:", error);
-          });
-        } catch (error) {
-          // Silently fail - webhook is not critical for UX
-          console.error("Failed to fetch payment intent for webhook:", error);
-        }
-      })();
-    }
+    // Note: Payment webhook is sent from the Stripe webhook handler (app/api/webhooks/stripe/route.ts)
+    // to avoid duplicate webhook sends. This action is called from the webhook handler,
+    // so we don't send the webhook here to prevent duplicates.
 
     return { success: true, data: enrollment };
   } catch (error) {

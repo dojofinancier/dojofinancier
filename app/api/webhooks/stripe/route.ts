@@ -81,8 +81,30 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ received: true });
       }
 
+      // Idempotency check: Check if enrollment already exists for this paymentIntentId
+      // This prevents duplicate enrollments if Stripe retries the webhook
+      let existingEnrollment;
+      if (isCohortPayment) {
+        existingEnrollment = await prisma.cohortEnrollment.findFirst({
+          where: { paymentIntentId: paymentIntent.id },
+          select: { id: true, orderNumber: true },
+        });
+      } else {
+        existingEnrollment = await prisma.enrollment.findFirst({
+          where: { paymentIntentId: paymentIntent.id },
+          select: { id: true, orderNumber: true },
+        });
+      }
+
       let enrollmentResult;
       let enrollmentId: string;
+
+      // If enrollment already exists, use it (idempotency)
+      if (existingEnrollment) {
+        enrollmentId = existingEnrollment.id;
+        // Return early - enrollment already processed, no need to create or send webhook again
+        return NextResponse.json({ received: true });
+      }
 
       if (isCohortPayment) {
         // Handle cohort enrollment
@@ -172,9 +194,10 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Fetch user and course/cohort details for webhook (non-blocking, fire-and-forget)
+      // Send webhook to Make.com (non-blocking, fire-and-forget)
       // Don't await - let it run in the background without blocking the response
       // This ensures webhook fires for both new users (checkout) and logged-in users
+      // Note: We only send webhook here, not from enrollment actions, to avoid duplicates
       (async () => {
         try {
           // Fetch user details

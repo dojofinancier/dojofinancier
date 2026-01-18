@@ -5,7 +5,7 @@ import { requireAdmin, requireAuth } from "@/lib/auth/require-auth";
 import { z } from "zod";
 import { logServerError } from "@/lib/utils/error-logging";
 import type { PaginatedResult } from "@/lib/utils/pagination";
-import { sendCohortEnrollmentWebhook, sendPaymentSuccessWebhook } from "@/lib/webhooks/make";
+import { sendCohortEnrollmentWebhook } from "@/lib/webhooks/make";
 import { stripe } from "@/lib/stripe/server";
 
 /**
@@ -194,54 +194,9 @@ export async function createCohortEnrollmentAction(
       });
     })();
 
-    // Also send payment webhook if paymentIntentId exists (for payment tracking)
-    if (enrollment.paymentIntentId) {
-      // Fire and forget - don't await, don't block the response
-      (async () => {
-        try {
-          // Fetch payment intent metadata for webhook data
-          const paymentIntent = await stripe.paymentIntents.retrieve(enrollment.paymentIntentId!);
-          const metadata = paymentIntent.metadata || {};
-          
-          const originalAmount = parseFloat(metadata.originalAmount || "0");
-          const discountAmount = parseFloat(metadata.discountAmount || "0");
-          const finalAmount = parseFloat(metadata.finalAmount || paymentIntent.amount.toString()) / 100; // Convert cents to dollars
-          const couponCode = metadata.couponCode || null;
-
-          // Extract user details from enrollment
-          const userName = `${enrollment.user.firstName || ''} ${enrollment.user.lastName || ''}`.trim() || enrollment.user.email;
-          const userEmail = enrollment.user.email;
-          const userPhone = enrollment.user.phone;
-
-          // Extract cohort title from enrollment
-          const cohortTitle = enrollment.cohort.title;
-
-          sendPaymentSuccessWebhook({
-            paymentIntentId: enrollment.paymentIntentId!,
-            userId: enrollment.userId,
-            cohortId: enrollment.cohortId,
-            cohortTitle: cohortTitle,
-            enrollmentId: enrollment.id,
-            orderNumber: enrollment.orderNumber,
-            amount: finalAmount || originalAmount, // Amount in dollars
-            originalAmount: originalAmount || finalAmount, // Amount in dollars
-            discountAmount: discountAmount, // Amount in dollars
-            couponCode: couponCode,
-            type: "cohort",
-            userName: userName,
-            userEmail: userEmail,
-            userPhone: userPhone,
-            timestamp: new Date().toISOString(),
-          }).catch((error) => {
-            // Silently fail - webhook is not critical for UX
-            console.error("Failed to send payment webhook from cohort enrollment action:", error);
-          });
-        } catch (error) {
-          // Silently fail - webhook is not critical for UX
-          console.error("Failed to fetch payment intent for webhook:", error);
-        }
-      })();
-    }
+    // Note: Payment webhook is sent from the Stripe webhook handler (app/api/webhooks/stripe/route.ts)
+    // to avoid duplicate webhook sends. This action is called from the webhook handler,
+    // so we don't send the webhook here to prevent duplicates.
 
     // Convert Decimal to number for serialization
     return {
