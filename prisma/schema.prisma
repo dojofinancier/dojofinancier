@@ -102,6 +102,7 @@ model Course {
   orientationVideoUrl      String?     @map("orientation_video_url") // Vimeo URL for orientation video (Phase 0)
   orientationText          String?     @map("orientation_text") @db.Text // Rich text explainer for Phase 0 when no video is provided
   launchDate               DateTime?   @map("launch_date") // Optional launch date - course accessible only after this date (if published)
+  productStats             Json?       @default("[]") @map("product_stats") // Customizable product page stats: [{value: number, label: string}]
   createdAt                DateTime    @default(now()) @map("created_at")
   updatedAt                DateTime    @updatedAt @map("updated_at")
 
@@ -962,6 +963,7 @@ model Cohort {
   courseId              String?   @map("course_id") // Link to base course - all modules from this course will be available
   componentVisibility   Json?     @default("{\"videos\": true, \"quizzes\": true, \"flashcards\": true, \"notes\": true, \"messaging\": true, \"appointments\": true, \"groupCoaching\": true, \"messageBoard\": true, \"virtualTutor\": false}") @map("component_visibility") // Component visibility settings
   launchDate            DateTime? @map("launch_date") // Optional launch date - cohort accessible only after this date (if published)
+  productStats          Json?     @default("[]") @map("product_stats") // Customizable product page stats: [{value: number, label: string}]
   createdAt             DateTime  @default(now()) @map("created_at")
   updatedAt             DateTime  @updatedAt @map("updated_at")
 

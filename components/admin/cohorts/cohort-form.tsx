@@ -27,6 +27,7 @@ import { getCoursesAction } from "@/app/actions/courses";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Plus, X } from "lucide-react";
 
 const componentVisibilitySchema = z.object({
   videos: z.boolean().default(true),
@@ -55,6 +56,7 @@ const cohortFormSchema = z.object({
   componentVisibility: componentVisibilitySchema.optional(),
   heroImages: z.string().optional(),
   launchDate: z.string().optional().nullable(),
+  productStats: z.string().optional(),
 });
 
 // Submit schema (transforms strings -> typed values expected by server actions)
@@ -77,6 +79,18 @@ const cohortSubmitSchema = cohortFormSchema.extend({
       const date = new Date(val);
       return isNaN(date.getTime()) ? null : date;
     }),
+  productStats: z.string().optional().transform((val) => {
+    if (!val || val.trim() === "") return [];
+    try {
+      const parsed = JSON.parse(val);
+      if (Array.isArray(parsed)) {
+        return parsed.filter((item) => item && typeof item.value === "number" && typeof item.label === "string");
+      }
+      return [];
+    } catch {
+      return [];
+    }
+  }),
 });
 
 type CohortFormData = z.infer<typeof cohortSubmitSchema>;
@@ -112,6 +126,11 @@ export function CohortForm({ cohortId, initialData }: CohortFormProps) {
     messageBoard: initialData?.componentVisibility?.messageBoard ?? true,
     virtualTutor: initialData?.componentVisibility?.virtualTutor ?? false,
   });
+  const [productStats, setProductStats] = useState<Array<{ value: number; label: string }>>(
+    Array.isArray((initialData as any)?.productStats) 
+      ? (initialData as any).productStats 
+      : []
+  );
 
   const {
     register,
@@ -138,6 +157,9 @@ export function CohortForm({ cohortId, initialData }: CohortFormProps) {
         : "",
       launchDate: (initialData as any)?.launchDate 
         ? new Date((initialData as any).launchDate).toISOString().slice(0, 16)
+        : "",
+      productStats: Array.isArray((initialData as any)?.productStats) 
+        ? JSON.stringify((initialData as any).productStats, null, 2)
         : "",
     },
   });
@@ -195,6 +217,7 @@ export function CohortForm({ cohortId, initialData }: CohortFormProps) {
         instructorId: data.instructorId === "" || data.instructorId === "none" ? null : data.instructorId,
         courseId: data.courseId === "" || data.courseId === "none" ? null : data.courseId,
         launchDate: data.launchDate || null,
+        productStats: productStats.length > 0 ? productStats : [],
       };
 
       let result;
@@ -419,6 +442,71 @@ export function CohortForm({ cohortId, initialData }: CohortFormProps) {
         />
         <p className="text-xs text-muted-foreground">
           Si définie, la cohorte sera publiée mais ne sera accessible qu'à partir de cette date. Laissez vide pour rendre la cohorte accessible immédiatement après publication.
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Statistiques de la page produit (compteur)</Label>
+        <p className="text-xs text-muted-foreground mb-2">
+          Personnalisez les 3 statistiques affichées sur la page produit. Laissez vide pour utiliser les valeurs calculées automatiquement (Questions, Flashcards, Séances de coaching).
+        </p>
+        <div className="space-y-2">
+          {productStats.map((stat, index) => (
+            <div key={index} className="flex gap-2 items-end">
+              <div className="flex-1">
+                <Label className="text-xs">Valeur</Label>
+                <Input
+                  type="number"
+                  value={stat.value}
+                  onChange={(e) => {
+                    const newStats = [...productStats];
+                    newStats[index].value = parseInt(e.target.value) || 0;
+                    setProductStats(newStats);
+                  }}
+                  placeholder="0"
+                />
+              </div>
+              <div className="flex-1">
+                <Label className="text-xs">Label</Label>
+                <Input
+                  type="text"
+                  value={stat.label}
+                  onChange={(e) => {
+                    const newStats = [...productStats];
+                    newStats[index].label = e.target.value;
+                    setProductStats(newStats);
+                  }}
+                  placeholder="Ex: Questions"
+                />
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={() => {
+                  setProductStats(productStats.filter((_, i) => i !== index));
+                }}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          ))}
+          {productStats.length < 3 && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setProductStats([...productStats, { value: 0, label: "" }]);
+              }}
+              className="w-full"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Ajouter une statistique
+            </Button>
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Maximum 3 statistiques. Si moins de 3 sont définies, les valeurs calculées automatiquement seront utilisées pour compléter.
         </p>
       </div>
 

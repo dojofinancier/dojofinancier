@@ -52,6 +52,10 @@ const cohortSchema = z.object({
     const date = new Date(val);
     return isNaN(date.getTime()) ? null : date;
   }),
+  productStats: z.array(z.object({
+    value: z.number(),
+    label: z.string(),
+  })).optional().default([]),
 });
 
 export type CohortActionResult = {
@@ -773,6 +777,9 @@ export async function getPublishedCohortBySlugAction(slug: string) {
         const testimonials = Array.isArray(cohort.testimonials) 
           ? cohort.testimonials 
           : (typeof cohort.testimonials === 'string' ? JSON.parse(cohort.testimonials) : []);
+        const productStats = Array.isArray(cohort.productStats) 
+          ? cohort.productStats 
+          : (cohort.productStats && typeof cohort.productStats === 'string' ? JSON.parse(cohort.productStats) : null);
         const heroImages = Array.isArray(cohort.heroImages) 
           ? cohort.heroImages 
           : (typeof cohort.heroImages === 'string' ? JSON.parse(cohort.heroImages) : []);
@@ -783,6 +790,7 @@ export async function getPublishedCohortBySlugAction(slug: string) {
           features: features as any[],
           testimonials: testimonials as any[],
           heroImages: heroImages as string[],
+          productStats: (productStats && Array.isArray(productStats)) ? productStats as Array<{ value: number; label: string }> : undefined,
           isEnrollmentOpen,
           spotsRemaining: Math.max(0, spotsRemaining),
           totalQuestions,

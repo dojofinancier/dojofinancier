@@ -123,6 +123,7 @@ interface Cohort {
   spotsRemaining: number;
   totalQuestions?: number;
   totalFlashcards?: number;
+  productStats?: Array<{ value: number; label: string }>;
 }
 
 interface CohortProductPageProps {
@@ -226,6 +227,36 @@ export function CohortProductPage({ cohort, isEnrolled }: CohortProductPageProps
   const totalQuestions = useMemo(() => cohort.totalQuestions || 0, [cohort.totalQuestions]);
   const totalFlashcards = useMemo(() => cohort.totalFlashcards || 0, [cohort.totalFlashcards]);
   const coachingSessions = useMemo(() => 8, []); // Default number of coaching sessions
+
+  // Get product stats (custom or fallback to calculated)
+  const displayStats = useMemo(() => {
+    const customStats = Array.isArray(cohort.productStats) && cohort.productStats.length > 0 
+      ? cohort.productStats 
+      : null;
+    
+    if (customStats && customStats.length >= 3) {
+      return customStats.slice(0, 3);
+    }
+    
+    // Fallback to calculated values
+    const fallbackStats = [
+      { value: totalQuestions, label: "Questions" },
+      { value: totalFlashcards, label: "Flashcards" },
+      { value: coachingSessions, label: "Séances de coaching" },
+    ];
+    
+    // Merge custom stats with fallback (custom stats take priority)
+    if (customStats && customStats.length > 0) {
+      const merged = [...customStats];
+      // Fill remaining slots with fallback
+      for (let i = customStats.length; i < 3; i++) {
+        merged.push(fallbackStats[i]);
+      }
+      return merged.slice(0, 3);
+    }
+    
+    return fallbackStats;
+  }, [cohort.productStats, totalQuestions, totalFlashcards, coachingSessions]);
 
   const instructorName = useMemo(() => 
     cohort.instructor
@@ -497,18 +528,17 @@ export function CohortProductPage({ cohort, isEnrolled }: CohortProductPageProps
 
               {/* Stats */}
               <div className="grid grid-cols-3 gap-0 pt-6 border-4 border-black">
-                <div className="text-center p-4 border-r-4 border-black">
-                  <div className="text-4xl font-black text-primary">{totalQuestions}</div>
-                  <div className="font-mono text-xs uppercase tracking-[0.25em] text-black/60 mt-1">Questions</div>
-                </div>
-                <div className="text-center p-4 border-r-4 border-black">
-                  <div className="text-4xl font-black text-primary">{totalFlashcards}</div>
-                  <div className="font-mono text-xs uppercase tracking-[0.25em] text-black/60 mt-1">Flashcards</div>
-                </div>
-                <div className="text-center p-4">
-                  <div className="text-4xl font-black text-primary">{coachingSessions}</div>
-                  <div className="font-mono text-xs uppercase tracking-[0.25em] text-black/60 mt-1">Séances de coaching</div>
-                </div>
+                {displayStats.map((stat, index) => (
+                  <div 
+                    key={index} 
+                    className={`text-center p-4 ${index < 2 ? 'border-r-4 border-black' : ''}`}
+                  >
+                    <div className="text-4xl font-black text-primary">{stat.value}</div>
+                    <div className="font-mono text-xs uppercase tracking-[0.25em] text-black/60 mt-1">
+                      {stat.label}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 
