@@ -4,6 +4,7 @@
 [build]
   command = "npm run db:generate && npm run build"
   # Note: publish directory is automatically handled by the Next.js adapter
+  # db:generate runs prisma generate which creates the Prisma Client from schema.prisma
 
 [build.environment]
   NODE_VERSION = "20"
