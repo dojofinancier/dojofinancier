@@ -54,6 +54,7 @@ const cohortFormSchema = z.object({
   courseId: z.string().optional().nullable(), // Link to base course
   componentVisibility: componentVisibilitySchema.optional(),
   heroImages: z.string().optional(),
+  launchDate: z.string().optional().nullable(),
 });
 
 // Submit schema (transforms strings -> typed values expected by server actions)
@@ -67,6 +68,15 @@ const cohortSubmitSchema = cohortFormSchema.extend({
     // Split by newline or comma, trim each, and filter empty strings
     return val.split(/[,\n]/).map((url) => url.trim()).filter((url) => url.length > 0);
   }),
+  launchDate: z
+    .string()
+    .optional()
+    .nullable()
+    .transform((val) => {
+      if (!val || val.trim() === "") return null;
+      const date = new Date(val);
+      return isNaN(date.getTime()) ? null : date.toISOString();
+    }),
 });
 
 type CohortFormData = z.infer<typeof cohortSubmitSchema>;
@@ -126,6 +136,9 @@ export function CohortForm({ cohortId, initialData }: CohortFormProps) {
       heroImages: Array.isArray((initialData as any)?.heroImages) 
         ? (initialData as any).heroImages.join("\n") 
         : "",
+      launchDate: (initialData as any)?.launchDate 
+        ? new Date((initialData as any).launchDate).toISOString().slice(0, 16)
+        : "",
     },
   });
 
@@ -181,6 +194,7 @@ export function CohortForm({ cohortId, initialData }: CohortFormProps) {
         testimonials: [],
         instructorId: data.instructorId === "" || data.instructorId === "none" ? null : data.instructorId,
         courseId: data.courseId === "" || data.courseId === "none" ? null : data.courseId,
+        launchDate: data.launchDate || null,
       };
 
       let result;
@@ -393,6 +407,19 @@ export function CohortForm({ cohortId, initialData }: CohortFormProps) {
         <Label htmlFor="published" className="cursor-pointer">
           Publier la cohorte
         </Label>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="launchDate">Date de lancement (à venir)</Label>
+        <Input
+          id="launchDate"
+          type="datetime-local"
+          {...register("launchDate")}
+          placeholder="Optionnel - la cohorte sera accessible à partir de cette date"
+        />
+        <p className="text-xs text-muted-foreground">
+          Si définie, la cohorte sera publiée mais ne sera accessible qu'à partir de cette date. Laissez vide pour rendre la cohorte accessible immédiatement après publication.
+        </p>
       </div>
 
       {/* Component Visibility Settings */}

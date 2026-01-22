@@ -8,10 +8,14 @@ export function NotFoundClient() {
     // Ensure standard navbar is hidden while the not-found UI is mounted.
     const root = document.documentElement;
     const prev = root.dataset.chrome;
+    const prevLock = root.dataset.chromeLock;
     root.dataset.chrome = "brutalist";
+    root.dataset.chromeLock = "brutalist";
     return () => {
       if (prev) root.dataset.chrome = prev;
       else delete root.dataset.chrome;
+      if (prevLock) root.dataset.chromeLock = prevLock;
+      else delete root.dataset.chromeLock;
     };
   }, []);
 

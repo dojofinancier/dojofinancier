@@ -544,9 +544,42 @@ export async function getUserCohortEnrollmentsAction(params: {
  */
 export async function checkCohortAccessAction(
   cohortId: string
-): Promise<{ hasAccess: boolean; enrollment?: any }> {
+): Promise<{ hasAccess: boolean; enrollment?: any; reason?: string }> {
   try {
     const user = await requireAuth();
+
+    const cohort = await prisma.cohort.findUnique({
+      where: { id: cohortId },
+      select: { published: true, launchDate: true },
+    });
+
+    if (!cohort) {
+      return {
+        hasAccess: false,
+        reason: "Cohorte introuvable",
+      };
+    }
+
+    if (!cohort.published) {
+      return {
+        hasAccess: false,
+        reason: "Cette cohorte n'est pas encore publiée",
+      };
+    }
+
+    // Check launch date (à venir / coming soon)
+    if (cohort.launchDate && new Date(cohort.launchDate) > new Date()) {
+      const launchDate = new Date(cohort.launchDate);
+      const formattedDate = launchDate.toLocaleDateString("fr-CA", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+      return {
+        hasAccess: false,
+        reason: `Cette cohorte sera disponible le ${formattedDate}`,
+      };
+    }
 
     const enrollment = await prisma.cohortEnrollment.findFirst({
       where: {
@@ -574,6 +607,7 @@ export async function checkCohortAccessAction(
 
     return {
       hasAccess: false,
+      reason: "Erreur lors de la vérification de l'accès",
     };
   }
 }

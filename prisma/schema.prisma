@@ -101,6 +101,7 @@ model Course {
   recommendedStudyHoursMax Int?        @default(10) @map("recommended_study_hours_max") // Maximum recommended study hours per week
   orientationVideoUrl      String?     @map("orientation_video_url") // Vimeo URL for orientation video (Phase 0)
   orientationText          String?     @map("orientation_text") @db.Text // Rich text explainer for Phase 0 when no video is provided
+  launchDate               DateTime?   @map("launch_date") // Optional launch date - course accessible only after this date (if published)
   createdAt                DateTime    @default(now()) @map("created_at")
   updatedAt                DateTime    @updatedAt @map("updated_at")
 
@@ -763,37 +764,37 @@ enum AppointmentStatus {
 
 // Blog Articles (mapped to seo_articles table)
 model BlogArticle {
-  id                  String     @id @default(uuid())
-  slug                String     @unique
-  course              String?    // Optional field in seo_articles
-  sourceModule        Int?       @map("source_module")
-  title               String
-  h1                  String?
-  content             String?    @db.Text
-  excerpt             String?    @db.Text
-  metaDescription     String?    @map("meta_description")
-  targetKeyword       String?    @map("target_keyword")
-  secondaryKeywords   String[]   @default([]) @map("secondary_keywords")
-  tags                String[]   @default([])
-  category            String?
-  wordCount           Int?       @map("word_count")
-  targetMarket        String     @map("target_market") // Text field: "professionals", "investors", "entrepreneurs", "general"
-  status              String?    // Text field in seo_articles
-  validationScore     Float?     @map("validation_score")
-  validationFeedback  String?    @map("validation_feedback")
-  published           Boolean?   @default(false)
-  isIndexable         Boolean?   @default(true) @map("is_indexable")
-  publishedAt         DateTime?  @map("published_at")
-  createdAt           DateTime?  @default(now()) @map("created_at")
-  updatedAt           DateTime?  @updatedAt @map("updated_at")
-  generationCost      Float?     @map("generation_cost")
-  tokensUsed          Json?      @map("tokens_used")
-  
+  id                 String    @id @default(uuid())
+  slug               String    @unique
+  course             String? // Optional field in seo_articles
+  sourceModule       Int?      @map("source_module")
+  title              String
+  h1                 String?
+  content            String?   @db.Text
+  excerpt            String?   @db.Text
+  metaDescription    String?   @map("meta_description")
+  targetKeyword      String?   @map("target_keyword")
+  secondaryKeywords  String[]  @default([]) @map("secondary_keywords")
+  tags               String[]  @default([])
+  category           String?
+  wordCount          Int?      @map("word_count")
+  targetMarket       String    @map("target_market") // Text field: "professionals", "investors", "entrepreneurs", "general"
+  status             String? // Text field in seo_articles
+  validationScore    Float?    @map("validation_score")
+  validationFeedback String?   @map("validation_feedback")
+  published          Boolean?  @default(false)
+  isIndexable        Boolean?  @default(true) @map("is_indexable")
+  publishedAt        DateTime? @map("published_at")
+  createdAt          DateTime? @default(now()) @map("created_at")
+  updatedAt          DateTime? @updatedAt @map("updated_at")
+  generationCost     Float?    @map("generation_cost")
+  tokensUsed         Json?     @map("tokens_used")
+
   // Semantic search: Store article embedding (pgvector)
-  embedding           Unsupported("vector(1536)")? // For text-embedding-3-small (1536 dimensions)
-  
+  embedding Unsupported("vector(1536)")? // For text-embedding-3-small (1536 dimensions)
+
   // Optional: Track internal links metadata (for analytics)
-  internalLinksMetadata Json?    @map("internal_links_metadata")
+  internalLinksMetadata Json? @map("internal_links_metadata")
   // Format: [{ "targetSlug": "article-slug", "anchorText": "keyword", "context": "sentence", "similarity": 0.85 }]
 
   @@index([status, publishedAt])
@@ -943,25 +944,26 @@ enum ErrorSeverity {
 
 // Cohorts (Group Coaching)
 model Cohort {
-  id                    String   @id @default(uuid())
+  id                    String    @id @default(uuid())
   title                 String
-  slug                  String?  @unique // URL-friendly slug based on title
-  shortDescription      String?  @map("short_description") @db.Text // Short description for hero section
-  description           String?  @db.Text
-  aboutText             String?  @map("about_text") @db.Text // Rich text about section
-  features              Json?    @default("[]") // Array of {icon: string, text: string}
-  testimonials          Json?    @default("[]") // Array of {name: string, role: string, text: string, avatar?: string}
-  heroImages            Json?    @default("[]") @map("hero_images") // Array of image URLs for hero carousel
-  price                 Decimal  @db.Decimal(10, 2)
-  maxStudents           Int      @map("max_students")
-  enrollmentClosingDate DateTime @map("enrollment_closing_date")
-  accessDuration        Int      @default(365) @map("access_duration") // days, default 1 year
-  published             Boolean  @default(false)
-  instructorId          String?  @map("instructor_id")
-  courseId              String?  @map("course_id") // Link to base course - all modules from this course will be available
-  componentVisibility   Json?    @default("{\"videos\": true, \"quizzes\": true, \"flashcards\": true, \"notes\": true, \"messaging\": true, \"appointments\": true, \"groupCoaching\": true, \"messageBoard\": true, \"virtualTutor\": false}") @map("component_visibility") // Component visibility settings
-  createdAt             DateTime @default(now()) @map("created_at")
-  updatedAt             DateTime @updatedAt @map("updated_at")
+  slug                  String?   @unique // URL-friendly slug based on title
+  shortDescription      String?   @map("short_description") @db.Text // Short description for hero section
+  description           String?   @db.Text
+  aboutText             String?   @map("about_text") @db.Text // Rich text about section
+  features              Json?     @default("[]") // Array of {icon: string, text: string}
+  testimonials          Json?     @default("[]") // Array of {name: string, role: string, text: string, avatar?: string}
+  heroImages            Json?     @default("[]") @map("hero_images") // Array of image URLs for hero carousel
+  price                 Decimal   @db.Decimal(10, 2)
+  maxStudents           Int       @map("max_students")
+  enrollmentClosingDate DateTime  @map("enrollment_closing_date")
+  accessDuration        Int       @default(365) @map("access_duration") // days, default 1 year
+  published             Boolean   @default(false)
+  instructorId          String?   @map("instructor_id")
+  courseId              String?   @map("course_id") // Link to base course - all modules from this course will be available
+  componentVisibility   Json?     @default("{\"videos\": true, \"quizzes\": true, \"flashcards\": true, \"notes\": true, \"messaging\": true, \"appointments\": true, \"groupCoaching\": true, \"messageBoard\": true, \"virtualTutor\": false}") @map("component_visibility") // Component visibility settings
+  launchDate            DateTime? @map("launch_date") // Optional launch date - cohort accessible only after this date (if published)
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
 
   // Relations
   instructor            User?                  @relation("CohortInstructor", fields: [instructorId], references: [id], onDelete: SetNull)

@@ -47,6 +47,11 @@ const cohortSchema = z.object({
   instructorId: z.string().optional().nullable(),
   courseId: z.string().optional().nullable(), // Link to base course
   componentVisibility: componentVisibilitySchema.optional(),
+  launchDate: z.string().optional().nullable().transform((val) => {
+    if (!val || val === "") return null;
+    const date = new Date(val);
+    return isNaN(date.getTime()) ? null : date;
+  }),
 });
 
 export type CohortActionResult = {
@@ -642,9 +647,24 @@ export async function getPublishedCohortBySlugAction(slug: string) {
       async (cohortSlug: string) => {
         // If it's a UUID, look up by ID (backward compatibility)
         // Otherwise, look up by slug
+        const now = new Date();
         const whereClause = isUUID(cohortSlug)
-          ? { id: cohortSlug, published: true }
-          : { slug: cohortSlug, published: true };
+          ? { 
+              id: cohortSlug, 
+              published: true,
+              OR: [
+                { launchDate: null },
+                { launchDate: { lte: now } },
+              ],
+            }
+          : { 
+              slug: cohortSlug, 
+              published: true,
+              OR: [
+                { launchDate: null },
+                { launchDate: { lte: now } },
+              ],
+            };
 
         const cohort = await prisma.cohort.findFirst({
           where: whereClause,

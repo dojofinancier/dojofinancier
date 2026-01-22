@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useLayoutEffect } from "react";
 import { usePathname } from "next/navigation";
 
 type ChromeMode = "default" | "brutalist";
@@ -22,9 +22,16 @@ function getChromeForPathname(pathname: string): ChromeMode {
 export function RouteChrome() {
   const pathname = usePathname();
 
-  useEffect(() => {
-    const next = getChromeForPathname(pathname);
+  useLayoutEffect(() => {
     const root = document.documentElement;
+    const lockedChrome = root.dataset.chromeLock as ChromeMode | undefined;
+
+    if (lockedChrome) {
+      root.dataset.chrome = lockedChrome;
+      return;
+    }
+
+    const next = getChromeForPathname(pathname);
 
     if (next === "brutalist") {
       root.dataset.chrome = "brutalist";
@@ -35,4 +42,3 @@ export function RouteChrome() {
 
   return null;
 }
-

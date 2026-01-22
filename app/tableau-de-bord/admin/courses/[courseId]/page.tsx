@@ -13,6 +13,7 @@ import { CourseFAQManagement } from "@/components/admin/courses/course-faq-manag
 import { CourseAboutManagement } from "@/components/admin/courses/course-about-management";
 import { CourseFeaturesManagement } from "@/components/admin/courses/course-features-management";
 import { CourseTestimonialsManagement } from "@/components/admin/courses/course-testimonials-management";
+import { CloneCourseButton } from "@/components/admin/courses/clone-course-button";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
@@ -51,12 +52,20 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
   return (
     <div className="container mx-auto p-6">
       <div className="mb-6">
-        <Link href="/dashboard/admin?tab=courses">
-          <Button variant="ghost" size="sm" className="mb-4">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Retour à la liste
-          </Button>
-        </Link>
+        <div className="flex items-start justify-between mb-4">
+          <Link href="/tableau-de-bord/admin?tab=courses">
+            <Button variant="ghost" size="sm">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Retour à la liste
+            </Button>
+          </Link>
+          <CloneCourseButton
+            courseId={courseId}
+            courseTitle={serializedCourse.title}
+            courseCode={serializedCourse.code}
+            categoryId={serializedCourse.categoryId}
+          />
+        </div>
         <h1 className="text-3xl font-bold">{serializedCourse.title}</h1>
         <p className="text-muted-foreground mt-2">
           Gérez les détails et le contenu de ce cours

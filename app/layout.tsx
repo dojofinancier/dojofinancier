@@ -93,6 +93,26 @@ export default function RootLayout({
             `,
           }}
         />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                const root = document.documentElement;
+                if (root.dataset.chromeLock) return;
+                const pathname = window.location.pathname || '';
+                const isBrutalist =
+                  pathname === '/' ||
+                  pathname === '/contact' ||
+                  pathname.startsWith('/formations') ||
+                  (pathname.startsWith('/investisseur') && !pathname.includes('/waitlist')) ||
+                  (pathname.startsWith('/cohorte') && !pathname.includes('/apprendre'));
+                if (isBrutalist) {
+                  root.dataset.chrome = 'brutalist';
+                }
+              })();
+            `,
+          }}
+        />
       </head>
       <body className="font-sans antialiased">
         <Suspense fallback={null}>
@@ -143,4 +163,3 @@ export default function RootLayout({
     </html>
   );
 }
-

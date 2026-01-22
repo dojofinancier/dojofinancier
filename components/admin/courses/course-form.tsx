@@ -56,6 +56,7 @@ const courseFormSchema = z.object({
   orientationText: z.string().optional().nullable(),
   heroImages: z.string().optional(),
   displayOrder: z.string().optional(),
+  launchDate: z.string().optional().nullable(),
 });
 
 // Submit schema (transform strings -> typed values for server actions)
@@ -78,6 +79,15 @@ const courseSubmitSchema = courseFormSchema.extend({
     .string()
     .optional()
     .transform((val) => (val && val.trim() !== "" ? parseInt(val, 10) : null)),
+  launchDate: z
+    .string()
+    .optional()
+    .nullable()
+    .transform((val) => {
+      if (!val || val.trim() === "") return null;
+      const date = new Date(val);
+      return isNaN(date.getTime()) ? null : date.toISOString();
+    }),
   heroImages: z.string().optional().transform((val) => {
     if (!val || val.trim() === "") return [];
     // Split by newline or comma, trim each, and filter empty strings
@@ -135,6 +145,9 @@ export function CourseForm({ courseId, initialData }: CourseFormProps) {
         ? (initialData as any).heroImages.join("\n") 
         : "",
       displayOrder: (initialData as any)?.displayOrder?.toString() || "",
+      launchDate: (initialData as any)?.launchDate 
+        ? new Date((initialData as any).launchDate).toISOString().slice(0, 16)
+        : "",
     },
   });
 
@@ -164,6 +177,7 @@ export function CourseForm({ courseId, initialData }: CourseFormProps) {
         componentVisibility,
         orientationVideoUrl: data.orientationVideoUrl ?? null,
         orientationText: orientationText || null,
+        launchDate: data.launchDate || null,
       };
 
       let result;
@@ -296,6 +310,19 @@ export function CourseForm({ courseId, initialData }: CourseFormProps) {
           />
           <p className="text-xs text-muted-foreground">
             Numéro pour ordonner les cours sur la page /formations (optionnel, plus bas = affiché en premier)
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="launchDate">Date de lancement (à venir)</Label>
+          <Input
+            id="launchDate"
+            type="datetime-local"
+            {...register("launchDate")}
+            placeholder="Optionnel - le cours sera accessible à partir de cette date"
+          />
+          <p className="text-xs text-muted-foreground">
+            Si défini, le cours sera publié mais ne sera accessible qu'à partir de cette date. Laissez vide pour rendre le cours accessible immédiatement après publication.
           </p>
         </div>
 

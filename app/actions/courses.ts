@@ -39,6 +39,11 @@ const courseSchema = z.object({
   ).transform((val) => val === "" ? null : val),
   orientationText: z.string().optional().nullable(),
   heroImages: z.array(z.string()).optional().default([]),
+  launchDate: z.string().optional().nullable().transform((val) => {
+    if (!val || val === "") return null;
+    const date = new Date(val);
+    return isNaN(date.getTime()) ? null : date;
+  }),
 });
 
 export type CourseActionResult = {
@@ -136,7 +141,7 @@ export async function updateCourseAction(
     console.log("Updating course with data:", { courseId, validatedData });
 
     // Separate categoryId from other fields and handle it as a relation
-    const { categoryId, code, appointmentHourlyRate, orientationVideoUrl, orientationText, heroImages, displayOrder, ...updateData } = validatedData;
+    const { categoryId, code, appointmentHourlyRate, orientationVideoUrl, orientationText, heroImages, displayOrder, launchDate, ...updateData } = validatedData;
     
     const prismaData: any = { ...updateData };
     
@@ -178,6 +183,11 @@ export async function updateCourseAction(
     // Handle displayOrder - explicitly set null if provided (even if null)
     if (displayOrder !== undefined) {
       prismaData.displayOrder = displayOrder;
+    }
+    
+    // Handle launchDate - explicitly set null if provided (even if null)
+    if (launchDate !== undefined) {
+      prismaData.launchDate = launchDate;
     }
     
     // Handle categoryId using the relation syntax
@@ -293,7 +303,28 @@ export async function getCoursesAction(params: {
       take: limit + 1,
       cursor,
       orderBy: { createdAt: "desc" },
-      include: {
+      select: {
+        id: true,
+        code: true,
+        slug: true,
+        title: true,
+        description: true,
+        price: true,
+        accessDuration: true,
+        paymentType: true,
+        subscriptionId: true,
+        published: true,
+        displayOrder: true,
+        categoryId: true,
+        componentVisibility: true,
+        appointmentHourlyRate: true,
+        recommendedStudyHoursMin: true,
+        recommendedStudyHoursMax: true,
+        orientationVideoUrl: true,
+        orientationText: true,
+        launchDate: true,
+        createdAt: true,
+        updatedAt: true,
         category: true,
         _count: {
           select: {
@@ -448,17 +479,29 @@ async function fetchPublishedCourses(params: {
   orderBy?: "createdAt" | "title" | "price";
   orderDirection?: "asc" | "desc";
 }): Promise<PaginatedResult<any>> {
+  const now = new Date();
   const where: any = {
     published: true,
+    // Only show courses where launchDate is null or <= now (à venir / coming soon)
+    AND: [
+      {
+        OR: [
+          { launchDate: null },
+          { launchDate: { lte: now } },
+        ],
+      },
+    ],
   };
 
   // Search by title, description, or code
   if (params.search) {
-    where.OR = [
-      { title: { contains: params.search, mode: "insensitive" } },
-      { description: { contains: params.search, mode: "insensitive" } },
-      { code: { contains: params.search, mode: "insensitive" } },
-    ];
+    where.AND.push({
+      OR: [
+        { title: { contains: params.search, mode: "insensitive" } },
+        { description: { contains: params.search, mode: "insensitive" } },
+        { code: { contains: params.search, mode: "insensitive" } },
+      ],
+    });
   }
 
   // Order by displayOrder first (ascending, lower numbers first), then by the specified field
@@ -489,6 +532,7 @@ async function fetchPublishedCourses(params: {
       displayOrder: true,
       paymentType: true,
       appointmentHourlyRate: true,
+      launchDate: true,
       category: true,
       createdAt: true,
       _count: {
@@ -1098,6 +1142,443 @@ export async function updateCourseAboutAction(
     return {
       success: false,
       error: "Erreur lors de la mise à jour de la section À propos",
+    };
+  }
+}
+
+/**
+ * Clone a full course including all modules, content, questions, flashcards, etc. (admin only)
+ * @param sourceCourseId - ID of the course to clone
+ * @param options - Optional overrides for the cloned course (title, code, etc.)
+ */
+export async function cloneCourseAction(
+  sourceCourseId: string,
+  options?: {
+    title?: string;
+    code?: string;
+    categoryId?: string;
+    published?: boolean;
+  }
+): Promise<CourseActionResult> {
+  try {
+    const admin = await requireAdmin();
+
+    // Fetch the source course with all related data
+    const sourceCourse = await prisma.course.findUnique({
+      where: { id: sourceCourseId },
+      include: {
+        category: true,
+        modules: {
+          orderBy: { order: "asc" },
+          include: {
+            contentItems: {
+              orderBy: { order: "asc" },
+              include: {
+                video: true,
+                quiz: {
+                  include: {
+                    questions: {
+                      orderBy: { order: "asc" },
+                    },
+                  },
+                },
+                notes: {
+                  where: { type: "ADMIN" },
+                },
+                learningActivity: true,
+              },
+            },
+            flashcards: true,
+            learningActivities: true,
+            questionBanks: {
+              include: {
+                questions: {
+                  orderBy: { order: "asc" },
+                },
+              },
+            },
+          },
+        },
+        flashcards: {
+          where: { moduleId: null }, // Course-level flashcards
+        },
+        questionBanks: {
+          where: { moduleId: null }, // Course-level question banks
+          include: {
+            questions: {
+              orderBy: { order: "asc" },
+            },
+          },
+        },
+        caseStudies: {
+          include: {
+            questions: {
+              orderBy: { order: "asc" },
+            },
+          },
+        },
+        faqs: {
+          orderBy: { order: "asc" },
+        },
+        availabilityRules: true,
+        availabilityExceptions: true,
+      },
+    });
+
+    if (!sourceCourse) {
+      return {
+        success: false,
+        error: "Cours source introuvable",
+      };
+    }
+
+    // Use a transaction to ensure all-or-nothing cloning
+    // Increase timeout for large courses (60 seconds)
+    const clonedCourse = await prisma.$transaction(
+      async (tx) => {
+      // Prepare new course data
+      const newCode = options?.code || (sourceCourse.code ? `${sourceCourse.code}-copy` : null);
+      const newTitle = options?.title || `${sourceCourse.title} (Copie)`;
+      const newCategoryId = options?.categoryId || sourceCourse.categoryId;
+      const newPublished = options?.published !== undefined ? options.published : false;
+
+      // Generate unique slug
+      let newSlug: string | null = null;
+      if (newCode) {
+        const baseSlug = generateSlug(newCode);
+        const existingSlugs = await tx.course.findMany({
+          where: { slug: { not: null } },
+          select: { slug: true },
+        }).then(courses => courses.map(c => c.slug).filter(Boolean) as string[]);
+        newSlug = generateUniqueSlug(baseSlug, existingSlugs);
+      }
+
+      // Create the cloned course
+      const clonedCourse = await tx.course.create({
+        data: {
+          code: newCode,
+          slug: newSlug,
+          title: newTitle,
+          shortDescription: sourceCourse.shortDescription,
+          description: sourceCourse.description,
+          aboutText: sourceCourse.aboutText,
+          features: sourceCourse.features,
+          testimonials: sourceCourse.testimonials,
+          heroImages: sourceCourse.heroImages,
+          price: sourceCourse.price,
+          accessDuration: sourceCourse.accessDuration,
+          paymentType: sourceCourse.paymentType,
+          subscriptionId: null, // Don't clone subscription ID
+          published: newPublished,
+          displayOrder: sourceCourse.displayOrder,
+          categoryId: newCategoryId,
+          componentVisibility: sourceCourse.componentVisibility,
+          appointmentHourlyRate: sourceCourse.appointmentHourlyRate,
+          recommendedStudyHoursMin: sourceCourse.recommendedStudyHoursMin,
+          recommendedStudyHoursMax: sourceCourse.recommendedStudyHoursMax,
+          orientationVideoUrl: sourceCourse.orientationVideoUrl,
+          orientationText: sourceCourse.orientationText,
+        },
+      });
+
+      // ID mapping dictionaries
+      const moduleIdMap: Record<string, string> = {};
+      const contentItemIdMap: Record<string, string> = {};
+      const quizIdMap: Record<string, string> = {};
+      const learningActivityIdMap: Record<string, string> = {};
+      const questionBankIdMap: Record<string, string> = {};
+      const caseStudyIdMap: Record<string, string> = {};
+
+      // Clone modules
+      for (const sourceModule of sourceCourse.modules) {
+        const clonedModule = await tx.module.create({
+          data: {
+            courseId: clonedCourse.id,
+            order: sourceModule.order,
+            title: sourceModule.title,
+            shortTitle: sourceModule.shortTitle,
+            description: sourceModule.description,
+            examWeight: sourceModule.examWeight,
+          },
+        });
+        moduleIdMap[sourceModule.id] = clonedModule.id;
+
+        // Clone content items for this module
+        for (const sourceContentItem of sourceModule.contentItems) {
+          const clonedContentItem = await tx.contentItem.create({
+            data: {
+              moduleId: clonedModule.id,
+              order: sourceContentItem.order,
+              contentType: sourceContentItem.contentType,
+              studyPhase: sourceContentItem.studyPhase,
+            },
+          });
+          contentItemIdMap[sourceContentItem.id] = clonedContentItem.id;
+
+          // Clone video if exists
+          if (sourceContentItem.video) {
+            await tx.video.create({
+              data: {
+                contentItemId: clonedContentItem.id,
+                vimeoUrl: sourceContentItem.video.vimeoUrl,
+                duration: sourceContentItem.video.duration,
+                transcript: sourceContentItem.video.transcript,
+              },
+            });
+          }
+
+          // Clone quiz if exists
+          if (sourceContentItem.quiz) {
+            const clonedQuiz = await tx.quiz.create({
+              data: {
+                contentItemId: clonedContentItem.id,
+                courseId: clonedCourse.id,
+                title: sourceContentItem.quiz.title,
+                passingScore: sourceContentItem.quiz.passingScore,
+                timeLimit: sourceContentItem.quiz.timeLimit,
+                isMockExam: sourceContentItem.quiz.isMockExam,
+                examFormat: sourceContentItem.quiz.examFormat,
+              },
+            });
+            quizIdMap[sourceContentItem.quiz.id] = clonedQuiz.id;
+
+            // Clone quiz questions (batch operation)
+            if (sourceContentItem.quiz.questions.length > 0) {
+              await tx.quizQuestion.createMany({
+                data: sourceContentItem.quiz.questions.map((sourceQuestion) => ({
+                  quizId: clonedQuiz.id,
+                  order: sourceQuestion.order,
+                  type: sourceQuestion.type,
+                  question: sourceQuestion.question,
+                  options: sourceQuestion.options,
+                  correctAnswer: sourceQuestion.correctAnswer,
+                  explanation: sourceQuestion.explanation,
+                })),
+              });
+            }
+          }
+
+          // Clone admin notes if exist (batch operation)
+          if (sourceContentItem.notes && sourceContentItem.notes.length > 0) {
+            await tx.note.createMany({
+              data: sourceContentItem.notes.map((sourceNote) => ({
+                contentItemId: clonedContentItem.id,
+                courseId: clonedCourse.id,
+                type: sourceNote.type,
+                content: sourceNote.content,
+              })),
+            });
+          }
+
+          // Clone learning activity if exists
+          if (sourceContentItem.learningActivity) {
+            const clonedActivity = await tx.learningActivity.create({
+              data: {
+                contentItemId: clonedContentItem.id,
+                courseId: clonedCourse.id,
+                moduleId: clonedModule.id,
+                activityType: sourceContentItem.learningActivity.activityType,
+                title: sourceContentItem.learningActivity.title,
+                instructions: sourceContentItem.learningActivity.instructions,
+                content: sourceContentItem.learningActivity.content,
+                correctAnswers: sourceContentItem.learningActivity.correctAnswers,
+                tolerance: sourceContentItem.learningActivity.tolerance,
+              },
+            });
+            learningActivityIdMap[sourceContentItem.learningActivity.id] = clonedActivity.id;
+          }
+        }
+
+        // Clone module-level flashcards (batch operation)
+        if (sourceModule.flashcards.length > 0) {
+          await tx.flashcard.createMany({
+            data: sourceModule.flashcards.map((sourceFlashcard) => ({
+              courseId: clonedCourse.id,
+              moduleId: clonedModule.id,
+              front: sourceFlashcard.front,
+              back: sourceFlashcard.back,
+            })),
+          });
+        }
+
+        // Note: Learning activities are already cloned as part of content items above
+        // The module.learningActivities relation is just for querying convenience
+
+        // Clone module-level question banks
+        for (const sourceQuestionBank of sourceModule.questionBanks) {
+          const clonedQuestionBank = await tx.questionBank.create({
+            data: {
+              courseId: clonedCourse.id,
+              moduleId: clonedModule.id,
+              title: sourceQuestionBank.title,
+              description: sourceQuestionBank.description,
+            },
+          });
+          questionBankIdMap[sourceQuestionBank.id] = clonedQuestionBank.id;
+
+          // Clone question bank questions (batch operation)
+          if (sourceQuestionBank.questions.length > 0) {
+            await tx.questionBankQuestion.createMany({
+              data: sourceQuestionBank.questions.map((sourceQuestion) => ({
+                questionBankId: clonedQuestionBank.id,
+                order: sourceQuestion.order,
+                question: sourceQuestion.question,
+                options: sourceQuestion.options,
+                correctAnswer: sourceQuestion.correctAnswer,
+                explanation: sourceQuestion.explanation,
+              })),
+            });
+          }
+        }
+      }
+
+      // Clone course-level flashcards (batch operation)
+      if (sourceCourse.flashcards.length > 0) {
+        await tx.flashcard.createMany({
+          data: sourceCourse.flashcards.map((sourceFlashcard) => ({
+            courseId: clonedCourse.id,
+            moduleId: null,
+            front: sourceFlashcard.front,
+            back: sourceFlashcard.back,
+          })),
+        });
+      }
+
+      // Clone course-level question banks
+      for (const sourceQuestionBank of sourceCourse.questionBanks) {
+        const clonedQuestionBank = await tx.questionBank.create({
+          data: {
+            courseId: clonedCourse.id,
+            moduleId: null,
+            title: sourceQuestionBank.title,
+            description: sourceQuestionBank.description,
+          },
+        });
+        questionBankIdMap[sourceQuestionBank.id] = clonedQuestionBank.id;
+
+        // Clone question bank questions (batch operation)
+        if (sourceQuestionBank.questions.length > 0) {
+          await tx.questionBankQuestion.createMany({
+            data: sourceQuestionBank.questions.map((sourceQuestion) => ({
+              questionBankId: clonedQuestionBank.id,
+              order: sourceQuestion.order,
+              question: sourceQuestion.question,
+              options: sourceQuestion.options,
+              correctAnswer: sourceQuestion.correctAnswer,
+              explanation: sourceQuestion.explanation,
+            })),
+          });
+        }
+      }
+
+      // Clone case studies
+      for (const sourceCaseStudy of sourceCourse.caseStudies) {
+        const clonedCaseStudy = await tx.caseStudy.create({
+          data: {
+            courseId: clonedCourse.id,
+            caseId: `${sourceCaseStudy.caseId}-copy-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`, // Generate unique caseId
+            caseNumber: sourceCaseStudy.caseNumber,
+            title: sourceCaseStudy.title,
+            theme: sourceCaseStudy.theme,
+            narrative: sourceCaseStudy.narrative,
+            chapters: sourceCaseStudy.chapters,
+            passingScore: sourceCaseStudy.passingScore,
+          },
+        });
+        caseStudyIdMap[sourceCaseStudy.id] = clonedCaseStudy.id;
+
+        // Clone case study questions (batch operation)
+        if (sourceCaseStudy.questions.length > 0) {
+          await tx.caseStudyQuestion.createMany({
+            data: sourceCaseStudy.questions.map((sourceQuestion) => ({
+              caseStudyId: clonedCaseStudy.id,
+              questionId: sourceQuestion.questionId,
+              order: sourceQuestion.order,
+              question: sourceQuestion.question,
+              options: sourceQuestion.options,
+              correctAnswer: sourceQuestion.correctAnswer,
+              explanation: sourceQuestion.explanation,
+              questionType: sourceQuestion.questionType,
+              difficulty: sourceQuestion.difficulty,
+              chapterReference: sourceQuestion.chapterReference,
+              caseReference: sourceQuestion.caseReference,
+              calculationSteps: sourceQuestion.calculationSteps,
+            })),
+          });
+        }
+      }
+
+      // Clone FAQs (batch operation)
+      if (sourceCourse.faqs.length > 0) {
+        await tx.courseFAQ.createMany({
+          data: sourceCourse.faqs.map((sourceFAQ) => ({
+            courseId: clonedCourse.id,
+            question: sourceFAQ.question,
+            answer: sourceFAQ.answer,
+            order: sourceFAQ.order,
+          })),
+        });
+      }
+
+      // Clone availability rules (batch operation)
+      if (sourceCourse.availabilityRules.length > 0) {
+        await tx.availabilityRule.createMany({
+          data: sourceCourse.availabilityRules.map((sourceRule) => ({
+            courseId: clonedCourse.id,
+            weekday: sourceRule.weekday,
+            startTime: sourceRule.startTime,
+            endTime: sourceRule.endTime,
+          })),
+        });
+      }
+
+      // Clone availability exceptions (batch operation)
+      if (sourceCourse.availabilityExceptions.length > 0) {
+        await tx.availabilityException.createMany({
+          data: sourceCourse.availabilityExceptions.map((sourceException) => ({
+            courseId: clonedCourse.id,
+            startDate: sourceException.startDate,
+            endDate: sourceException.endDate,
+            isUnavailable: sourceException.isUnavailable,
+          })),
+        });
+      }
+
+      return clonedCourse;
+    },
+    {
+      maxWait: 60000, // 60 seconds to acquire transaction
+      timeout: 300000, // 300 seconds (5 minutes) for the transaction to complete (enough for very large courses)
+      isolationLevel: 'ReadCommitted', // Use read committed isolation level for better performance
+    }
+    );
+
+    // Revalidate paths
+    revalidatePath("/tableau-de-bord/admin");
+    revalidatePath("/formations");
+
+    return {
+      success: true,
+      data: {
+        ...clonedCourse,
+        price: clonedCourse.price.toNumber(),
+        appointmentHourlyRate: clonedCourse.appointmentHourlyRate?.toNumber() ?? null,
+      },
+    };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorStack = error instanceof Error ? error.stack : undefined;
+
+    await logServerError({
+      errorMessage: `Failed to clone course: ${errorMessage}`,
+      stackTrace: errorStack,
+      userId: (await requireAdmin()).id,
+      severity: "HIGH",
+    });
+
+    return {
+      success: false,
+      error: `Erreur lors du clonage du cours: ${errorMessage}`,
     };
   }
 }

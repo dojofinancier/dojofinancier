@@ -291,6 +291,40 @@ export async function uploadFlashcardCSVAction(
     let flashcardsCreated = 0;
     const errors: string[] = [];
 
+    // First pass: Find minimum chapter number to determine offset
+    let minChapter: number | null = null;
+    if (chapterIndex !== -1) {
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+
+        // Parse CSV line (handling quoted fields)
+        const fields: string[] = [];
+        let currentField = "";
+        let inQuotes = false;
+
+        for (let j = 0; j < line.length; j++) {
+          const char = line[j];
+          if (char === '"') {
+            inQuotes = !inQuotes;
+          } else if (char === "," && !inQuotes) {
+            fields.push(currentField.trim());
+            currentField = "";
+          } else {
+            currentField += char;
+          }
+        }
+        fields.push(currentField.trim());
+
+        const chapter = parseInt(fields[chapterIndex] || "0");
+        if (!isNaN(chapter) && chapter > 0) {
+          if (minChapter === null || chapter < minChapter) {
+            minChapter = chapter;
+          }
+        }
+      }
+    }
+
     // Parse data rows
     for (let i = 1; i < lines.length; i++) {
       const line = lines[i].trim();
@@ -323,10 +357,13 @@ export async function uploadFlashcardCSVAction(
         continue;
       }
 
-      // Map chapter to module (if chapter is 1, use first module, etc.)
+      // Map chapter to module
+      // If minChapter is found, use it as offset (e.g., chapters 13-27 map to modules 0-14)
+      // Otherwise, assume chapters start at 1 (e.g., chapters 1-15 map to modules 0-14)
       let moduleId: string | null = null;
       if (chapter !== null && chapter > 0 && modules.length > 0) {
-        const moduleIndex = Math.min(chapter - 1, modules.length - 1);
+        const offset = minChapter !== null ? minChapter : 1;
+        const moduleIndex = Math.min(Math.max(0, chapter - offset), modules.length - 1);
         moduleId = modules[moduleIndex].id;
       }
 

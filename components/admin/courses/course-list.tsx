@@ -35,13 +35,15 @@ import {
 } from "@/components/ui/dialog";
 import { getCoursesAction, deleteCourseAction, getCourseCategoriesAction } from "@/app/actions/courses";
 import { toast } from "sonner";
-import { Plus, Search, MoreVertical, Edit, Trash2, Download, Eye } from "lucide-react";
+import { Plus, Search, MoreVertical, Edit, Trash2, Download, Eye, Copy } from "lucide-react";
 import type { Course, CourseCategory } from "@prisma/client";
+import { CloneCourseDialog } from "./clone-course-dialog";
 
 type CourseWithCounts = Omit<Course, "price" | "appointmentHourlyRate"> & {
   // Server actions serialize Prisma Decimals for client usage
   price: number;
   appointmentHourlyRate: number | null;
+  launchDate: Date | null;
   category: CourseCategory;
   _count: {
     enrollments: number;
@@ -63,6 +65,8 @@ export function CourseList() {
   const [hasMore, setHasMore] = useState(true);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [courseToDelete, setCourseToDelete] = useState<string | null>(null);
+  const [cloneDialogOpen, setCloneDialogOpen] = useState(false);
+  const [courseToClone, setCourseToClone] = useState<CourseWithCounts | null>(null);
 
   const loadCourses = useCallback(async (cursor?: string | null, reset = false) => {
     try {
@@ -332,9 +336,24 @@ export function CourseList() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={course.published ? "default" : "secondary"}>
-                      {course.published ? "Publié" : "Brouillon"}
-                    </Badge>
+                    {(() => {
+                      const now = new Date();
+                      const launchDate = course.launchDate ? new Date(course.launchDate) : null;
+                      const isComingSoon = course.published && launchDate && launchDate > now;
+                      
+                      if (isComingSoon) {
+                        return (
+                          <Badge variant="outline" className="border-amber-500 text-amber-700">
+                            À venir ({launchDate.toLocaleDateString("fr-CA")})
+                          </Badge>
+                        );
+                      }
+                      return (
+                        <Badge variant={course.published ? "default" : "secondary"}>
+                          {course.published ? "Publié" : "Brouillon"}
+                        </Badge>
+                      );
+                    })()}
                   </TableCell>
                   <TableCell>{course._count.enrollments}</TableCell>
                   <TableCell>{course._count.modules}</TableCell>
@@ -360,6 +379,15 @@ export function CourseList() {
                         >
                           <Edit className="h-4 w-4 mr-2" />
                           Modifier
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setCourseToClone(course);
+                            setCloneDialogOpen(true);
+                          }}
+                        >
+                          <Copy className="h-4 w-4 mr-2" />
+                          Cloner
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => {
@@ -411,6 +439,17 @@ export function CourseList() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {courseToClone && (
+        <CloneCourseDialog
+          open={cloneDialogOpen}
+          onOpenChange={setCloneDialogOpen}
+          sourceCourseId={courseToClone.id}
+          sourceCourseTitle={courseToClone.title}
+          sourceCourseCode={courseToClone.code}
+          sourceCategoryId={courseToClone.categoryId}
+        />
+      )}
     </div>
   );
 }

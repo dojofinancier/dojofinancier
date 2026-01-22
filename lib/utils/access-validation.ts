@@ -32,7 +32,7 @@ const getCachedCourseInfo = unstable_cache(
   async (courseId: string) => {
     return await prisma.course.findUnique({
       where: { id: courseId },
-      select: { published: true, paymentType: true, subscriptionId: true },
+      select: { published: true, paymentType: true, subscriptionId: true, launchDate: true },
     });
   },
   ["course-info"],
@@ -77,6 +77,20 @@ export async function validateCourseAccess(
       return {
         hasAccess: false,
         reason: "Ce cours n'est pas encore publié",
+      };
+    }
+
+    // Check launch date (à venir / coming soon)
+    if (course.launchDate && new Date(course.launchDate) > new Date()) {
+      const launchDate = new Date(course.launchDate);
+      const formattedDate = launchDate.toLocaleDateString("fr-CA", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+      return {
+        hasAccess: false,
+        reason: `Ce cours sera disponible le ${formattedDate}`,
       };
     }
 
