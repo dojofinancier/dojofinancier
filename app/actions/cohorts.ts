@@ -710,7 +710,7 @@ export async function getPublishedCohortBySlugAction(slug: string) {
         }
 
         // Check if enrollment closing date has passed
-        const now = new Date();
+        // Note: 'now' is already defined above for the whereClause
         const isEnrollmentOpen = cohort.enrollmentClosingDate > now;
         const spotsRemaining = cohort.maxStudents - cohort._count.enrollments;
 

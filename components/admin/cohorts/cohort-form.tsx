@@ -75,7 +75,7 @@ const cohortSubmitSchema = cohortFormSchema.extend({
     .transform((val) => {
       if (!val || val.trim() === "") return null;
       const date = new Date(val);
-      return isNaN(date.getTime()) ? null : date.toISOString();
+      return isNaN(date.getTime()) ? null : date;
     }),
 });
 
