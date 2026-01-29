@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { getExamsAction, upsertExamAction, deleteExamAction, uploadQuestionsToExamAction, cleanupEscapedQuotesAction, importPracticeExamFromCSVAction } from "@/app/actions/exams";
+import { getExamsAction, upsertExamAction, deleteExamAction, uploadQuestionsToExamAction, cleanupEscapedQuotesAction, importPracticeExamFromCSVAction, importPracticeExamFromJSONAction } from "@/app/actions/exams";
 import { getModulesAction } from "@/app/actions/modules";
 import { createContentItemAction } from "@/app/actions/content-items";
 import { createQuizQuestionAction, updateQuizQuestionAction, deleteQuizQuestionAction } from "@/app/actions/content-items";
@@ -102,10 +102,15 @@ export function ExamManager({ courseId }: ExamManagerProps) {
   const [questionEditDialogOpen, setQuestionEditDialogOpen] = useState(false);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [importPracticeExamDialogOpen, setImportPracticeExamDialogOpen] = useState(false);
+  const [importJsonExamDialogOpen, setImportJsonExamDialogOpen] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [importingJson, setImportingJson] = useState(false);
   const [importExamTitle, setImportExamTitle] = useState("");
   const [importModuleId, setImportModuleId] = useState<string | null>(null);
   const [importExistingExamId, setImportExistingExamId] = useState<string | null>(null);
+  const [importJsonExamTitle, setImportJsonExamTitle] = useState("");
+  const [importJsonModuleId, setImportJsonModuleId] = useState<string | null>(null);
+  const [importJsonExistingExamId, setImportJsonExistingExamId] = useState<string | null>(null);
   const [modules, setModules] = useState<Array<{ id: string; title: string }>>([]);
   const [selectedExam, setSelectedExam] = useState<Exam | null>(null);
   const [expandedExamId, setExpandedExamId] = useState<string | null>(null);
@@ -569,6 +574,48 @@ export function ExamManager({ courseId }: ExamManagerProps) {
     }
   };
 
+  const handleImportJsonExam = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setImportingJson(true);
+    try {
+      const fileContent = await file.text();
+      const result = await importPracticeExamFromJSONAction(
+        courseId,
+        fileContent,
+        importJsonExamTitle || undefined,
+        importJsonModuleId || undefined,
+        importJsonExistingExamId || undefined
+      );
+
+      if (result.success) {
+        const data = result.data as { questionsAdded?: number; errors?: string[] };
+        toast.success(
+          `${data?.questionsAdded ?? 0} question(s) importée(s) avec succès${data?.errors?.length ? ` (${data.errors.length} erreurs)` : ""}`
+        );
+        setImportJsonExamDialogOpen(false);
+        setImportJsonExamTitle("");
+        setImportJsonModuleId(null);
+        setImportJsonExistingExamId(null);
+        await loadExams();
+        if (data?.errors && data.errors.length > 0) {
+          console.warn("Import JSON errors:", data.errors);
+        }
+      } else {
+        toast.error(result.error || "Erreur lors de l'importation");
+      }
+    } catch (error) {
+      console.error("Error importing JSON exam:", error);
+      toast.error("Erreur lors de l'importation du fichier JSON");
+    } finally {
+      setImportingJson(false);
+      if (event.target) {
+        event.target.value = "";
+      }
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -579,6 +626,92 @@ export function ExamManager({ courseId }: ExamManagerProps) {
           </p>
         </div>
         <div className="flex gap-2">
+          <Dialog open={importJsonExamDialogOpen} onOpenChange={(open) => {
+            setImportJsonExamDialogOpen(open);
+            if (!open) {
+              setImportJsonExamTitle("");
+              setImportJsonModuleId(null);
+              setImportJsonExistingExamId(null);
+            }
+          }}>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <FileText className="h-4 w-4 mr-2" />
+                Importer examen JSON
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Importer un examen depuis un fichier JSON</DialogTitle>
+                <DialogDescription>
+                  Format attendu: un objet avec une propriété &quot;questions&quot; (tableau). Chaque question: question, options (A, B, C, D), correct_answer (A/B/C/D), explanation (optionnel).
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 mt-4">
+                <div className="space-y-2">
+                  <Label>Fichier JSON *</Label>
+                  <Input
+                    type="file"
+                    accept=".json,application/json"
+                    onChange={handleImportJsonExam}
+                    disabled={importingJson}
+                  />
+                  {importingJson && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Importation en cours...
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label>Titre de l&apos;examen (optionnel)</Label>
+                  <Input
+                    value={importJsonExamTitle}
+                    onChange={(e) => setImportJsonExamTitle(e.target.value)}
+                    placeholder="Laissez vide pour utiliser un titre par défaut"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Module (optionnel)</Label>
+                  <Select
+                    value={importJsonModuleId || "none"}
+                    onValueChange={(value) => setImportJsonModuleId(value === "none" ? null : value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sélectionner un module" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Utiliser le premier module</SelectItem>
+                      {modules.map((module) => (
+                        <SelectItem key={module.id} value={module.id}>
+                          {module.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Ajouter à un examen existant (optionnel)</Label>
+                  <Select
+                    value={importJsonExistingExamId || "none"}
+                    onValueChange={(value) => setImportJsonExistingExamId(value === "none" ? null : value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Créer un nouvel examen" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Créer un nouvel examen</SelectItem>
+                      {exams.map((exam) => (
+                        <SelectItem key={exam.id} value={exam.id}>
+                          {exam.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
           <Dialog open={importPracticeExamDialogOpen} onOpenChange={(open) => {
             setImportPracticeExamDialogOpen(open);
             if (!open) {
@@ -590,7 +723,7 @@ export function ExamManager({ courseId }: ExamManagerProps) {
             <DialogTrigger asChild>
               <Button variant="outline">
                 <Upload className="h-4 w-4 mr-2" />
-                Importer examen pratique
+                Importer examen CSV
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">

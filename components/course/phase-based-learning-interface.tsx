@@ -435,7 +435,12 @@ export function PhaseBasedLearningInterface({
                     <VideosTool courseId={course.id} onBack={handleToolBack} />
                   )}
                   {selectedTool === "notes" && (
-                    <NotesTool courseId={course.id} onBack={handleToolBack} />
+                    <NotesTool
+                      courseId={course.id}
+                      onBack={handleToolBack}
+                      componentVisibility={course.componentVisibility as { notesPdfDownload?: boolean; consolidatedNotesPdf?: boolean } | undefined}
+                      consolidatedNotesPdfUrl={(course as { consolidatedNotesPdfUrl?: string | null }).consolidatedNotesPdfUrl ?? null}
+                    />
                   )}
                   {selectedTool === "quizzes" && (
                     <QuizzesTool courseId={course.id} onBack={handleToolBack} />

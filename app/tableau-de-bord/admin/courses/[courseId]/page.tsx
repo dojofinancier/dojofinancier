@@ -13,6 +13,7 @@ import { CourseFAQManagement } from "@/components/admin/courses/course-faq-manag
 import { CourseAboutManagement } from "@/components/admin/courses/course-about-management";
 import { CourseFeaturesManagement } from "@/components/admin/courses/course-features-management";
 import { CourseTestimonialsManagement } from "@/components/admin/courses/course-testimonials-management";
+import { CourseConsolidatedNotesManagement } from "@/components/admin/courses/course-consolidated-notes-management";
 import { CloneCourseButton } from "@/components/admin/courses/clone-course-button";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -106,6 +107,10 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
               displayOrder: (course as any).displayOrder ?? undefined,
               orientationText: (course as any).orientationText ?? undefined,
             }}
+          />
+          <CourseConsolidatedNotesManagement
+            courseId={courseId}
+            initialConsolidatedNotesPdfUrl={(course as any).consolidatedNotesPdfUrl ?? null}
           />
         </TabsContent>
         <TabsContent value="about" className="mt-6">

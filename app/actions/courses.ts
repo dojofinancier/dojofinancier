@@ -16,6 +16,9 @@ const componentVisibilitySchema = z.object({
   messaging: z.boolean().default(true),
   appointments: z.boolean().default(true),
   virtualTutor: z.boolean().default(false),
+  caseStudies: z.boolean().default(false),
+  notesPdfDownload: z.boolean().default(false),
+  consolidatedNotesPdf: z.boolean().default(false),
 });
 
 const courseSchema = z.object({
@@ -1594,4 +1597,3 @@ export async function cloneCourseAction(
     };
   }
 }
-

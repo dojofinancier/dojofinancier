@@ -736,4 +736,217 @@ export async function importPracticeExamFromCSVAction(
   }
 }
 
+/** JSON exam format: { "questions": [ { "question_id", "question", "options": { "A", "B", "C?", "D?" }, "correct_answer", "explanation?", "concept_tested?", ... } ] } */
+const practiceExamJsonQuestionSchema = z.object({
+  question_id: z.string().optional(),
+  section: z.string().optional(),
+  element: z.string().optional(),
+  question: z.string(),
+  options: z.record(z.string(), z.string()), // Zod 4: record requires (key, value) schemas
+  correct_answer: z.string(), // "A" | "B" | "C" | "D"
+  explanation: z.string().optional().nullable(),
+  concept_tested: z.string().optional().nullable(),
+  question_type: z.string().optional().nullable(),
+  source_content: z.string().optional().nullable(),
+  exam_metadata: z.record(z.string(), z.any()).optional().nullable(), // Zod 4: no z.record(z.unknown())
+});
+
+const practiceExamJsonSchema = z.object({
+  questions: z.array(practiceExamJsonQuestionSchema),
+});
+
+export type PracticeExamJsonInput = z.infer<typeof practiceExamJsonSchema>;
+
+/**
+ * Import practice exam from JSON file.
+ * Expected format: { "questions": [ { "question", "options": { "A", "B", "C?", "D?" }, "correct_answer", "explanation?" } ] }
+ */
+export async function importPracticeExamFromJSONAction(
+  courseId: string,
+  jsonContent: string,
+  examTitle?: string,
+  moduleId?: string | null,
+  existingExamId?: string | null
+): Promise<ExamActionResult> {
+  try {
+    await requireAdmin();
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(jsonContent);
+    } catch {
+      return { success: false, error: "Le fichier JSON est invalide." };
+    }
+
+    const parseResult = practiceExamJsonSchema.safeParse(parsed);
+    if (!parseResult.success) {
+      const first = parseResult.error.issues[0];
+      return {
+        success: false,
+        error: `Format JSON invalide: ${first?.path?.join(".") || "questions"} - ${first?.message || "voir le schéma attendu"}`,
+      };
+    }
+
+    const { questions: rawQuestions } = parseResult.data;
+    if (rawQuestions.length === 0) {
+      return { success: false, error: "Le fichier JSON ne contient aucune question." };
+    }
+
+    const correctAnswerMap: Record<string, string> = {
+      A: "option1",
+      B: "option2",
+      C: "option3",
+      D: "option4",
+    };
+
+    const questions: Array<{
+      question: string;
+      options: Record<string, string>;
+      correctAnswer: string;
+      explanation?: string | null;
+    }> = [];
+
+    for (let i = 0; i < rawQuestions.length; i++) {
+      const q = rawQuestions[i];
+      const opts = q.options || {};
+      const optionA = opts["A"] ?? opts["a"];
+      const optionB = opts["B"] ?? opts["b"];
+      const optionC = opts["C"] ?? opts["c"];
+      const optionD = opts["D"] ?? opts["d"];
+
+      if (!optionA || !optionB) {
+        continue;
+      }
+
+      const options: Record<string, string> = {
+        option1: optionA,
+        option2: optionB,
+      };
+      if (optionC) options.option3 = optionC;
+      if (optionD) options.option4 = optionD;
+
+      const correctLetter = String(q.correct_answer).trim().toUpperCase().slice(0, 1) as "A" | "B" | "C" | "D";
+      const correctAnswer = correctAnswerMap[correctLetter] || "option1";
+      if (!options[correctAnswer]) {
+        continue;
+      }
+
+      questions.push({
+        question: q.question,
+        options,
+        correctAnswer,
+        explanation: q.explanation ?? undefined,
+      });
+    }
+
+    if (questions.length === 0) {
+      return { success: false, error: "Aucune question valide trouvée (question, options A/B et correct_answer requis)." };
+    }
+
+    let exam: { id: string; contentItem: { id: string }; contentItemId: string };
+    let contentItem: { id: string };
+
+    if (existingExamId) {
+      const existing = await prisma.quiz.findUnique({
+        where: { id: existingExamId },
+        include: { contentItem: true },
+      });
+      if (!existing) {
+        return { success: false, error: "Examen existant introuvable." };
+      }
+      exam = existing;
+      contentItem = existing.contentItem;
+    } else {
+      let targetModuleId = moduleId;
+      if (!targetModuleId) {
+        const firstModule = await prisma.module.findFirst({
+          where: { courseId },
+          orderBy: { order: "asc" },
+        });
+        if (!firstModule) {
+          return { success: false, error: "Aucun module trouvé pour ce cours." };
+        }
+        targetModuleId = firstModule.id;
+      }
+
+      const contentItemResult = await createContentItemAction({
+        moduleId: targetModuleId,
+        contentType: "QUIZ",
+        order: 0,
+      });
+      if (!contentItemResult.success || !contentItemResult.data) {
+        return {
+          success: false,
+          error: contentItemResult.error || "Erreur lors de la création de l'élément de contenu.",
+        };
+      }
+      contentItem = contentItemResult.data;
+
+      exam = await prisma.quiz.create({
+        data: {
+          contentItemId: contentItem.id,
+          courseId,
+          title: examTitle || `Examen pratique - ${new Date().toLocaleDateString()}`,
+          passingScore: 70,
+          timeLimit: 120 * 60,
+          isMockExam: true,
+        },
+        include: { contentItem: true },
+      });
+    }
+
+    const lastQuestion = await prisma.quizQuestion.findFirst({
+      where: { quizId: exam.id },
+      orderBy: { order: "desc" },
+      select: { order: true },
+    });
+    let nextOrder = lastQuestion ? lastQuestion.order + 1 : 1;
+
+    const errors: string[] = [];
+    let successCount = 0;
+
+    for (const q of questions) {
+      const order = nextOrder++;
+      try {
+        await prisma.quizQuestion.create({
+          data: {
+            quizId: exam.id,
+            question: q.question,
+            type: "MULTIPLE_CHOICE",
+            order,
+            options: q.options,
+            correctAnswer: q.correctAnswer,
+            explanation: q.explanation || null,
+          },
+        });
+        successCount++;
+      } catch (err) {
+        errors.push(`Question ${order}: ${err instanceof Error ? err.message : "Erreur inconnue"}`);
+      }
+    }
+
+    revalidatePath(`/tableau-de-bord/admin/courses/${courseId}`);
+    revalidatePath(`/dashboard/admin/courses/${courseId}`);
+
+    return {
+      success: true,
+      data: {
+        examId: exam.id,
+        questionsAdded: successCount,
+        errors: errors.length > 0 ? errors : undefined,
+      },
+    };
+  } catch (error) {
+    await logServerError({
+      errorMessage: `Failed to import practice exam from JSON: ${error instanceof Error ? error.message : "Unknown error"}`,
+      stackTrace: error instanceof Error ? error.stack : undefined,
+      severity: "HIGH",
+    });
+    return {
+      success: false,
+      error: `Erreur lors de l'importation: ${error instanceof Error ? error.message : "Erreur inconnue"}`,
+    };
+  }
+}
+
 

@@ -3,6 +3,10 @@ import path from "path";
 
 const nextConfig: NextConfig = {
   /* config options here */
+  // Allow larger uploads (e.g. PDFs, JSON exams) in Server Actions (default 1 MB)
+  serverActions: {
+    bodySizeLimit: "15mb",
+  },
   // Suppress webpack warnings from Next.js internals
   webpack: (config, { dev }) => {
     if (dev) {

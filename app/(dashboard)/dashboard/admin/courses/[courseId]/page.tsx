@@ -9,6 +9,7 @@ import { LearningActivityManager } from "@/components/admin/courses/learning-act
 import { ExamManager } from "@/components/admin/courses/exam-manager";
 import { QuestionBankManager } from "@/components/admin/courses/question-bank-manager";
 import { CourseFAQManagement } from "@/components/admin/courses/course-faq-management";
+import { CourseConsolidatedNotesManagement } from "@/components/admin/courses/course-consolidated-notes-management";
 import { CloneCourseButton } from "@/components/admin/courses/clone-course-button";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -99,6 +100,10 @@ async function CourseDetailContent({ params }: CourseDetailPageProps) {
               displayOrder: (course as any).displayOrder ?? undefined,
               orientationText: (course as any).orientationText ?? undefined,
             }}
+          />
+          <CourseConsolidatedNotesManagement
+            courseId={courseId}
+            initialConsolidatedNotesPdfUrl={(course as any).consolidatedNotesPdfUrl ?? null}
           />
         </TabsContent>
         <TabsContent value="modules" className="mt-6">

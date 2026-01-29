@@ -103,6 +103,7 @@ model Course {
   orientationText          String?     @map("orientation_text") @db.Text // Rich text explainer for Phase 0 when no video is provided
   launchDate               DateTime?   @map("launch_date") // Optional launch date - course accessible only after this date (if published)
   productStats             Json?       @default("[]") @map("product_stats") // Customizable product page stats: [{value: number, label: string}]
+  consolidatedNotesPdfUrl String?     @map("consolidated_notes_pdf_url") // Admin-uploaded consolidated notes PDF (public URL)
   createdAt                DateTime    @default(now()) @map("created_at")
   updatedAt                DateTime    @updatedAt @map("updated_at")
 
@@ -1095,17 +1096,18 @@ model CohortMessageRead {
 
 // User Course Settings (Study Plan Configuration)
 model UserCourseSettings {
-  id                   String     @id @default(uuid())
-  userId               String     @map("user_id")
-  courseId             String     @map("course_id")
-  examDate             DateTime?  @map("exam_date")
-  studyHoursPerWeek    Int        @default(6) @map("study_hours_per_week")
-  preferredStudyDays   Json?      @map("preferred_study_days") // Array of weekdays [0-6]
-  selfRating           SelfRating @default(NOVICE) @map("self_rating")
-  planCreatedAt        DateTime   @default(now()) @map("plan_created_at")
-  orientationCompleted Boolean    @default(false) @map("orientation_completed")
-  createdAt            DateTime   @default(now()) @map("created_at")
-  updatedAt            DateTime   @updatedAt @map("updated_at")
+  id                      String     @id @default(uuid())
+  userId                  String     @map("user_id")
+  courseId                String     @map("course_id")
+  examDate                DateTime?  @map("exam_date")
+  studyHoursPerWeek       Int        @default(6) @map("study_hours_per_week")
+  preferredStudyDays      Json?      @map("preferred_study_days") // Array of weekdays [0-6]
+  selfRating              SelfRating @default(NOVICE) @map("self_rating")
+  planCreatedAt           DateTime   @default(now()) @map("plan_created_at")
+  orientationCompleted    Boolean    @default(false) @map("orientation_completed")
+  consolidatedNotesPdfUrl String?    @map("consolidated_notes_pdf_url") // Student-uploaded consolidated notes PDF
+  createdAt               DateTime   @default(now()) @map("created_at")
+  updatedAt               DateTime   @updatedAt @map("updated_at")
 
   // Relations
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)

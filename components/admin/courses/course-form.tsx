@@ -37,6 +37,8 @@ const componentVisibilitySchema = z.object({
   appointments: z.boolean().default(true),
   virtualTutor: z.boolean().default(false),
   caseStudies: z.boolean().default(false),
+  notesPdfDownload: z.boolean().default(false),
+  consolidatedNotesPdf: z.boolean().default(false),
 });
 
 // Form schema (keep inputs as strings for react-hook-form)
@@ -132,6 +134,8 @@ export function CourseForm({ courseId, initialData }: CourseFormProps) {
     appointments: initialData?.componentVisibility?.appointments ?? true,
     virtualTutor: initialData?.componentVisibility?.virtualTutor ?? false,
     caseStudies: initialData?.componentVisibility?.caseStudies ?? false,
+    notesPdfDownload: initialData?.componentVisibility?.notesPdfDownload ?? false,
+    consolidatedNotesPdf: initialData?.componentVisibility?.consolidatedNotesPdf ?? false,
   });
   const [productStats, setProductStats] = useState<Array<{ value: number; label: string }>>(
     Array.isArray((initialData as any)?.productStats) 
@@ -647,6 +651,30 @@ export function CourseForm({ courseId, initialData }: CourseFormProps) {
                 checked={componentVisibility.caseStudies}
                 onCheckedChange={(checked) =>
                   setComponentVisibility((prev) => ({ ...prev, caseStudies: checked }))
+                }
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="visibility-notes-pdf-download" className="cursor-pointer">
+                Télécharger les notes par chapitre (PDF)
+              </Label>
+              <Switch
+                id="visibility-notes-pdf-download"
+                checked={componentVisibility.notesPdfDownload}
+                onCheckedChange={(checked) =>
+                  setComponentVisibility((prev) => ({ ...prev, notesPdfDownload: checked }))
+                }
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="visibility-consolidated-notes-pdf" className="cursor-pointer">
+                Notes consolidées (PDF) — téléchargement et envoi par l&apos;étudiant
+              </Label>
+              <Switch
+                id="visibility-consolidated-notes-pdf"
+                checked={componentVisibility.consolidatedNotesPdf}
+                onCheckedChange={(checked) =>
+                  setComponentVisibility((prev) => ({ ...prev, consolidatedNotesPdf: checked }))
                 }
               />
             </div>
