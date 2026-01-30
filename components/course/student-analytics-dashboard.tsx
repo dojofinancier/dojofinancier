@@ -1,17 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Loader2, Clock, Target, TrendingUp, BookOpen, Calendar, Award } from "lucide-react";
+import { Loader2, Target, TrendingUp, BookOpen, Calendar, Award } from "lucide-react";
 import {
-  getStudentOverviewAction,
-  getStudentProgressAction,
-  getStudentPerformanceAction,
-  getStudentStudyHabitsAction,
-  getStudentGoalsAction,
-} from "@/app/actions/student-analytics";
+  useStudentOverview,
+  useStudentProgress,
+  useStudentPerformance,
+  useStudentStudyHabits,
+  useStudentGoals,
+} from "@/lib/hooks/use-student-analytics";
 import { OverviewSection } from "./analytics/overview-section";
 import { ProgressSection } from "./analytics/progress-section";
 import { PerformanceSection } from "./analytics/performance-section";
@@ -23,119 +22,30 @@ interface StudentAnalyticsDashboardProps {
 }
 
 export function StudentAnalyticsDashboard({ courseId }: StudentAnalyticsDashboardProps) {
-  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
-  const [overviewData, setOverviewData] = useState<any>(null);
-  const [progressData, setProgressData] = useState<any>(null);
-  const [progressLoading, setProgressLoading] = useState(false);
-  const [performanceData, setPerformanceData] = useState<any>(null);
-  const [performanceLoading, setPerformanceLoading] = useState(false);
-  const [studyHabitsData, setStudyHabitsData] = useState<any>(null);
-  const [habitsLoading, setHabitsLoading] = useState(false);
-  const [goalsData, setGoalsData] = useState<any>(null);
-  const [goalsLoading, setGoalsLoading] = useState(false);
 
-  // Load overview immediately
-  useEffect(() => {
-    loadOverview();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [courseId]);
+  // Use React Query hooks for all data fetching
+  // Each hook only fetches when its tab is active (enabled prop)
+  // Data is cached for 5 minutes, preventing redundant fetches on tab switches
+  const { data: overviewData, isLoading: overviewLoading } = useStudentOverview(courseId, true);
+  const { data: progressData, isLoading: progressLoading } = useStudentProgress(
+    courseId,
+    activeTab === "progress"
+  );
+  const { data: performanceData, isLoading: performanceLoading } = useStudentPerformance(
+    courseId,
+    activeTab === "performance"
+  );
+  const { data: studyHabitsData, isLoading: habitsLoading } = useStudentStudyHabits(
+    courseId,
+    activeTab === "habits"
+  );
+  const { data: goalsData, isLoading: goalsLoading } = useStudentGoals(
+    courseId,
+    activeTab === "goals"
+  );
 
-  // Load other tabs when they become active
-  useEffect(() => {
-    if (activeTab === "progress" && !progressData && !progressLoading) {
-      loadProgress();
-    } else if (activeTab === "performance" && !performanceData && !performanceLoading) {
-      loadPerformance();
-    } else if (activeTab === "habits" && !studyHabitsData && !habitsLoading) {
-      loadHabits();
-    } else if (activeTab === "goals" && !goalsData && !goalsLoading) {
-      loadGoals();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, courseId]);
-
-  const loadOverview = async () => {
-    setLoading(true);
-    try {
-      const result = await getStudentOverviewAction(courseId);
-      if (result.success) {
-        setOverviewData(result.data);
-      } else {
-        console.error("Overview error:", result.error);
-      }
-    } catch (error) {
-      console.error("Error loading overview:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadProgress = async () => {
-    setProgressLoading(true);
-    try {
-      const result = await getStudentProgressAction(courseId);
-      if (result.success) {
-        setProgressData(result.data);
-      } else {
-        console.error("Progress error:", result.error);
-      }
-    } catch (error) {
-      console.error("Error loading progress:", error);
-    } finally {
-      setProgressLoading(false);
-    }
-  };
-
-  const loadPerformance = async () => {
-    setPerformanceLoading(true);
-    try {
-      const result = await getStudentPerformanceAction(courseId);
-      if (result.success) {
-        setPerformanceData(result.data);
-      } else {
-        console.error("Performance error:", result.error);
-      }
-    } catch (error) {
-      console.error("Error loading performance:", error);
-    } finally {
-      setPerformanceLoading(false);
-    }
-  };
-
-  const loadHabits = async () => {
-    setHabitsLoading(true);
-    try {
-      const result = await getStudentStudyHabitsAction(courseId);
-      if (result.success) {
-        setStudyHabitsData(result.data);
-      } else {
-        console.error("Habits error:", result.error);
-      }
-    } catch (error) {
-      console.error("Error loading habits:", error);
-    } finally {
-      setHabitsLoading(false);
-    }
-  };
-
-  const loadGoals = async () => {
-    setGoalsLoading(true);
-    try {
-      const result = await getStudentGoalsAction(courseId);
-      if (result.success) {
-        setGoalsData(result.data);
-      } else {
-        console.error("Goals error:", result.error);
-      }
-    } catch (error) {
-      console.error("Error loading goals:", error);
-    } finally {
-      setGoalsLoading(false);
-    }
-  };
-
-  if (loading && !overviewData) {
+  if (overviewLoading && !overviewData) {
     return (
       <div className="space-y-6">
         <Skeleton className="h-8 w-64" />
@@ -187,7 +97,7 @@ export function StudentAnalyticsDashboard({ courseId }: StudentAnalyticsDashboar
         </TabsContent>
 
         <TabsContent value="progress" className="mt-6">
-          {progressLoading ? (
+          {progressLoading && !progressData ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
@@ -201,7 +111,7 @@ export function StudentAnalyticsDashboard({ courseId }: StudentAnalyticsDashboar
         </TabsContent>
 
         <TabsContent value="performance" className="mt-6">
-          {performanceLoading ? (
+          {performanceLoading && !performanceData ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
@@ -215,7 +125,7 @@ export function StudentAnalyticsDashboard({ courseId }: StudentAnalyticsDashboar
         </TabsContent>
 
         <TabsContent value="habits" className="mt-6">
-          {habitsLoading ? (
+          {habitsLoading && !studyHabitsData ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
@@ -229,7 +139,7 @@ export function StudentAnalyticsDashboard({ courseId }: StudentAnalyticsDashboar
         </TabsContent>
 
         <TabsContent value="goals" className="mt-6">
-          {goalsLoading ? (
+          {goalsLoading && !goalsData ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
@@ -245,4 +155,3 @@ export function StudentAnalyticsDashboard({ courseId }: StudentAnalyticsDashboar
     </div>
   );
 }
-

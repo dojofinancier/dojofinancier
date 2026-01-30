@@ -3,9 +3,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Video, FileText, Play, Layers, Brain, FileQuestion, BookOpen, Briefcase } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getCourseAction } from "@/app/actions/courses";
-import { getCaseStudiesAction } from "@/app/actions/case-studies";
-import { useEffect, useState } from "react";
+import { useLearningToolsData } from "@/lib/hooks/use-learning-tools";
 
 interface LearningToolsProps {
   courseId: string;
@@ -72,50 +70,16 @@ const allTools = [
 ];
 
 export function LearningTools({ courseId, onToolSelect }: LearningToolsProps) {
-  const [course, setCourse] = useState<any>(null);
-  const [hasCaseStudies, setHasCaseStudies] = useState(false);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    loadCourse();
-  }, [courseId]);
-
-  const loadCourse = async () => {
-    try {
-      setLoading(true);
-      const [courseResult, caseStudiesResult] = await Promise.all([
-        getCourseAction(courseId),
-        getCaseStudiesAction(courseId),
-      ]);
-
-      if (courseResult) {
-        setCourse(courseResult);
-      }
-
-      if (caseStudiesResult.success && caseStudiesResult.data) {
-        setHasCaseStudies(caseStudiesResult.data.length > 0);
-      }
-    } catch (error) {
-      console.error("Error loading course:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Use React Query hook for caching and deduplication
+  const { isLoading, visibility } = useLearningToolsData(courseId);
 
   // Filter tools based on component visibility
-  const componentVisibility = course?.componentVisibility || {};
-  const videosEnabled = course ? componentVisibility.videos !== false : false;
-  const notesEnabled = course ? componentVisibility.notes !== false : false;
-  const quizzesEnabled = course ? componentVisibility.quizzes !== false : false;
-  const flashcardsEnabled = course ? componentVisibility.flashcards !== false : false;
-  const caseStudiesEnabled = hasCaseStudies;
-
   const tools = allTools.filter((tool) => {
-    if (tool.id === "videos") return videosEnabled;
-    if (tool.id === "notes") return notesEnabled;
-    if (tool.id === "quizzes") return quizzesEnabled;
-    if (tool.id === "flashcards") return flashcardsEnabled;
-    if (tool.id === "case-studies") return caseStudiesEnabled;
+    if (tool.id === "videos") return visibility.videos;
+    if (tool.id === "notes") return visibility.notes;
+    if (tool.id === "quizzes") return visibility.quizzes;
+    if (tool.id === "flashcards") return visibility.flashcards;
+    if (tool.id === "case-studies") return visibility.caseStudies;
     // Activities, exams, and question-bank are always available
     return true;
   });
@@ -129,7 +93,7 @@ export function LearningTools({ courseId, onToolSelect }: LearningToolsProps) {
         </p>
       </div>
 
-      {loading ? (
+      {isLoading ? (
         <Card>
           <CardContent className="py-10 text-center text-muted-foreground">
             Chargement des outils...
@@ -167,4 +131,3 @@ export function LearningTools({ courseId, onToolSelect }: LearningToolsProps) {
     </div>
   );
 }
-

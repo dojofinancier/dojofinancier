@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, lazy, Suspense, useMemo } from "react";
+import { useState, useEffect, lazy, Suspense, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -125,8 +125,6 @@ export function PhaseBasedLearningInterface({
     initialSettings
   );
   
-  // Cache for loaded phase data to prevent redundant requests
-  const [loadedPhases, setLoadedPhases] = useState<Set<string>>(new Set());
   const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null);
   const [selectedTool, setSelectedTool] = useState<string | null>(null);
   const [selectedExamId, setSelectedExamId] = useState<string | null>(null);
@@ -176,84 +174,64 @@ export function PhaseBasedLearningInterface({
     setMobileMenuOpen(false);
   };
 
-  const handleNavigate = (item: NavigationItem) => {
+  // Optimized navigation handler using useCallback
+  // Consolidates state resets to minimize re-renders
+  const handleNavigate = useCallback((item: NavigationItem) => {
+    // Reset all selection state at once (React 18+ batches these automatically)
+    setSelectedTool(null);
+    setSelectedExamId(null);
     setActiveItem(item);
+
     if (item === "home") {
       setActivePhase("home");
       setSelectedModuleId(null);
-      setSelectedTool(null);
-      setSelectedExamId(null);
     } else if (item === "learn") {
       setActivePhase("learn");
       setSelectedModuleId(null);
-      setSelectedTool(null);
-      setSelectedExamId(null);
-      setLoadedPhases(prev => new Set(prev).add("learn"));
     } else if (item.startsWith("module-")) {
       setActivePhase("learn");
-      const moduleId = item.replace("module-", "");
-      setSelectedModuleId(moduleId);
-      setSelectedTool(null);
-      setSelectedExamId(null);
-      setLoadedPhases(prev => new Set(prev).add("learn"));
+      setSelectedModuleId(item.replace("module-", ""));
     } else if (item === "review") {
       setActivePhase("review");
       setSelectedModuleId(null);
-      setSelectedTool(null);
-      setSelectedExamId(null);
-      setLoadedPhases(prev => new Set(prev).add("review"));
     } else if (item === "practice") {
       setActivePhase("practice");
       setSelectedModuleId(null);
-      setSelectedTool(null);
-      setSelectedExamId(null);
-      setLoadedPhases(prev => new Set(prev).add("practice"));
     } else if (item === "question") {
       setActivePhase("question");
       setSelectedModuleId(null);
-      setSelectedTool(null);
-      setSelectedExamId(null);
     } else if (item === "syllabus") {
       setActivePhase("syllabus");
       setSelectedModuleId(null);
-      setSelectedTool(null);
-      setSelectedExamId(null);
-      setLoadedPhases(prev => new Set(prev).add("syllabus"));
     } else if (item === "tools") {
       setActivePhase("tools");
       setSelectedModuleId(null);
-      setSelectedTool(null);
-      setSelectedExamId(null);
-      setLoadedPhases(prev => new Set(prev).add("tools"));
     } else if (item === "progress") {
       setActivePhase("progress");
       setSelectedModuleId(null);
-      setSelectedTool(null);
-      setSelectedExamId(null);
-      setLoadedPhases(prev => new Set(prev).add("progress"));
     }
-  };
+  }, []);
 
-  const handleModuleBack = () => {
+  const handleModuleBack = useCallback(() => {
     setSelectedModuleId(null);
     setActiveItem("learn");
-  };
+  }, []);
 
-  const handleToolSelect = (tool: string) => {
+  const handleToolSelect = useCallback((tool: string) => {
     setSelectedTool(tool);
-  };
+  }, []);
 
-  const handleToolBack = () => {
+  const handleToolBack = useCallback(() => {
     setSelectedTool(null);
-  };
+  }, []);
 
-  const handleStartExam = (examId: string) => {
+  const handleStartExam = useCallback((examId: string) => {
     setSelectedExamId(examId);
-  };
+  }, []);
 
-  const handleExamExit = () => {
+  const handleExamExit = useCallback(() => {
     setSelectedExamId(null);
-  };
+  }, []);
 
   if (settingsLoading) {
     return (
