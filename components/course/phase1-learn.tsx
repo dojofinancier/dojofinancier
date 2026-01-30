@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
 import { BookOpen, CheckCircle2, Circle, Play } from "lucide-react";
 import { getModuleProgressAction } from "@/app/actions/study-plan";
 import { LearnStatus } from "@prisma/client";
@@ -13,17 +14,24 @@ interface Phase1LearnProps {
   courseId: string;
   course: any;
   settings: any;
+  /** Pre-fetched on server so Phase 1 list shows immediately without client fetch */
+  initialModuleProgress?: any[] | null;
   onModuleSelect?: (moduleId: string) => void;
 }
 
-export function Phase1Learn({ courseId, course, settings, onModuleSelect }: Phase1LearnProps) {
-  const [moduleProgress, setModuleProgress] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+export function Phase1Learn({ courseId, course, settings, initialModuleProgress, onModuleSelect }: Phase1LearnProps) {
+  const [moduleProgress, setModuleProgress] = useState<any[]>(initialModuleProgress ?? []);
+  const [loading, setLoading] = useState(!initialModuleProgress);
   const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null);
 
   useEffect(() => {
+    if (initialModuleProgress != null) {
+      setModuleProgress(initialModuleProgress);
+      setLoading(false);
+      return;
+    }
     loadProgress();
-  }, [courseId]);
+  }, [courseId, initialModuleProgress]);
 
   const loadProgress = async () => {
     try {
@@ -70,12 +78,44 @@ export function Phase1Learn({ courseId, course, settings, onModuleSelect }: Phas
         moduleId={selectedModuleId}
         onBack={handleBack}
         componentVisibility={course?.componentVisibility as any}
+        consolidatedNotesPdfUrl={(course as any)?.consolidatedNotesPdfUrl ?? null}
       />
     );
   }
 
   if (loading) {
-    return <div>Chargement...</div>;
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-6 w-48" />
+            <Skeleton className="h-4 w-full mt-2" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-3 w-full mb-2" />
+            <Skeleton className="h-2 w-full" />
+          </CardContent>
+        </Card>
+        <div className="grid gap-4">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <Card key={i}>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3 flex-1">
+                    <Skeleton className="h-5 w-5 rounded-full" />
+                    <div className="space-y-2 flex-1">
+                      <Skeleton className="h-4 w-3/4" />
+                      <Skeleton className="h-3 w-1/3" />
+                    </div>
+                  </div>
+                  <Skeleton className="h-9 w-28" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
   }
 
   const learnedCount = moduleProgress.filter((p) => p.learnStatus === LearnStatus.LEARNED).length;

@@ -74,11 +74,11 @@ export function CourseConsolidatedNotesManagement({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <FileText className="h-5 w-5" />
-          Notes consolidées (PDF)
+          Notes de chapitre / Notes consolidées (PDF)
         </CardTitle>
         <CardDescription>
-          Téléversez un document PDF regroupant les notes de tous les modules. Les étudiants pourront le
-          télécharger si l&apos;option « Notes consolidées (PDF) » est activée dans la visibilité des composants.
+          Téléversez ici le PDF des notes de chapitre pour ce cours. Les étudiants pourront le télécharger
+          si l&apos;option « Notes consolidées (PDF) » est activée dans la visibilité des composants (onglet Détails).
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

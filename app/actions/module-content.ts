@@ -24,6 +24,7 @@ const getCachedModuleContent = unstable_cache(
         title: true,
         description: true,
         order: true,
+        detailedNotesPdfUrl: true,
         contentItems: {
           where: {
             OR: [
@@ -114,6 +115,7 @@ const getCachedModuleContent = unstable_cache(
         title: module.title,
         description: module.description,
         order: module.order,
+        detailedNotesPdfUrl: module.detailedNotesPdfUrl,
       },
       videos,
       notes,

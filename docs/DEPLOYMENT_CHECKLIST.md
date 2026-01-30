@@ -76,6 +76,14 @@ Ensure all required environment variables are set in Netlify:
 - Check Supabase connection pooling settings
 - Ensure database is accessible from Netlify's IP ranges
 
+### Upload notes PDF fails (Bucket not found / RLS)
+**Solution:**
+1. In Supabase Dashboard → **Storage** → **New bucket** → create a bucket named exactly **`course-notes`** (e.g. Public if you want open PDF links).
+2. Add Storage RLS policies so reads and uploads are allowed:
+   - In Supabase Dashboard → **SQL Editor**, run the script **`prisma/storage-course-notes-policies.sql`** (copy/paste its contents and Run).
+   - That script adds: public read (SELECT) on `course-notes`, and authenticated INSERT/UPDATE/DELETE so admins and students can upload/remove.
+3. If "download" or opening the PDF link still fails with "Accès refusé", the missing RLS policy is usually **SELECT** on `storage.objects` for `bucket_id = 'course-notes'`; the script above adds it.
+
 ## 📋 Post-Deployment Verification
 
 After deployment, verify:

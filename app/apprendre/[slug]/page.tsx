@@ -1,6 +1,6 @@
 import { getCourseContentAction } from "@/app/actions/courses";
 import { getPublishedCourseBySlugAction } from "@/app/actions/courses";
-import { getTodaysPlanAction, getUserCourseSettingsAction } from "@/app/actions/study-plan";
+import { getTodaysPlanAction, getUserCourseSettingsAction, getModuleProgressAction } from "@/app/actions/study-plan";
 
 import { notFound, redirect } from "next/navigation";
 import { CourseLearningInterface } from "@/components/course/learning-interface";
@@ -30,11 +30,12 @@ export default async function CourseLearningPage({
 
     const actualCourseId = courseBySlug.id;
 
-    // Fetch course content and settings in parallel for better performance
-    const [courseResult, settingsResult, todaysPlanResult] = await Promise.all([
+    // Fetch course content, settings, today's plan, and Phase 1 module progress in parallel
+    const [courseResult, settingsResult, todaysPlanResult, moduleProgressResult] = await Promise.all([
       getCourseContentAction(actualCourseId),
-      getUserCourseSettingsAction(actualCourseId).catch(() => ({ success: false, data: null })), // Don't fail if settings don't exist
+      getUserCourseSettingsAction(actualCourseId).catch(() => ({ success: false, data: null })),
       getTodaysPlanAction(actualCourseId).catch(() => ({ success: false, data: null })),
+      getModuleProgressAction(actualCourseId).catch(() => ({ success: false, data: null })),
     ]);
 
 
@@ -106,6 +107,7 @@ export default async function CourseLearningPage({
             course={result.data}
             initialSettings={settingsResult.success ? settingsResult.data : null}
             initialTodaysPlan={todaysPlanResult.success ? todaysPlanResult.data : null}
+            initialModuleProgress={moduleProgressResult.success ? moduleProgressResult.data : null}
           />
         </Suspense>
       );

@@ -137,15 +137,16 @@ enum PaymentType {
 
 // Modules
 model Module {
-  id          String   @id @default(uuid())
-  courseId    String   @map("course_id")
-  order       Int
-  title       String
-  shortTitle  String?  @map("short_title") // Short title for sidebar display
-  description String?  @db.Text
-  examWeight  Float?   @map("exam_weight") // Pondération à l'examen (e.g., 0.15 for 15%)
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id                   String   @id @default(uuid())
+  courseId             String   @map("course_id")
+  order                Int
+  title                String
+  shortTitle           String?  @map("short_title") // Short title for sidebar display
+  description          String?  @db.Text
+  examWeight           Float?   @map("exam_weight") // Pondération à l'examen (e.g., 0.15 for 15%)
+  detailedNotesPdfUrl  String?  @map("detailed_notes_pdf_url") // Admin-uploaded detailed notes PDF for this chapter
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
 
   // Relations
   course             Course             @relation(fields: [courseId], references: [id], onDelete: Cascade)

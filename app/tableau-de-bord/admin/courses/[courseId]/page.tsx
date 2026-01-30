@@ -88,6 +88,9 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
           <TabsTrigger value="faqs">FAQ</TabsTrigger>
         </TabsList>
         <TabsContent value="details" className="mt-6">
+          <p className="text-sm text-muted-foreground mb-4">
+            Modifiez les paramètres du cours ci-dessous. Pour téléverser le PDF des notes de chapitre, utilisez la section « Notes de chapitre / Notes consolidées » en bas de cette page.
+          </p>
           <CourseForm
             courseId={courseId}
             initialData={{

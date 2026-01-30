@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   DndContext,
   closestCenter,
@@ -58,6 +58,9 @@ import {
   FileText,
   ChevronDown,
   ChevronUp,
+  Upload,
+  Loader2,
+  ExternalLink,
 } from "lucide-react";
 import type { Module, ContentItem, Video as VideoModel, Quiz, Note, QuizQuestion, ContentType } from "@prisma/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -66,6 +69,10 @@ import { QuizBuilder } from "./quiz-builder";
 import { FileUploadButton } from "./file-upload-button";
 import { marked } from "marked";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import {
+  uploadModuleDetailedNotesPdfAction,
+  removeModuleDetailedNotesPdfAction,
+} from "@/app/actions/course-notes-upload";
 
 type FullContentItem = ContentItem & {
   video?: VideoModel | null;
@@ -516,10 +523,139 @@ function SortableModuleItem({
           </div>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-4">
+        <ModuleDetailedNotesRow
+          courseId={module.courseId}
+          moduleId={module.id}
+          moduleTitle={module.title}
+          initialUrl={(module as ModuleWithContent & { detailedNotesPdfUrl?: string | null }).detailedNotesPdfUrl ?? null}
+          onRefresh={onRefresh}
+        />
         <ModuleContentManager module={module} courseId={module.courseId} onRefresh={onRefresh} />
       </CardContent>
     </Card>
+  );
+}
+
+interface ModuleDetailedNotesRowProps {
+  courseId: string;
+  moduleId: string;
+  moduleTitle: string;
+  initialUrl: string | null;
+  onRefresh: () => void;
+}
+
+function ModuleDetailedNotesRow({
+  courseId,
+  moduleId,
+  moduleTitle,
+  initialUrl,
+  onRefresh,
+}: ModuleDetailedNotesRowProps) {
+  const [url, setUrl] = useState<string | null>(initialUrl);
+  const [uploading, setUploading] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setUrl(initialUrl);
+  }, [initialUrl]);
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.type !== "application/pdf") {
+      toast.error("Seuls les fichiers PDF sont acceptés");
+      return;
+    }
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const result = await uploadModuleDetailedNotesPdfAction(courseId, moduleId, formData);
+      if (result.success && result.url) {
+        setUrl(result.url);
+        toast.success("Notes détaillées mises en ligne");
+        onRefresh();
+      } else {
+        toast.error(result.error || "Erreur lors du téléversement");
+      }
+    } catch {
+      toast.error("Erreur lors du téléversement");
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  };
+
+  const handleRemove = async () => {
+    setRemoving(true);
+    try {
+      const result = await removeModuleDetailedNotesPdfAction(moduleId);
+      if (result.success) {
+        setUrl(null);
+        toast.success("Notes détaillées supprimées");
+        onRefresh();
+      } else {
+        toast.error(result.error || "Erreur lors de la suppression");
+      }
+    } catch {
+      toast.error("Erreur lors de la suppression");
+    } finally {
+      setRemoving(false);
+    }
+  };
+
+  return (
+    <div className="rounded-lg border p-3 bg-muted/40">
+      <div className="flex items-center gap-2 mb-2">
+        <FileText className="h-4 w-4 text-muted-foreground" />
+        <span className="text-sm font-medium">Notes détaillées (PDF) – {moduleTitle}</span>
+      </div>
+      {url ? (
+        <div className="flex flex-wrap items-center gap-3">
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm text-primary hover:underline truncate max-w-[200px] sm:max-w-none"
+          >
+            Notes détaillées (PDF)
+          </a>
+          <div className="flex gap-2 ml-auto">
+            <Button variant="outline" size="sm" asChild>
+              <a href={url} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="h-4 w-4 mr-1" />
+                Ouvrir
+              </a>
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleRemove} disabled={removing}>
+              {removing ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Trash2 className="h-4 w-4 mr-1" /> Supprimer</>}
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/pdf"
+            className="hidden"
+            onChange={handleUpload}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={uploading}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            {uploading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Upload className="h-4 w-4 mr-2" />}
+            Téléverser les notes détaillées (PDF)
+          </Button>
+        </div>
+      )}
+    </div>
   );
 }
 

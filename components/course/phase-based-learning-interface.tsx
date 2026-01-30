@@ -99,8 +99,10 @@ type TodaysPlanData = {
 
 interface PhaseBasedLearningInterfaceProps {
   course: Course;
-  initialSettings?: any; // Settings passed from server to avoid client-side fetch
+  initialSettings?: any;
   initialTodaysPlan?: TodaysPlanData | null;
+  /** Phase 1 module progress from server to avoid client-side fetch and speed up "learn" tab */
+  initialModuleProgress?: any[] | null;
 }
 
 
@@ -111,6 +113,7 @@ export function PhaseBasedLearningInterface({
   course,
   initialSettings,
   initialTodaysPlan,
+  initialModuleProgress,
 }: PhaseBasedLearningInterfaceProps) {
   const router = useRouter();
   const [activePhase, setActivePhase] = useState<Phase>("orientation");
@@ -381,6 +384,7 @@ export function PhaseBasedLearningInterface({
                   moduleId={selectedModuleId}
                   onBack={handleModuleBack}
                   componentVisibility={course.componentVisibility as any}
+                  consolidatedNotesPdfUrl={(course as any)?.consolidatedNotesPdfUrl ?? null}
                 />
               ) : (
                 <>
@@ -389,6 +393,7 @@ export function PhaseBasedLearningInterface({
                       courseId={course.id}
                       course={course}
                       settings={settings}
+                      initialModuleProgress={initialModuleProgress ?? undefined}
                       onModuleSelect={(moduleId) => {
                         setSelectedModuleId(moduleId);
                         setActiveItem(`module-${moduleId}` as NavigationItem);

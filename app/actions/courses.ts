@@ -837,6 +837,7 @@ export async function getCourseContentAction(courseId: string) {
         slug: true,
         title: true,
         componentVisibility: true,
+        consolidatedNotesPdfUrl: true,
         category: true,
         recommendedStudyHoursMin: true,
         recommendedStudyHoursMax: true,

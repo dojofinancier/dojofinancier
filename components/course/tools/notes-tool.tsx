@@ -1,19 +1,13 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
 import { getCourseModulesAction } from "@/app/actions/modules";
 import { getBatchModuleContentAction } from "@/app/actions/module-content";
 import { getCourseAction } from "@/app/actions/courses";
-import {
-  uploadStudentConsolidatedNotesPdfAction,
-  getStudentConsolidatedNotesPdfUrlAction,
-} from "@/app/actions/course-notes-upload";
-import { ChevronLeft, ChevronRight, Download, FileText, Upload, Loader2, ExternalLink } from "lucide-react";
-import { toast } from "sonner";
+import { ChevronLeft, ChevronRight, Download, FileText } from "lucide-react";
 
 
 interface NoteItem {
@@ -51,9 +45,6 @@ export function NotesTool({
   const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null);
   const [currentNoteIndex, setCurrentNoteIndex] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [studentConsolidatedUrl, setStudentConsolidatedUrl] = useState<string | null>(null);
-  const [uploadingConsolidated, setUploadingConsolidated] = useState(false);
-  const consolidatedFileInputRef = useRef<HTMLInputElement>(null);
   const [resolvedVisibility, setResolvedVisibility] = useState(componentVisibility);
   const [resolvedConsolidatedUrl, setResolvedConsolidatedUrl] = useState(consolidatedNotesPdfUrl);
 
@@ -82,51 +73,18 @@ export function NotesTool({
   }, [courseId, componentVisibility, consolidatedNotesPdfUrl]);
 
   const notesPdfDownloadEnabled = resolvedVisibility?.notesPdfDownload === true;
-  const consolidatedNotesPdfEnabled = resolvedVisibility?.consolidatedNotesPdf === true;
   const effectiveConsolidatedNotesPdfUrl = consolidatedNotesPdfUrl ?? resolvedConsolidatedUrl;
+  // Show consolidated PDF download whenever a URL exists (admin uploaded); no extra visibility gate
+  const showConsolidatedNotesDownload = !!effectiveConsolidatedNotesPdfUrl;
 
   useEffect(() => {
     loadAllModules();
   }, [courseId]);
 
   useEffect(() => {
-    if (consolidatedNotesPdfEnabled) {
-      getStudentConsolidatedNotesPdfUrlAction(courseId).then(({ url }) =>
-        setStudentConsolidatedUrl(url)
-      );
-    }
-  }, [courseId, consolidatedNotesPdfEnabled]);
-
-  useEffect(() => {
     // Reset note index when module changes
     setCurrentNoteIndex(0);
   }, [selectedModuleId]);
-
-  const handleUploadConsolidated = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.type !== "application/pdf") {
-      toast.error("Seuls les fichiers PDF sont acceptés");
-      return;
-    }
-    setUploadingConsolidated(true);
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const result = await uploadStudentConsolidatedNotesPdfAction(courseId, formData);
-      if (result.success && result.url) {
-        setStudentConsolidatedUrl(result.url);
-        toast.success("Document consolidé téléversé avec succès");
-      } else {
-        toast.error(result.error || "Erreur lors du téléversement");
-      }
-    } catch {
-      toast.error("Erreur lors du téléversement");
-    } finally {
-      setUploadingConsolidated(false);
-      e.target.value = "";
-    }
-  };
 
   const loadAllModules = async () => {
     try {
@@ -288,7 +246,7 @@ export function NotesTool({
           <ChevronLeft className="h-4 w-4 mr-2" />
           Retour
         </Button>
-        {consolidatedNotesPdfEnabled && (effectiveConsolidatedNotesPdfUrl || studentConsolidatedUrl) && (
+        {showConsolidatedNotesDownload && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
@@ -296,46 +254,13 @@ export function NotesTool({
                 Notes consolidées (PDF)
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              {effectiveConsolidatedNotesPdfUrl && (
-                <Button variant="outline" size="sm" asChild>
-                  <a href={effectiveConsolidatedNotesPdfUrl} target="_blank" rel="noopener noreferrer">
-                    <Download className="h-4 w-4 mr-2" />
-                    Télécharger le document consolidé (instructeur)
-                  </a>
-                </Button>
-              )}
-              {studentConsolidatedUrl && (
-                <Button variant="outline" size="sm" asChild>
-                  <a href={studentConsolidatedUrl} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    Votre document consolidé
-                  </a>
-                </Button>
-              )}
-              <div className="flex items-center gap-2">
-                <input
-                  ref={consolidatedFileInputRef}
-                  type="file"
-                  accept="application/pdf"
-                  onChange={handleUploadConsolidated}
-                  className="hidden"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => consolidatedFileInputRef.current?.click()}
-                  disabled={uploadingConsolidated}
-                >
-                  {uploadingConsolidated ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <Upload className="h-4 w-4 mr-2" />
-                  )}
-                  {studentConsolidatedUrl ? "Remplacer mon document" : "Téléverser mon document consolidé"}
-                </Button>
-              </div>
+            <CardContent>
+              <Button variant="outline" size="sm" asChild>
+                <a href={effectiveConsolidatedNotesPdfUrl!} target="_blank" rel="noopener noreferrer">
+                  <Download className="h-4 w-4 mr-2" />
+                  Télécharger le document consolidé
+                </a>
+              </Button>
             </CardContent>
           </Card>
         )}
@@ -350,7 +275,7 @@ export function NotesTool({
 
   return (
     <div className="space-y-4">
-      {consolidatedNotesPdfEnabled && (
+      {showConsolidatedNotesDownload && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
@@ -358,50 +283,16 @@ export function NotesTool({
               Notes consolidées (PDF)
             </CardTitle>
             <CardDescription className="text-sm">
-              Téléchargez le document fourni par l&apos;instructeur ou téléversez votre propre document consolidé.
+              Téléchargez le document fourni par l&apos;instructeur.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3">
-            {effectiveConsolidatedNotesPdfUrl && (
-              <Button variant="outline" size="sm" asChild>
-                <a href={effectiveConsolidatedNotesPdfUrl} target="_blank" rel="noopener noreferrer">
-                  <Download className="h-4 w-4 mr-2" />
-                  Télécharger le document consolidé (instructeur)
-                </a>
-              </Button>
-            )}
-            {studentConsolidatedUrl && (
-              <Button variant="outline" size="sm" asChild>
-                <a href={studentConsolidatedUrl} target="_blank" rel="noopener noreferrer">
-                  <ExternalLink className="h-4 w-4 mr-2" />
-                  Votre document consolidé
-                </a>
-              </Button>
-            )}
-            <div className="flex items-center gap-2">
-              <input
-                ref={consolidatedFileInputRef}
-                type="file"
-                accept="application/pdf"
-                onChange={handleUploadConsolidated}
-                className="hidden"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => consolidatedFileInputRef.current?.click()}
-                disabled={uploadingConsolidated}
-              >
-                {uploadingConsolidated ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Upload className="h-4 w-4 mr-2" />
-                )}
-                {studentConsolidatedUrl ? "Remplacer mon document" : "Téléverser mon document consolidé"}
-              </Button>
-              <Label className="text-xs text-muted-foreground">PDF, max 32 Mo</Label>
-            </div>
+          <CardContent>
+            <Button variant="outline" size="sm" asChild>
+              <a href={effectiveConsolidatedNotesPdfUrl!} target="_blank" rel="noopener noreferrer">
+                <Download className="h-4 w-4 mr-2" />
+                Télécharger le document consolidé
+              </a>
+            </Button>
           </CardContent>
         </Card>
       )}
@@ -440,12 +331,7 @@ export function NotesTool({
       {selectedModule && currentNote && (
         <Card>
           <CardHeader>
-            <CardTitle>
-              {selectedModule.title}
-            </CardTitle>
-            <div className="text-sm text-muted-foreground mt-2">
-              Note {currentNoteIndex + 1} / {selectedModule.notes.length}
-            </div>
+            <CardTitle>{selectedModule.title}</CardTitle>
           </CardHeader>
           <CardContent>
             <div

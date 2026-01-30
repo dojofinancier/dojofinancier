@@ -25,7 +25,10 @@ interface ModuleDetailPageProps {
     videos?: boolean;
     quizzes?: boolean;
     notes?: boolean;
+    consolidatedNotesPdf?: boolean;
   } | null;
+  /** Admin-uploaded consolidated notes PDF (for download link in Notes tab) */
+  consolidatedNotesPdfUrl?: string | null;
 }
 
 type Video = {
@@ -66,11 +69,12 @@ type Quiz = {
   };
 };
 
-export function ModuleDetailPage({ courseId, moduleId, onBack, componentVisibility }: ModuleDetailPageProps) {
+export function ModuleDetailPage({ courseId, moduleId, onBack, componentVisibility, consolidatedNotesPdfUrl }: ModuleDetailPageProps) {
   // Get component visibility settings (default to enabled if not set)
   const videosEnabled = componentVisibility?.videos !== false; // Default to true if not set
   const quizzesEnabled = componentVisibility?.quizzes !== false; // Default to true if not set
   const notesEnabled = componentVisibility?.notes !== false; // Default to true if not set
+  const showConsolidatedNotesDownload = !!consolidatedNotesPdfUrl;
   
   const [loading, setLoading] = useState(true);
   const [module, setModule] = useState<any>(null);
@@ -78,6 +82,9 @@ export function ModuleDetailPage({ courseId, moduleId, onBack, componentVisibili
   const [notes, setNotes] = useState<Note[]>([]);
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [progress, setProgress] = useState<any>(null);
+  
+  const detailedNotesPdfUrl = module?.detailedNotesPdfUrl ?? null;
+  const showDetailedNotesDownload = !!detailedNotesPdfUrl;
   
   // Determine initial tab based on what's enabled and available
   const getInitialTab = (): "videos" | "notes" | "quiz" => {
@@ -268,53 +275,6 @@ export function ModuleDetailPage({ courseId, moduleId, onBack, componentVisibili
     } finally {
       setMarkingComplete(false);
     }
-  };
-
-  const handleDownloadNotePdf = (noteItem: Note) => {
-    const title = `${module?.title || "Note"} - Note ${noteItem.order + 1}`;
-    const html = `<!doctype html>
-<html lang="fr">
-  <head>
-    <meta charset="utf-8" />
-    <title>${title}</title>
-    <style>
-      body { font-family: "Inter", Arial, sans-serif; margin: 32px; color: #111827; }
-      h1 { font-size: 20px; margin-bottom: 16px; }
-      .note-content { line-height: 1.75; }
-      .note-content p { margin: 0 0 16px 0; }
-      .note-content h1 { font-size: 24px; margin: 24px 0 16px; }
-      .note-content h2 { font-size: 20px; margin: 20px 0 12px; }
-      .note-content h3 { font-size: 18px; margin: 16px 0 10px; }
-      .note-content ul, .note-content ol { margin: 16px 0; padding-left: 24px; }
-      .note-content li { margin-bottom: 8px; }
-      @media print { body { margin: 0.5in; } }
-    </style>
-  </head>
-  <body>
-    <h1>${title}</h1>
-    <div class="note-content">${noteItem.note.content}</div>
-  </body>
-</html>`;
-
-    const iframe = document.createElement("iframe");
-    iframe.style.position = "fixed";
-    iframe.style.right = "0";
-    iframe.style.bottom = "0";
-    iframe.style.width = "0";
-    iframe.style.height = "0";
-    iframe.style.border = "0";
-    iframe.setAttribute("aria-hidden", "true");
-    iframe.srcdoc = html;
-
-    iframe.onload = () => {
-      const printWindow = iframe.contentWindow;
-      if (!printWindow) return;
-      printWindow.focus();
-      printWindow.print();
-      setTimeout(() => iframe.remove(), 1000);
-    };
-
-    document.body.appendChild(iframe);
   };
 
   const handleQuizAnswerChange = (quizId: string, questionId: string, answer: string) => {
@@ -522,27 +482,44 @@ export function ModuleDetailPage({ courseId, moduleId, onBack, componentVisibili
         {/* Notes Tab */}
         <TabsContent value="notes" className="mt-6">
           {notes.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <p className="text-muted-foreground">Aucune note disponible pour ce module.</p>
-              </CardContent>
-            </Card>
+            <>
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <p className="text-muted-foreground">Aucune note disponible pour ce module.</p>
+                </CardContent>
+              </Card>
+              {showDetailedNotesDownload && (
+                <div className="pt-2 flex justify-end">
+                  <a
+                    href={detailedNotesPdfUrl!}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Télécharger les notes détaillées
+                  </a>
+                </div>
+              )}
+              {showConsolidatedNotesDownload && (
+                <div className="pt-2 flex justify-end">
+                  <a
+                    href={consolidatedNotesPdfUrl!}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Télécharger le document consolidé (PDF)
+                  </a>
+                </div>
+              )}
+            </>
           ) : (
             <div className="space-y-4">
               {notes.map((noteItem) => (
                 <Card key={noteItem.id}>
-                  <CardHeader className="flex flex-row items-center justify-between gap-3">
-                    <CardTitle>Note {noteItem.order + 1}</CardTitle>
-                    <Button
-                      variant="outline"
-                      className="hidden md:inline-flex"
-                      onClick={() => handleDownloadNotePdf(noteItem)}
-                    >
-                      <Download className="h-4 w-4 mr-2" />
-                      Télécharger PDF
-                    </Button>
-                  </CardHeader>
-                  <CardContent>
+                  <CardContent className="pt-6">
                     <div 
                       className="note-content [&>p]:mb-4 [&>p:last-child]:mb-0 [&>ul]:my-4 [&>ol]:my-4 [&>li]:mb-2 [&>h1]:text-2xl [&>h1]:font-bold [&>h1]:mt-6 [&>h1]:mb-4 [&>h2]:text-xl [&>h2]:font-bold [&>h2]:mt-6 [&>h2]:mb-4 [&>h3]:text-lg [&>h3]:font-semibold [&>h3]:mt-4 [&>h3]:mb-3 [&>strong]:font-semibold [&>em]:italic [&>a]:text-primary [&>a]:underline [&>a:hover]:no-underline [&>ul]:list-disc [&>ul]:pl-6 [&>ol]:list-decimal [&>ol]:pl-6 [&>li]:ml-4"
                       style={{
@@ -553,6 +530,32 @@ export function ModuleDetailPage({ courseId, moduleId, onBack, componentVisibili
                   </CardContent>
                 </Card>
               ))}
+              {showDetailedNotesDownload && (
+                <div className="pt-2 flex justify-end">
+                  <a
+                    href={detailedNotesPdfUrl!}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Télécharger les notes détaillées
+                  </a>
+                </div>
+              )}
+              {showConsolidatedNotesDownload && (
+                <div className="pt-2 flex justify-end">
+                  <a
+                    href={consolidatedNotesPdfUrl!}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Télécharger le document consolidé (PDF)
+                  </a>
+                </div>
+              )}
             </div>
           )}
         </TabsContent>
