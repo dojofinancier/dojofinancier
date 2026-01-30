@@ -484,23 +484,24 @@ export function ModuleDetailPage({ courseId, moduleId, onBack, componentVisibili
           {notes.length === 0 ? (
             <>
               <Card>
-                <CardContent className="py-12 text-center">
+                {showDetailedNotesDownload && (
+                  <CardHeader className="flex flex-row items-center justify-end gap-3 pb-2">
+                    <Button variant="outline" size="sm" className="hidden md:inline-flex" asChild>
+                      <a
+                        href={detailedNotesPdfUrl!}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Télécharger les notes détaillées
+                      </a>
+                    </Button>
+                  </CardHeader>
+                )}
+                <CardContent className={showDetailedNotesDownload ? "pt-0 py-12 text-center" : "py-12 text-center"}>
                   <p className="text-muted-foreground">Aucune note disponible pour ce module.</p>
                 </CardContent>
               </Card>
-              {showDetailedNotesDownload && (
-                <div className="pt-2 flex justify-end">
-                  <a
-                    href={detailedNotesPdfUrl!}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    <Download className="h-3.5 w-3.5" />
-                    Télécharger les notes détaillées
-                  </a>
-                </div>
-              )}
               {showConsolidatedNotesDownload && (
                 <div className="pt-2 flex justify-end">
                   <a
@@ -519,7 +520,21 @@ export function ModuleDetailPage({ courseId, moduleId, onBack, componentVisibili
             <div className="space-y-4">
               {notes.map((noteItem) => (
                 <Card key={noteItem.id}>
-                  <CardContent className="pt-6">
+                  {showDetailedNotesDownload && (
+                    <CardHeader className="flex flex-row items-center justify-end gap-3 pb-2">
+                      <Button variant="outline" size="sm" className="hidden md:inline-flex" asChild>
+                        <a
+                          href={detailedNotesPdfUrl!}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          Télécharger les notes détaillées
+                        </a>
+                      </Button>
+                    </CardHeader>
+                  )}
+                  <CardContent className={showDetailedNotesDownload ? "pt-0" : "pt-6"}>
                     <div 
                       className="note-content [&>p]:mb-4 [&>p:last-child]:mb-0 [&>ul]:my-4 [&>ol]:my-4 [&>li]:mb-2 [&>h1]:text-2xl [&>h1]:font-bold [&>h1]:mt-6 [&>h1]:mb-4 [&>h2]:text-xl [&>h2]:font-bold [&>h2]:mt-6 [&>h2]:mb-4 [&>h3]:text-lg [&>h3]:font-semibold [&>h3]:mt-4 [&>h3]:mb-3 [&>strong]:font-semibold [&>em]:italic [&>a]:text-primary [&>a]:underline [&>a:hover]:no-underline [&>ul]:list-disc [&>ul]:pl-6 [&>ol]:list-decimal [&>ol]:pl-6 [&>li]:ml-4"
                       style={{
@@ -530,19 +545,6 @@ export function ModuleDetailPage({ courseId, moduleId, onBack, componentVisibili
                   </CardContent>
                 </Card>
               ))}
-              {showDetailedNotesDownload && (
-                <div className="pt-2 flex justify-end">
-                  <a
-                    href={detailedNotesPdfUrl!}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    <Download className="h-3.5 w-3.5" />
-                    Télécharger les notes détaillées
-                  </a>
-                </div>
-              )}
               {showConsolidatedNotesDownload && (
                 <div className="pt-2 flex justify-end">
                   <a
