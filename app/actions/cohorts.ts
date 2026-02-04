@@ -6,7 +6,7 @@ import { z } from "zod";
 import { logServerError } from "@/lib/utils/error-logging";
 import type { PaginatedResult } from "@/lib/utils/pagination";
 import { generateSlug, generateUniqueSlug } from "@/lib/utils/slug";
-import { unstable_cache } from "next/cache";
+import { revalidatePath, unstable_cache } from "next/cache";
 
 const componentVisibilitySchema = z.object({
   videos: z.boolean().default(true),
@@ -780,6 +780,10 @@ export async function getPublishedCohortBySlugAction(slug: string) {
         const productStats = Array.isArray(cohort.productStats) 
           ? cohort.productStats 
           : (cohort.productStats && typeof cohort.productStats === 'string' ? JSON.parse(cohort.productStats) : null);
+        const rawAboutAccordionItems = (cohort as any).aboutAccordionItems;
+        const aboutAccordionItems = Array.isArray(rawAboutAccordionItems)
+          ? rawAboutAccordionItems
+          : (rawAboutAccordionItems && typeof rawAboutAccordionItems === 'string' ? JSON.parse(rawAboutAccordionItems) : []);
         const heroImages = Array.isArray(cohort.heroImages) 
           ? cohort.heroImages 
           : (typeof cohort.heroImages === 'string' ? JSON.parse(cohort.heroImages) : []);
@@ -791,6 +795,7 @@ export async function getPublishedCohortBySlugAction(slug: string) {
           testimonials: testimonials as any[],
           heroImages: heroImages as string[],
           productStats: (productStats && Array.isArray(productStats)) ? productStats as Array<{ value: number; label: string }> : undefined,
+          aboutAccordionItems: Array.isArray(aboutAccordionItems) ? aboutAccordionItems as Array<{ id: string; title: string; subtitle: string; richText: string }> : [],
           isEnrollmentOpen,
           spotsRemaining: Math.max(0, spotsRemaining),
           totalQuestions,
@@ -1386,7 +1391,11 @@ export async function reorderCohortModulesAction(
  */
 export async function updateCohortAboutAction(
   cohortId: string,
-  data: { shortDescription: string; aboutText: string }
+  data: { 
+    shortDescription: string; 
+    aboutText: string;
+    aboutAccordionItems: Array<{ id: string; title: string; subtitle: string; richText: string }>;
+  }
 ): Promise<CohortActionResult> {
   try {
     await requireAdminOrInstructor();
@@ -1416,8 +1425,13 @@ export async function updateCohortAboutAction(
       data: {
         shortDescription: data.shortDescription,
         aboutText: data.aboutText,
-      },
+        aboutAccordionItems: Array.isArray(data.aboutAccordionItems) ? data.aboutAccordionItems : [],
+      } as any,
     });
+
+    if (cohort.slug) {
+      revalidatePath(`/cohorte/${cohort.slug}`);
+    }
 
     return { success: true };
   } catch (error) {
@@ -1533,4 +1547,3 @@ export async function updateCohortTestimonialsAction(
     };
   }
 }
-

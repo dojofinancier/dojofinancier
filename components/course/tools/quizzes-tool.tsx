@@ -101,6 +101,16 @@ export function QuizzesTool({ courseId, onBack }: QuizzesToolProps) {
     return String.fromCharCode(65 + index);
   };
 
+  const getOrderedOptionKeys = (options: Record<string, string>) => {
+    const optionKeys = Object.keys(options || {});
+    return optionKeys.slice().sort((a, b) => {
+      const aNum = Number.parseInt(a.replace(/\D/g, ""), 10);
+      const bNum = Number.parseInt(b.replace(/\D/g, ""), 10);
+      if (!Number.isNaN(aNum) && !Number.isNaN(bNum) && aNum !== bNum) return aNum - bNum;
+      return a.localeCompare(b);
+    });
+  };
+
   const handleSubmitQuiz = async (quizId: string) => {
     const quiz = quizzes.find((q) => q.id === quizId);
     if (!quiz) return;
@@ -197,7 +207,7 @@ export function QuizzesTool({ courseId, onBack }: QuizzesToolProps) {
                     }}
                     className="mt-4"
                   >
-                    {Object.entries(currentQuestion.options).map(([key, option], idx) => (
+                    {getOrderedOptionKeys(currentQuestion.options).map((key, idx) => (
                       <div key={key} className="flex items-center space-x-2">
                         <RadioGroupItem value={key} id={`option-${key}`} />
                         <Label
@@ -205,7 +215,7 @@ export function QuizzesTool({ courseId, onBack }: QuizzesToolProps) {
                           className="flex-1 cursor-pointer font-normal"
                         >
                           <span className="font-semibold mr-2">{getOptionLetter(key, idx)}.</span>
-                          {option}
+                          {currentQuestion.options[key]}
                         </Label>
                       </div>
                     ))}

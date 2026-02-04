@@ -88,6 +88,19 @@ export default async function CohortDetailPage({ params }: CohortDetailPageProps
             cohortId={cohortId}
             initialShortDescription={(cohort.shortDescription as string) || ""}
             initialAboutText={(cohort.aboutText as string) || ""}
+            initialAboutAccordionItems={(() => {
+              const raw = (cohort as any).aboutAccordionItems;
+              if (Array.isArray(raw)) return raw;
+              if (typeof raw === "string") {
+                try {
+                  const parsed = JSON.parse(raw);
+                  return Array.isArray(parsed) ? parsed : [];
+                } catch {
+                  return [];
+                }
+              }
+              return [];
+            })()}
           />
         </TabsContent>
         <TabsContent value="features" className="mt-6">

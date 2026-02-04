@@ -24,6 +24,19 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
     ...course,
     shortDescription: (course as any).shortDescription || null,
     aboutText: (course as any).aboutText || null,
+    aboutAccordionItems: (() => {
+      const raw = (course as any).aboutAccordionItems;
+      if (Array.isArray(raw)) return raw;
+      if (typeof raw === "string") {
+        try {
+          const parsed = JSON.parse(raw);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch {
+          return [];
+        }
+      }
+      return [];
+    })(),
     features: Array.isArray((course as any).features) ? (course as any).features : [],
     testimonials: Array.isArray((course as any).testimonials) ? (course as any).testimonials : [],
     heroImages: Array.isArray((course as any).heroImages) ? (course as any).heroImages : [],
@@ -35,4 +48,3 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
     </Suspense>
   );
 }
-

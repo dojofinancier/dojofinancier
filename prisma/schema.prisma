@@ -85,6 +85,7 @@ model Course {
   shortDescription         String?     @map("short_description") @db.Text // Short description for hero section
   description              String?     @db.Text
   aboutText                String?     @map("about_text") @db.Text // Rich text about section
+  aboutAccordionItems      Json?       @default("[]") @map("about_accordion_items") // Array of {id, title, subtitle, richText}
   features                 Json?       @default("[]") // Array of {icon: string, text: string}
   testimonials             Json?       @default("[]") // Array of {name: string, role: string, text: string, avatar?: string}
   heroImages               Json?       @default("[]") @map("hero_images") // Array of image URLs for hero carousel
@@ -953,6 +954,7 @@ model Cohort {
   shortDescription      String?   @map("short_description") @db.Text // Short description for hero section
   description           String?   @db.Text
   aboutText             String?   @map("about_text") @db.Text // Rich text about section
+  aboutAccordionItems   Json?     @default("[]") @map("about_accordion_items") // Array of {id, title, subtitle, richText}
   features              Json?     @default("[]") // Array of {icon: string, text: string}
   testimonials          Json?     @default("[]") // Array of {name: string, role: string, text: string, avatar?: string}
   heroImages            Json?     @default("[]") @map("hero_images") // Array of image URLs for hero carousel

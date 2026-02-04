@@ -60,6 +60,7 @@ const getCachedModuleContent = unstable_cache(
                     question: true,
                     options: true,
                     correctAnswer: true,
+                    explanation: true,
                     type: true,
                   },
                 },
@@ -326,4 +327,3 @@ export async function getBatchModuleContentAction(
     };
   }
 }
-

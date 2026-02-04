@@ -4,31 +4,73 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { RichTextEditor } from "../courses/rich-text-editor";
 import { toast } from "sonner";
-import { Save } from "lucide-react";
+import { Plus, Save, Trash2 } from "lucide-react";
 import { updateCohortAboutAction } from "@/app/actions/cohorts";
+
+interface AboutAccordionItem {
+  id: string;
+  title: string;
+  subtitle: string;
+  richText: string;
+}
 
 interface CohortAboutManagementProps {
   cohortId: string;
   initialShortDescription: string;
   initialAboutText: string;
+  initialAboutAccordionItems: AboutAccordionItem[];
 }
 
 export function CohortAboutManagement({ 
   cohortId, 
   initialShortDescription,
-  initialAboutText 
+  initialAboutText,
+  initialAboutAccordionItems,
 }: CohortAboutManagementProps) {
   const [shortDescription, setShortDescription] = useState(initialShortDescription || "");
   const [aboutText, setAboutText] = useState(initialAboutText || "");
+  const [aboutAccordionItems, setAboutAccordionItems] = useState<AboutAccordionItem[]>(
+    Array.isArray(initialAboutAccordionItems) ? initialAboutAccordionItems : []
+  );
   const [saving, setSaving] = useState(false);
+
+  const handleAddAccordionItem = () => {
+    setAboutAccordionItems([
+      ...aboutAccordionItems,
+      {
+        id: crypto.randomUUID(),
+        title: "",
+        subtitle: "",
+        richText: "",
+      },
+    ]);
+  };
+
+  const handleUpdateAccordionItem = (
+    id: string,
+    updates: Partial<AboutAccordionItem>
+  ) => {
+    setAboutAccordionItems((items) =>
+      items.map((item) => (item.id === id ? { ...item, ...updates } : item))
+    );
+  };
+
+  const handleRemoveAccordionItem = (id: string) => {
+    setAboutAccordionItems((items) => items.filter((item) => item.id !== id));
+  };
 
   const handleSave = async () => {
     try {
       setSaving(true);
-      const result = await updateCohortAboutAction(cohortId, { shortDescription, aboutText });
+      const result = await updateCohortAboutAction(cohortId, { 
+        shortDescription, 
+        aboutText,
+        aboutAccordionItems,
+      });
       if (result.success) {
         toast.success("Informations mises à jour avec succès");
       } else {
@@ -59,6 +101,78 @@ export function CohortAboutManagement({
               onChange={(e) => setShortDescription(e.target.value)}
               placeholder="Ex: Formation intensive avec accompagnement personnalisé et sessions de coaching en groupe"
             />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Accordéon « Idéal pour les »</CardTitle>
+          <CardDescription>
+            Ajoutez des éléments avec un titre, un sous-titre et un contenu riche pour la section accordéon sous le héros
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {aboutAccordionItems.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Aucun élément pour le moment. Ajoutez-en un ci-dessous.
+            </p>
+          ) : (
+            <div className="space-y-6">
+              {aboutAccordionItems.map((item, index) => (
+                <div key={item.id} className="border rounded-lg p-4 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-semibold">Élément {index + 1}</h4>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRemoveAccordionItem(item.id)}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor={`accordion-title-${item.id}`}>Titre</Label>
+                      <Input
+                        id={`accordion-title-${item.id}`}
+                        value={item.title}
+                        onChange={(e) => handleUpdateAccordionItem(item.id, { title: e.target.value })}
+                        placeholder="Ex: Tests automatisés"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor={`accordion-subtitle-${item.id}`}>Sous-titre</Label>
+                      <Textarea
+                        id={`accordion-subtitle-${item.id}`}
+                        value={item.subtitle}
+                        onChange={(e) => handleUpdateAccordionItem(item.id, { subtitle: e.target.value })}
+                        placeholder="Ex: Optimisez vos résultats sans effort"
+                        rows={2}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Contenu riche (boîte de droite)</Label>
+                    <RichTextEditor
+                      content={item.richText}
+                      onChange={(value) => handleUpdateAccordionItem(item.id, { richText: value })}
+                      placeholder="Décrivez en détail cet avantage..."
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="flex justify-end">
+            <Button
+              variant="outline"
+              onClick={handleAddAccordionItem}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Ajouter un élément
+            </Button>
           </div>
         </CardContent>
       </Card>

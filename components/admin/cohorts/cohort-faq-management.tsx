@@ -1,6 +1,23 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -43,6 +60,13 @@ export function CohortFAQManagement({ cohortId }: CohortFAQManagementProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [formData, setFormData] = useState({ question: "", answer: "" });
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   useEffect(() => {
     loadFAQs();
@@ -139,6 +163,21 @@ export function CohortFAQManagement({ cohortId }: CohortFAQManagementProps) {
     setFormData({ question: "", answer: "" });
   };
 
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = faqs.findIndex((f) => f.id === active.id);
+    const newIndex = faqs.findIndex((f) => f.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const reordered = arrayMove(faqs, oldIndex, newIndex);
+    setFaqs(reordered);
+    const result = await reorderCohortFAQsAction(reordered.map((f) => f.id));
+    if (!result.success) {
+      toast.error(result.error || "Erreur lors du réordonnancement");
+      loadFAQs();
+    }
+  };
+
   if (loading) {
     return <div className="text-muted-foreground">Chargement des FAQ...</div>;
   }
@@ -213,39 +252,18 @@ export function CohortFAQManagement({ cohortId }: CohortFAQManagementProps) {
                 Aucune FAQ pour le moment. Ajoutez-en une ci-dessus.
               </p>
             ) : (
-              faqs.map((faq) => (
-                <Card key={faq.id}>
-                  <CardContent className="pt-6">
-                    <div className="flex items-start gap-4">
-                      <GripVertical className="h-5 w-5 text-muted-foreground mt-1" />
-                      <div className="flex-1 space-y-2">
-                        <div>
-                          <h4 className="font-semibold">{faq.question}</h4>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {faq.answer}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => startEdit(faq)}
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setDeleteId(faq.id)}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                <SortableContext items={faqs.map((f) => f.id)} strategy={verticalListSortingStrategy}>
+                  {faqs.map((faq) => (
+                    <SortableFAQCard
+                      key={faq.id}
+                      faq={faq}
+                      onEdit={() => startEdit(faq)}
+                      onDelete={() => setDeleteId(faq.id)}
+                    />
+                  ))}
+                </SortableContext>
+              </DndContext>
             )}
           </div>
         </CardContent>
@@ -272,6 +290,56 @@ export function CohortFAQManagement({ cohortId }: CohortFAQManagementProps) {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  );
+}
+
+function SortableFAQCard({
+  faq,
+  onEdit,
+  onDelete,
+}: {
+  faq: FAQ;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: faq.id,
+  });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+  return (
+    <Card ref={setNodeRef} style={style}>
+      <CardContent className="pt-6">
+        <div className="flex items-start gap-4">
+          <div
+            {...attributes}
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing touch-none mt-1"
+          >
+            <GripVertical className="h-5 w-5 text-muted-foreground" />
+          </div>
+          <div className="flex-1 space-y-2">
+            <div>
+              <h4 className="font-semibold">{faq.question}</h4>
+              <p className="text-sm text-muted-foreground mt-1">
+                {faq.answer}
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="ghost" size="sm" onClick={onEdit}>
+              <Edit2 className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="sm" onClick={onDelete}>
+              <Trash2 className="h-4 w-4 text-destructive" />
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 

@@ -1,6 +1,23 @@
 "use client";
 
 import { useState } from "react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,14 +33,7 @@ import { toast } from "sonner";
 import { Plus, Trash2, GripVertical, X, Save } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 import { updateCourseFeaturesAction } from "@/app/actions/courses";
-
-// Available icons for features
-const availableIcons = [
-  "BookOpen", "Video", "FileText", "HelpCircle", "Award", "Clock",
-  "Users", "CheckCircle", "Target", "Zap", "Shield", "Star",
-  "Trophy", "GraduationCap", "Brain", "Lightbulb", "Rocket", "Heart",
-  "MessageCircle", "Calendar", "BarChart", "Headphones", "Download", "Play"
-] as const;
+import { FEATURE_ICONS } from "@/lib/constants/feature-icons";
 
 interface Feature {
   id: string;
@@ -64,6 +74,22 @@ export function CourseFeaturesManagement({ courseId, initialFeatures }: CourseFe
 
   const handleRemoveFeature = (id: string) => {
     setFeatures(features.filter((f) => f.id !== id));
+  };
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = features.findIndex((f) => f.id === active.id);
+    const newIndex = features.findIndex((f) => f.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    setFeatures(arrayMove(features, oldIndex, newIndex));
   };
 
   const handleSave = async () => {
@@ -108,8 +134,8 @@ export function CourseFeaturesManagement({ courseId, initialFeatures }: CourseFe
                     </div>
                   </SelectValue>
                 </SelectTrigger>
-                <SelectContent className="max-h-[300px]">
-                  {availableIcons.map((icon) => (
+                <SelectContent className="max-h-[320px] overflow-y-auto">
+                  {FEATURE_ICONS.map((icon) => (
                     <SelectItem key={icon} value={icon}>
                       <div className="flex items-center gap-2">
                         <IconComponent name={icon} />
@@ -144,27 +170,18 @@ export function CourseFeaturesManagement({ courseId, initialFeatures }: CourseFe
               Aucune fonctionnalité ajoutée. Ajoutez-en une ci-dessus.
             </p>
           ) : (
-            features.map((feature, index) => (
-              <div
-                key={feature.id}
-                className="flex items-center gap-4 p-3 border rounded-lg bg-background"
-              >
-                <GripVertical className="h-5 w-5 text-muted-foreground cursor-move" />
-                <div className="flex items-center gap-3 flex-1">
-                  <div className="p-2 rounded-lg bg-primary/10 text-primary">
-                    <IconComponent name={feature.icon} />
-                  </div>
-                  <span className="font-medium">{feature.text}</span>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleRemoveFeature(feature.id)}
-                >
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
-              </div>
-            ))
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <SortableContext items={features.map((f) => f.id)} strategy={verticalListSortingStrategy}>
+                {features.map((feature) => (
+                  <SortableFeatureItem
+                    key={feature.id}
+                    feature={feature}
+                    IconComponent={IconComponent}
+                    onRemove={() => handleRemoveFeature(feature.id)}
+                  />
+                ))}
+              </SortableContext>
+            </DndContext>
           )}
         </div>
 
@@ -177,6 +194,49 @@ export function CourseFeaturesManagement({ courseId, initialFeatures }: CourseFe
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function SortableFeatureItem({
+  feature,
+  IconComponent,
+  onRemove,
+}: {
+  feature: Feature;
+  IconComponent: ({ name }: { name: string }) => React.ReactNode;
+  onRemove: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: feature.id,
+  });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="flex items-center gap-4 p-3 border rounded-lg bg-background"
+    >
+      <div
+        {...attributes}
+        {...listeners}
+        className="cursor-grab active:cursor-grabbing touch-none"
+      >
+        <GripVertical className="h-5 w-5 text-muted-foreground" />
+      </div>
+      <div className="flex items-center gap-3 flex-1">
+        <div className="p-2 rounded-lg bg-primary/10 text-primary">
+          <IconComponent name={feature.icon} />
+        </div>
+        <span className="font-medium">{feature.text}</span>
+      </div>
+      <Button variant="ghost" size="sm" onClick={onRemove}>
+        <Trash2 className="h-4 w-4 text-destructive" />
+      </Button>
+    </div>
   );
 }
 

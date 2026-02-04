@@ -1,6 +1,7 @@
 /**
  * Phase 3 Gate Check
- * Verifies that all modules are marked as learned before allowing Phase 3 access
+ * Phase 3 (Pratiquer) is accessible to all students; the previous requirement
+ * to complete all Phase 1 chapters has been removed.
  */
 
 import { PrismaClient } from "@prisma/client";
@@ -16,59 +17,23 @@ export interface Phase3GateResult {
 }
 
 /**
- * Check if user can access Phase 3 (all modules must be learned)
+ * Check if user can access Phase 3. Access is no longer gated by Phase 1 completion.
  */
 export async function checkPhase3Access(
-  userId: string,
+  _userId: string,
   courseId: string
 ): Promise<Phase3GateResult> {
-  // Get all modules for the course
   const modules = await prisma.module.findMany({
     where: { courseId },
     orderBy: { order: "asc" },
-    select: {
-      id: true,
-      title: true,
-      order: true,
-    },
+    select: { id: true, title: true, order: true },
   });
-
-  // Get module progress
-  const moduleProgress = await prisma.moduleProgress.findMany({
-    where: {
-      userId,
-      courseId,
-    },
-    select: {
-      moduleId: true,
-      learnStatus: true,
-    },
-  });
-
-  const learnedModuleIds = new Set(
-    moduleProgress
-      .filter((p) => p.learnStatus === "LEARNED")
-      .map((p) => p.moduleId)
-  );
-
-  const unlearnedModules = modules.filter((m) => !learnedModuleIds.has(m.id));
-
-  const canAccess = unlearnedModules.length === 0;
-
-  let message: string | undefined;
-  if (!canAccess) {
-    const moduleList = unlearnedModules
-      .map((m) => `Module ${m.order}: ${m.title}`)
-      .join(", ");
-    message = `Vous devez marquer tous les modules comme terminés pour accéder à la Phase 3. Modules restants: ${moduleList}`;
-  }
 
   return {
-    canAccess,
-    learnedModules: learnedModuleIds.size,
+    canAccess: true,
+    learnedModules: modules.length,
     totalModules: modules.length,
-    unlearnedModules,
-    message,
+    unlearnedModules: [],
   };
 }
 

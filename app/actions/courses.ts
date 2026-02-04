@@ -71,13 +71,18 @@ export async function createCourseAction(
     const validatedData = courseSchema.parse(data);
 
     // Separate categoryId and componentVisibility from other fields
-    const { categoryId, componentVisibility, heroImages, ...createData } = validatedData;
+    const { categoryId, componentVisibility, heroImages, productStats, ...createData } = validatedData;
     
     const prismaData: any = { ...createData };
     
     // Handle heroImages - explicitly set as JSON array
     if (heroImages !== undefined) {
       prismaData.heroImages = heroImages;
+    }
+    
+    // Handle productStats - explicitly set as JSON array
+    if (productStats !== undefined) {
+      prismaData.productStats = Array.isArray(productStats) ? productStats : [];
     }
     
     // Generate slug from code if code exists
@@ -148,13 +153,18 @@ export async function updateCourseAction(
     console.log("Updating course with data:", { courseId, validatedData });
 
     // Separate categoryId from other fields and handle it as a relation
-    const { categoryId, code, appointmentHourlyRate, orientationVideoUrl, orientationText, heroImages, displayOrder, launchDate, ...updateData } = validatedData;
+    const { categoryId, code, appointmentHourlyRate, orientationVideoUrl, orientationText, heroImages, displayOrder, launchDate, productStats, ...updateData } = validatedData;
     
     const prismaData: any = { ...updateData };
     
     // Handle heroImages - explicitly set as JSON array
     if (heroImages !== undefined) {
       prismaData.heroImages = heroImages;
+    }
+    
+    // Handle productStats - explicitly set as JSON array so custom stats persist
+    if (productStats !== undefined) {
+      prismaData.productStats = Array.isArray(productStats) ? productStats : [];
     }
     
     // Regenerate slug if code is being updated
@@ -724,6 +734,10 @@ export async function getPublishedCourseBySlugAction(slug: string) {
         const productStats = Array.isArray(course.productStats) 
           ? course.productStats 
           : (course.productStats && typeof course.productStats === 'string' ? JSON.parse(course.productStats) : null);
+        const rawAboutAccordionItems = (course as any).aboutAccordionItems;
+        const aboutAccordionItems = Array.isArray(rawAboutAccordionItems)
+          ? rawAboutAccordionItems
+          : (rawAboutAccordionItems && typeof rawAboutAccordionItems === 'string' ? JSON.parse(rawAboutAccordionItems) : []);
 
         // Convert Decimal fields to numbers for client components
         return {
@@ -731,6 +745,7 @@ export async function getPublishedCourseBySlugAction(slug: string) {
           price: course.price.toNumber(),
           appointmentHourlyRate: course.appointmentHourlyRate?.toNumber() ?? null,
           productStats: (productStats && Array.isArray(productStats)) ? productStats as Array<{ value: number; label: string }> : undefined,
+          aboutAccordionItems: Array.isArray(aboutAccordionItems) ? aboutAccordionItems as Array<{ id: string; title: string; subtitle: string; richText: string }> : [],
           _count: {
             ...course._count,
             flashcards: course.flashcards.length,
@@ -1074,8 +1089,15 @@ export async function updateCourseFeaturesAction(
       data: { features },
     });
 
-    revalidatePath(`/formations/${courseId}`);
+    const course = await prisma.course.findUnique({
+      where: { id: courseId },
+      select: { slug: true },
+    });
+
     revalidatePath(`/tableau-de-bord/admin/courses/${courseId}`);
+    if (course?.slug) {
+      revalidatePath(`/formations/${course.slug}`);
+    }
 
     return { success: true };
   } catch (error) {
@@ -1130,7 +1152,11 @@ export async function updateCourseTestimonialsAction(
  */
 export async function updateCourseAboutAction(
   courseId: string,
-  data: { shortDescription: string; aboutText: string }
+  data: { 
+    shortDescription: string; 
+    aboutText: string;
+    aboutAccordionItems: Array<{ id: string; title: string; subtitle: string; richText: string }>;
+  }
 ): Promise<CourseActionResult> {
   try {
     await requireAdmin();
@@ -1140,7 +1166,8 @@ export async function updateCourseAboutAction(
       data: {
         shortDescription: data.shortDescription,
         aboutText: data.aboutText,
-      },
+        aboutAccordionItems: Array.isArray(data.aboutAccordionItems) ? data.aboutAccordionItems : [],
+      } as any,
     });
 
     revalidatePath(`/formations/${courseId}`);
@@ -1277,6 +1304,7 @@ export async function cloneCourseAction(
           shortDescription: sourceCourse.shortDescription,
           description: sourceCourse.description,
           aboutText: sourceCourse.aboutText,
+          aboutAccordionItems: (sourceCourse as any).aboutAccordionItems as any,
           features: sourceCourse.features as any,
           testimonials: sourceCourse.testimonials as any,
           heroImages: sourceCourse.heroImages as any,
@@ -1294,7 +1322,7 @@ export async function cloneCourseAction(
           orientationVideoUrl: sourceCourse.orientationVideoUrl,
           orientationText: sourceCourse.orientationText,
           launchDate: sourceCourse.launchDate,
-        },
+        } as any,
       });
 
       // ID mapping dictionaries

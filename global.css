@@ -573,17 +573,6 @@ html[data-chrome="brutalist"] body nav.border-b.overflow-hidden {
   display: none !important;
 }
 
-/* Ensure transparent navbar has no background */
-[data-transparent-nav] {
-  background-color: transparent !important;
-  background: transparent !important;
-}
-
-[data-transparent-nav] nav {
-  background-color: transparent !important;
-  background: transparent !important;
-}
-
 /* When navbar is transparent and not scrolled, ensure no white background shows */
 [data-transparent-nav]:not(.bg-black) {
   background-color: transparent !important;
@@ -593,4 +582,26 @@ html[data-chrome="brutalist"] body nav.border-b.overflow-hidden {
 [data-transparent-nav]:not(.bg-black) nav {
   background-color: transparent !important;
   background: transparent !important;
+}
+
+@keyframes hero-float {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -14px, 0);
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.hero-float {
+  animation: hero-float 7s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-float {
+    animation: none;
+  }
 }

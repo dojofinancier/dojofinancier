@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,16 +31,47 @@ import { CourseMetricsTable } from "./analytics/course-metrics-table";
 import { RevenueChart } from "./financials/revenue-chart";
 import { RevenueByCourseChart } from "./financials/revenue-by-course-chart";
 
+/** Load only analytics (no Stripe/refunds). Fast initial paint. */
+async function loadAnalyticsOnly() {
+  const [enrollmentResult, completionResult, engagementResult, metricsResult] = await Promise.all([
+    getEnrollmentStatisticsAction(),
+    getDetailedCompletionRatesAction(),
+    getUserEngagementAction(),
+    getCourseMetricsAction(),
+  ]);
+  return {
+    enrollmentStats: enrollmentResult.success ? enrollmentResult.data : null,
+    completionRates: completionResult.success ? completionResult.data : null,
+    userEngagement: engagementResult.success ? engagementResult.data : null,
+    courseMetrics: metricsResult.success ? metricsResult.data : null,
+  };
+}
+
+/** Load financials (Stripe + refunds). Deferred so overview loads fast. */
+async function loadFinancialsOnly(year: number, month?: number) {
+  const [totalResult, periodResult, subscriptionResult] = await Promise.all([
+    getTotalRevenueAction(),
+    getRevenueByPeriodAction(year, month),
+    getSubscriptionStatisticsAction(),
+  ]);
+  return {
+    totalRevenue: totalResult.success ? totalResult.data : null,
+    periodRevenue: periodResult.success ? periodResult.data : null,
+    subscriptionStats: subscriptionResult.success ? subscriptionResult.data : null,
+  };
+}
+
 export function OverviewDashboard() {
   const [loading, setLoading] = useState(true);
-  
-  // Analytics state
+  const [financialsLoading, setFinancialsLoading] = useState(false);
+
+  // Analytics state (loaded first)
   const [enrollmentStats, setEnrollmentStats] = useState<any>(null);
   const [completionRates, setCompletionRates] = useState<any>(null);
   const [userEngagement, setUserEngagement] = useState<any>(null);
   const [courseMetrics, setCourseMetrics] = useState<any>(null);
-  
-  // Financials state
+
+  // Financials state (loaded after analytics, or on demand)
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
   const [totalRevenue, setTotalRevenue] = useState<any>(null);
@@ -49,64 +80,94 @@ export function OverviewDashboard() {
   const [revenueTrends, setRevenueTrends] = useState<any>(null);
   const [trendsLoading, setTrendsLoading] = useState(false);
 
+  const mountedRef = useRef(true);
+  const financialsInitialLoadDone = useRef(false);
+
+  const loadFinancials = async (year: number, month?: number) => {
+    setFinancialsLoading(true);
+    try {
+      const data = await loadFinancialsOnly(year, month);
+      if (!mountedRef.current) return;
+      setTotalRevenue(data.totalRevenue);
+      setPeriodRevenue(data.periodRevenue);
+      setSubscriptionStats(data.subscriptionStats);
+    } catch (error) {
+      if (mountedRef.current) toast.error("Erreur lors du chargement des données financières");
+    } finally {
+      if (mountedRef.current) setFinancialsLoading(false);
+    }
+  };
+
+  const loadRevenueTrends = async () => {
+    if (revenueTrends) return;
+    setTrendsLoading(true);
+    try {
+      const trendsResult = await getRevenueTrendsAction();
+      if (mountedRef.current && trendsResult.success) setRevenueTrends(trendsResult.data);
+    } catch (error) {
+      if (mountedRef.current) toast.error("Erreur lors du chargement des tendances");
+    } finally {
+      if (mountedRef.current) setTrendsLoading(false);
+    }
+  };
+
+  // Phase 1: load analytics only (fast). Then defer financials (Stripe/refunds).
+  useEffect(() => {
+    mountedRef.current = true;
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await loadAnalyticsOnly();
+        if (cancelled || !mountedRef.current) return;
+        setEnrollmentStats(data.enrollmentStats);
+        setCompletionRates(data.completionRates);
+        setUserEngagement(data.userEngagement);
+        setCourseMetrics(data.courseMetrics);
+      } catch (error) {
+        if (mountedRef.current) toast.error("Erreur lors du chargement des données");
+      } finally {
+        if (mountedRef.current) setLoading(false);
+      }
+    })();
+    const financialsTimer = setTimeout(() => {
+      if (!mountedRef.current) return;
+      financialsInitialLoadDone.current = true;
+      loadFinancials(selectedYear, selectedMonth || undefined);
+    }, 300);
+    const trendsTimer = setTimeout(() => {
+      if (mountedRef.current) loadRevenueTrends();
+    }, 1500);
+    return () => {
+      cancelled = true;
+      mountedRef.current = false;
+      clearTimeout(financialsTimer);
+      clearTimeout(trendsTimer);
+    };
+  }, []);
+
+  // When year/month change, reload financials (period revenue) only; skip initial mount
+  useEffect(() => {
+    if (!financialsInitialLoadDone.current || !mountedRef.current) return;
+    loadFinancials(selectedYear, selectedMonth || undefined);
+  }, [selectedYear, selectedMonth]);
+
   const loadData = async () => {
     setLoading(true);
     try {
-      // Load critical data first (without revenue trends for faster initial load)
-      const [
-        enrollmentResult,
-        completionResult,
-        engagementResult,
-        metricsResult,
-        totalResult,
-        periodResult,
-        subscriptionResult,
-      ] = await Promise.all([
-        getEnrollmentStatisticsAction(),
-        getDetailedCompletionRatesAction(),
-        getUserEngagementAction(),
-        getCourseMetricsAction(),
-        getTotalRevenueAction(),
-        getRevenueByPeriodAction(selectedYear, selectedMonth || undefined),
-        getSubscriptionStatisticsAction(),
-      ]);
-
-      if (enrollmentResult.success) setEnrollmentStats(enrollmentResult.data);
-      if (completionResult.success) setCompletionRates(completionResult.data);
-      if (engagementResult.success) setUserEngagement(engagementResult.data);
-      if (metricsResult.success) setCourseMetrics(metricsResult.data);
-      if (totalResult.success) setTotalRevenue(totalResult.data);
-      if (periodResult.success) setPeriodRevenue(periodResult.data);
-      if (subscriptionResult.success) setSubscriptionStats(subscriptionResult.data);
+      const data = await loadAnalyticsOnly();
+      if (!mountedRef.current) return;
+      setEnrollmentStats(data.enrollmentStats);
+      setCompletionRates(data.completionRates);
+      setUserEngagement(data.userEngagement);
+      setCourseMetrics(data.courseMetrics);
     } catch (error) {
       toast.error("Erreur lors du chargement des données");
     } finally {
       setLoading(false);
     }
+    loadFinancials(selectedYear, selectedMonth || undefined);
+    loadRevenueTrends();
   };
-
-  const loadRevenueTrends = async () => {
-    if (revenueTrends) return; // Already loaded
-    setTrendsLoading(true);
-    try {
-      const trendsResult = await getRevenueTrendsAction();
-      if (trendsResult.success) setRevenueTrends(trendsResult.data);
-    } catch (error) {
-      toast.error("Erreur lors du chargement des tendances");
-    } finally {
-      setTrendsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadData();
-    // Load revenue trends separately after a short delay for better UX
-    const trendsTimer = setTimeout(() => {
-      loadRevenueTrends();
-    }, 500);
-    return () => clearTimeout(trendsTimer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedYear, selectedMonth]);
 
   const handleExportCSV = async () => {
     try {
@@ -181,18 +242,22 @@ export function OverviewDashboard() {
 
       {/* Summary Cards - Combined Analytics & Financials */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {/* Financial Cards */}
+        {/* Financial Cards (load after analytics; show loading state) */}
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Revenu total (net)</CardDescription>
             <CardTitle className="text-2xl flex items-center gap-2">
-              <DollarSign className="h-5 w-5" />
-              ${totalRevenue?.netRevenue?.toFixed(2) || "0.00"}
+              {financialsLoading && !totalRevenue ? (
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              ) : (
+                <DollarSign className="h-5 w-5" />
+              )}
+              ${totalRevenue?.netRevenue?.toFixed(2) ?? (financialsLoading ? "…" : "0.00")}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-xs text-muted-foreground">
-              Brut: ${totalRevenue?.grossRevenue?.toFixed(2) || "0.00"}
+              Brut: ${totalRevenue?.grossRevenue?.toFixed(2) ?? (financialsLoading ? "…" : "0.00")}
             </div>
             <div className="text-xs text-muted-foreground">
               Remboursements: ${totalRevenue?.totalRefunds?.toFixed(2) || "0.00"}

@@ -547,8 +547,12 @@ export async function createQuizQuestionAction(
   }
 }
 
+/** Sentinel order used temporarily to avoid unique constraint (quiz_id, order) when reordering */
+const QUIZ_QUESTION_ORDER_SENTINEL = -1;
+
 /**
- * Update a quiz question (admin only)
+ * Update a quiz question (admin only).
+ * When changing order, runs a transaction to avoid unique constraint on (quiz_id, order).
  */
 export async function updateQuizQuestionAction(
   questionId: string,
@@ -562,12 +566,61 @@ export async function updateQuizQuestionAction(
     if (cleanedData.options == null) delete cleanedData.options;
     const validatedData = quizQuestionSchema.partial().parse(cleanedData);
 
-    const question = await prisma.quizQuestion.update({
+    const existing = await prisma.quizQuestion.findUnique({
       where: { id: questionId },
-      data: validatedData,
+      select: { quizId: true, order: true },
     });
+    if (!existing) {
+      return { success: false, error: "Question introuvable" };
+    }
 
-    return { success: true, data: question };
+    const newOrder = validatedData.order;
+    const orderChanging = newOrder !== undefined && newOrder !== existing.order;
+
+    if (orderChanging) {
+      await prisma.$transaction(async (tx) => {
+        // Move this question to a sentinel order so (quizId, newOrder) is free
+        await tx.quizQuestion.update({
+          where: { id: questionId },
+          data: { order: QUIZ_QUESTION_ORDER_SENTINEL },
+        });
+        if (newOrder! < existing.order) {
+          // Moving up: shift questions in [newOrder, existing.order) down by 1
+          await tx.quizQuestion.updateMany({
+            where: {
+              quizId: existing.quizId,
+              id: { not: questionId },
+              order: { gte: newOrder!, lt: existing.order },
+            },
+            data: { order: { increment: 1 } },
+          });
+        } else {
+          // Moving down: shift questions in (existing.order, newOrder] up by 1
+          await tx.quizQuestion.updateMany({
+            where: {
+              quizId: existing.quizId,
+              id: { not: questionId },
+              order: { gt: existing.order, lte: newOrder! },
+            },
+            data: { order: { decrement: 1 } },
+          });
+        }
+        await tx.quizQuestion.update({
+          where: { id: questionId },
+          data: validatedData,
+        });
+      });
+    } else {
+      await prisma.quizQuestion.update({
+        where: { id: questionId },
+        data: validatedData,
+      });
+    }
+
+    const question = await prisma.quizQuestion.findUnique({
+      where: { id: questionId },
+    });
+    return { success: true, data: question ?? undefined };
   } catch (error) {
     if (error instanceof z.ZodError) {
       return {

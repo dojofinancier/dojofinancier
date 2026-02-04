@@ -108,7 +108,24 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
               componentVisibility: serializedCourse.componentVisibility as any,
               heroImages: Array.isArray((course as any).heroImages) ? (course as any).heroImages : [],
               displayOrder: (course as any).displayOrder ?? undefined,
+              orientationVideoUrl: (course as any).orientationVideoUrl ?? undefined,
               orientationText: (course as any).orientationText ?? undefined,
+              launchDate: (course as any).launchDate ?? undefined,
+              productStats: (() => {
+                const raw = (course as any).productStats;
+                if (Array.isArray(raw) && raw.length > 0) {
+                  return raw.filter((s: unknown) => s && typeof s === "object" && "value" in s && "label" in s).map((s: any) => ({ value: Number(s.value), label: String(s.label) }));
+                }
+                if (typeof raw === "string") {
+                  try {
+                    const parsed = JSON.parse(raw);
+                    return Array.isArray(parsed) ? parsed.map((s: any) => ({ value: Number(s?.value ?? 0), label: String(s?.label ?? "") })) : [];
+                  } catch {
+                    return [];
+                  }
+                }
+                return [];
+              })(),
             }}
           />
           <CourseConsolidatedNotesManagement
@@ -121,6 +138,19 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
             courseId={courseId}
             initialShortDescription={(course as any).shortDescription || ""}
             initialAboutText={(course as any).aboutText || ""}
+            initialAboutAccordionItems={(() => {
+              const raw = (course as any).aboutAccordionItems;
+              if (Array.isArray(raw)) return raw;
+              if (typeof raw === "string") {
+                try {
+                  const parsed = JSON.parse(raw);
+                  return Array.isArray(parsed) ? parsed : [];
+                } catch {
+                  return [];
+                }
+              }
+              return [];
+            })()}
           />
         </TabsContent>
         <TabsContent value="features" className="mt-6">
@@ -160,4 +190,3 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
     </div>
   );
 }
-

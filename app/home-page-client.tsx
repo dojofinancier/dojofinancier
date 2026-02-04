@@ -48,7 +48,7 @@ function HeroSection() {
   }, []);
 
   return (
-    <section className="relative min-h-screen bg-black text-white overflow-hidden">
+    <section className="relative min-h-screen bg-black text-white overflow-hidden" data-nav-hero>
       {/* Hard grid pattern */}
       <div 
         ref={gridRef}
@@ -77,58 +77,63 @@ function HeroSection() {
       <div className="relative pt-32 pb-20 px-4 sm:px-8 min-h-screen flex flex-col justify-center">
         {/* Main content - asymmetric layout */}
         <div className="max-w-[1400px] mx-auto w-full">
-          {/* Oversized headline */}
-          <div className="mb-8">
-            <span className="text-primary font-mono text-sm uppercase tracking-[0.3em] block mb-4">
-              [FORMATIONS FINANCIÈRES]
-            </span>
-            <h1 className="text-[12vw] sm:text-[10vw] md:text-[8vw] font-black uppercase leading-[0.85] tracking-tighter">
-              MAÎTRISEZ
-              <br />
-              <span className="text-primary">LA FINANCE</span>
-            </h1>
-          </div>
+          <div className="max-w-[1400px] mx-auto w-full">
+            <div>
+              {/* Oversized headline */}
+              <div className="mb-8">
+                <span className="text-primary font-mono text-sm uppercase tracking-[0.3em] block mb-4">
+                  [FORMATIONS FINANCIÈRES]
+                </span>
+                <h1 className="text-[12vw] sm:text-[10vw] md:text-[8vw] font-black uppercase leading-[0.85] tracking-tighter">
+                  MAÎTRISEZ
+                  <br />
+                  <span className="text-primary">LA FINANCE</span>
+                </h1>
+              </div>
 
-          {/* Subtext with hard box */}
-          <div className="max-w-xl mb-12">
-            <div className="border-l-4 border-primary pl-6 py-2">
-              <p className="text-xl sm:text-2xl font-light leading-relaxed">
-                Certifications OCRI, AMF, CSI.
-                <span className="font-bold"> Passez vos examens avec confiance.</span>
-              </p>
-            </div>
-          </div>
+              {/* Subtext with hard box */}
+              <div className="max-w-xl mb-12">
+                <div className="border-l-4 border-primary pl-6 py-2">
+                  <p className="text-xl sm:text-2xl font-light leading-relaxed">
+                    Certifications OCRI, AMF, CSI.
+                    <span className="font-bold"> Passez vos examens avec confiance.</span>
+                  </p>
+                </div>
+              </div>
 
-          {/* CTA - Brutalist buttons */}
-          <div className="flex flex-col sm:flex-row gap-4">
-            <Link 
-              href="#qui-etes-vous"
-              className="inline-block bg-white text-black font-black uppercase text-lg tracking-wider px-10 py-5 border-4 border-white hover:bg-primary hover:border-primary hover:text-black transition-colors shadow-[8px_8px_0_0_hsl(var(--primary))]"
-            >
-              Commencer →
-            </Link>
-            <Link 
-              href="/formations"
-              className="inline-block bg-transparent text-white font-black uppercase text-lg tracking-wider px-10 py-5 border-4 border-white hover:bg-white hover:text-black transition-colors"
-            >
-              Voir les formations
-            </Link>
-          </div>
+              {/* CTA - Brutalist buttons */}
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Link 
+                  href="#qui-etes-vous"
+                  className="inline-block bg-white text-black font-black uppercase text-lg tracking-wider px-10 py-5 border-4 border-white hover:bg-primary hover:border-primary hover:text-black transition-colors shadow-[8px_8px_0_0_hsl(var(--primary))]"
+                >
+                  Commencer →
+                </Link>
+                <Link 
+                  href="/formations"
+                  className="inline-block bg-transparent text-white font-black uppercase text-lg tracking-wider px-10 py-5 border-4 border-white hover:bg-white hover:text-black transition-colors"
+                >
+                  Voir les formations
+                </Link>
+              </div>
 
-          {/* Stats row - hard borders */}
-          <div className="mt-20 flex flex-wrap gap-0 border-4 border-white inline-flex">
-            <div className="px-8 py-6 border-r-4 border-white">
-              <div className="text-5xl font-black text-primary">2500+</div>
-              <div className="text-sm uppercase tracking-wider mt-1 font-mono">Étudiants</div>
+              {/* Stats row - hard borders */}
+              <div className="mt-20 flex flex-wrap gap-0 border-4 border-white inline-flex">
+                <div className="px-8 py-6 border-r-4 border-white">
+                  <div className="text-5xl font-black text-primary">2500+</div>
+                  <div className="text-sm uppercase tracking-wider mt-1 font-mono">Étudiants</div>
+                </div>
+                <div className="px-8 py-6 border-r-4 border-white">
+                  <div className="text-5xl font-black text-primary">95%</div>
+                  <div className="text-sm uppercase tracking-wider mt-1 font-mono">Réussite</div>
+                </div>
+                <div className="px-8 py-6">
+                  <div className="text-5xl font-black text-primary">15+</div>
+                  <div className="text-sm uppercase tracking-wider mt-1 font-mono">Années</div>
+                </div>
+              </div>
             </div>
-            <div className="px-8 py-6 border-r-4 border-white">
-              <div className="text-5xl font-black text-primary">95%</div>
-              <div className="text-sm uppercase tracking-wider mt-1 font-mono">Réussite</div>
-            </div>
-            <div className="px-8 py-6">
-              <div className="text-5xl font-black text-primary">15+</div>
-              <div className="text-sm uppercase tracking-wider mt-1 font-mono">Années</div>
-            </div>
+
           </div>
         </div>
       </div>

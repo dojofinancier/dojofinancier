@@ -106,6 +106,15 @@ export function QuizComponent({ quiz, contentItemId }: QuizComponentProps) {
 
   const isQuiz = !quiz.timeLimit;
   const isExam = !!quiz.timeLimit;
+  const getOrderedOptionKeys = (options: Record<string, string>) => {
+    const optionKeys = Object.keys(options || {});
+    return optionKeys.slice().sort((a, b) => {
+      const aNum = Number.parseInt(a.replace(/\D/g, ""), 10);
+      const bNum = Number.parseInt(b.replace(/\D/g, ""), 10);
+      if (!Number.isNaN(aNum) && !Number.isNaN(bNum) && aNum !== bNum) return aNum - bNum;
+      return a.localeCompare(b);
+    });
+  };
 
   return (
     <Card>
@@ -181,25 +190,23 @@ export function QuizComponent({ quiz, contentItemId }: QuizComponentProps) {
                       className="mt-3"
                     >
                       {question.options &&
-                        Object.entries(question.options as Record<string, string>).map(
-                          ([key, value]) => (
-                            <div key={key} className="flex items-center space-x-2">
-                              <RadioGroupItem value={key} id={`${question.id}-${key}`} />
-                              <Label
-                                htmlFor={`${question.id}-${key}`}
-                                className={`cursor-pointer ${
-                                  submitted && key === question.correctAnswer
-                                    ? "text-green-600 font-semibold"
-                                    : submitted && key === userAnswer && !isCorrect
-                                    ? "text-red-600"
-                                    : ""
-                                }`}
-                              >
-                                {key}: {value}
-                              </Label>
-                            </div>
-                          )
-                        )}
+                        getOrderedOptionKeys(question.options as Record<string, string>).map((key) => (
+                          <div key={key} className="flex items-center space-x-2">
+                            <RadioGroupItem value={key} id={`${question.id}-${key}`} />
+                            <Label
+                              htmlFor={`${question.id}-${key}`}
+                              className={`cursor-pointer ${
+                                submitted && key === question.correctAnswer
+                                  ? "text-green-600 font-semibold"
+                                  : submitted && key === userAnswer && !isCorrect
+                                  ? "text-red-600"
+                                  : ""
+                              }`}
+                            >
+                              {key}: {(question.options as Record<string, string>)[key]}
+                            </Label>
+                          </div>
+                        ))}
                     </RadioGroup>
                   )}
 

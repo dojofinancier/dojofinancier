@@ -57,7 +57,7 @@ export default function FormationsPage() {
     <>
       <main className="bg-black text-white">
         {/* HERO */}
-        <section className="relative overflow-hidden pt-28 pb-16 sm:pt-32 sm:pb-20">
+        <section className="relative overflow-hidden pt-28 pb-16 sm:pt-32 sm:pb-20" data-nav-hero>
           <div
             className="absolute inset-0 opacity-10"
             style={{
@@ -130,4 +130,3 @@ export default function FormationsPage() {
     </>
   );
 }
-

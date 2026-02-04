@@ -24,12 +24,32 @@ export function BrutalistNavbarClient({ user, variant = "transparent", dashboard
   useEffect(() => {
     if (variant !== "transparent") return;
 
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 50);
+    const heroElement = document.querySelector("[data-nav-hero]") as HTMLElement | null;
+    let raf = 0;
+    const update = () => {
+      raf = 0;
+      if (!heroElement) {
+        setScrolled(window.scrollY > 50);
+        return;
+      }
+      const heroHeight = heroElement.offsetHeight || 0;
+      const triggerPoint = Math.max(0, heroHeight - 80);
+      setScrolled(window.scrollY >= triggerPoint);
     };
+
+    const handleScroll = () => {
+      if (raf) return;
+      raf = window.requestAnimationFrame(update);
+    };
+
     handleScroll();
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    window.addEventListener("resize", handleScroll);
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("resize", handleScroll);
+      if (raf) window.cancelAnimationFrame(raf);
+    };
   }, [variant]);
 
 
@@ -144,4 +164,3 @@ export function BrutalistNavbarClient({ user, variant = "transparent", dashboard
     </div>
   );
 }
-

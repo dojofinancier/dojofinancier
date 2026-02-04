@@ -65,6 +65,7 @@ type Quiz = {
       question: string;
       options: Record<string, string>;
       correctAnswer: string;
+      explanation?: string | null;
     }>;
   };
 };
@@ -109,8 +110,10 @@ export function ModuleDetailPage({ courseId, moduleId, onBack, componentVisibili
     score: number;
     completedAt: Date;
     passed?: boolean;
+    answers?: Record<string, string>;
   }>>>({});
   const [loadingAttempts, setLoadingAttempts] = useState<Record<string, boolean>>({});
+  const [expandedAttemptId, setExpandedAttemptId] = useState<Record<string, string | null>>({});
 
   useEffect(() => {
     loadModuleContent();
@@ -218,6 +221,7 @@ export function ModuleDetailPage({ courseId, moduleId, onBack, componentVisibili
         score: number;
         completedAt: Date;
         passed?: boolean;
+        answers?: Record<string, string>;
       }>> = {};
 
       results.forEach(({ quizId, attempts }) => {
@@ -229,6 +233,7 @@ export function ModuleDetailPage({ courseId, moduleId, onBack, componentVisibili
             score: attempt.score,
             completedAt: new Date(attempt.completedAt),
             passed: attempt.score >= passingScore,
+            answers: (attempt.answers as Record<string, string>) || {},
           }));
         }
       });
@@ -359,6 +364,68 @@ export function ModuleDetailPage({ courseId, moduleId, onBack, componentVisibili
       return key.toUpperCase();
     }
     return String.fromCharCode(65 + index);
+  };
+
+  const getOrderedOptionKeys = (options: Record<string, string>) => {
+    const optionKeys = Object.keys(options || {});
+    return optionKeys.slice().sort((a, b) => {
+      const aNum = Number.parseInt(a.replace(/\D/g, ""), 10);
+      const bNum = Number.parseInt(b.replace(/\D/g, ""), 10);
+      if (!Number.isNaN(aNum) && !Number.isNaN(bNum) && aNum !== bNum) return aNum - bNum;
+      return a.localeCompare(b);
+    });
+  };
+
+  const resolveAnswerIndex = (answer: string | undefined, options: Record<string, string>) => {
+    if (!answer) return null;
+    const trimmed = answer.trim();
+    if (!trimmed) return null;
+
+    const lower = trimmed.toLowerCase();
+    const orderedKeys = getOrderedOptionKeys(options);
+
+    const directKey = orderedKeys.find((key) => key.toLowerCase() === lower);
+    if (directKey) return orderedKeys.indexOf(directKey);
+
+    const valueMatchKey = orderedKeys.find((key) => {
+      const value = options[key];
+      return value && value.trim().toLowerCase() === lower;
+    });
+    if (valueMatchKey) return orderedKeys.indexOf(valueMatchKey);
+
+    const letterMatch = lower.match(/^([a-d])\s*[\).:\-]?/);
+    if (letterMatch) {
+      const idx = ["a", "b", "c", "d"].indexOf(letterMatch[1]);
+      if (idx >= 0 && idx < orderedKeys.length) return idx;
+    }
+
+    const numberMatch = lower.match(/^([1-4])\s*[\).:\-]?/);
+    if (numberMatch) {
+      const idx = Number.parseInt(numberMatch[1], 10) - 1;
+      if (idx >= 0 && idx < orderedKeys.length) return idx;
+    }
+
+    const optionMatch = lower.match(/^option\s*([1-9]\d*)/);
+    if (optionMatch) {
+      const idx = Number.parseInt(optionMatch[1], 10) - 1;
+      if (idx >= 0 && idx < orderedKeys.length) return idx;
+    }
+
+    return null;
+  };
+
+  const getAnswerDisplay = (answer: string | undefined, options: Record<string, string>) => {
+    if (!answer) {
+      return { label: "Non repondu", value: null };
+    }
+    const index = resolveAnswerIndex(answer, options);
+    const orderedKeys = getOrderedOptionKeys(options);
+    if (index === null || index < 0 || index >= orderedKeys.length) {
+      return { label: answer, value: null };
+    }
+    const key = orderedKeys[index];
+    const letter = getOptionLetter(key, index);
+    return { label: `${letter}: ${options[key]}`, value: key };
   };
 
   if (loading) {
@@ -602,7 +669,12 @@ export function ModuleDetailPage({ courseId, moduleId, onBack, componentVisibili
                 if (!currentQuestion) return null;
 
                 const optionKeys = currentQuestion.options
-                  ? Object.keys(currentQuestion.options).sort()
+                  ? Object.keys(currentQuestion.options).sort((a, b) => {
+                      const aNum = Number.parseInt(a.replace(/\D/g, ""), 10);
+                      const bNum = Number.parseInt(b.replace(/\D/g, ""), 10);
+                      if (!Number.isNaN(aNum) && !Number.isNaN(bNum) && aNum !== bNum) return aNum - bNum;
+                      return a.localeCompare(b);
+                    })
                   : [];
                 const userAnswer = answers[currentQuestion.id];
 
@@ -730,44 +802,95 @@ export function ModuleDetailPage({ courseId, moduleId, onBack, componentVisibili
                                   hour: '2-digit',
                                   minute: '2-digit',
                                 }).format(attempt.completedAt);
+                                const isExpanded = expandedAttemptId[quiz.id] === attempt.id;
 
                                 return (
-                                  <div
-                                    key={attempt.id}
-                                    className={`flex items-center justify-between p-3 rounded-lg border ${
-                                      isPassed
-                                        ? 'bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800'
-                                        : 'bg-red-50 border-red-200 dark:bg-red-950 dark:border-red-800'
-                                    }`}
-                                  >
-                                    <div className="flex items-center gap-3">
-                                      {isPassed ? (
-                                        <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
-                                      ) : (
-                                        <XCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
-                                      )}
-                                      <div>
-                                        <div className="flex items-center gap-2">
-                                          <span className="font-semibold">
-                                            Tentative #{quizAttempts[quiz.id].length - index}
-                                          </span>
-                                          <Badge
-                                            variant={isPassed ? 'default' : 'destructive'}
-                                            className="text-xs"
-                                          >
-                                            {attempt.score}%
-                                          </Badge>
-                                          {isPassed && (
-                                            <Badge variant="outline" className="text-xs border-green-600 text-green-700 dark:text-green-400">
-                                              Réussi
+                                  <div key={attempt.id} className="space-y-3">
+                                    <div
+                                      className={`flex items-center justify-between p-3 rounded-lg border ${
+                                        isPassed
+                                          ? 'bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800'
+                                          : 'bg-red-50 border-red-200 dark:bg-red-950 dark:border-red-800'
+                                      }`}
+                                    >
+                                      <div className="flex items-center gap-3">
+                                        {isPassed ? (
+                                          <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+                                        ) : (
+                                          <XCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
+                                        )}
+                                        <div>
+                                          <div className="flex items-center gap-2">
+                                            <span className="font-semibold">
+                                              Tentative #{quizAttempts[quiz.id].length - index}
+                                            </span>
+                                            <Badge
+                                              variant={isPassed ? 'default' : 'destructive'}
+                                              className="text-xs"
+                                            >
+                                              {attempt.score}%
                                             </Badge>
-                                          )}
+                                            {isPassed && (
+                                              <Badge variant="outline" className="text-xs border-green-600 text-green-700 dark:text-green-400">
+                                                Réussi
+                                              </Badge>
+                                            )}
+                                          </div>
+                                          <p className="text-sm text-muted-foreground mt-1">
+                                            {formattedDate}
+                                          </p>
                                         </div>
-                                        <p className="text-sm text-muted-foreground mt-1">
-                                          {formattedDate}
-                                        </p>
                                       </div>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() =>
+                                          setExpandedAttemptId((prev) => ({
+                                            ...prev,
+                                            [quiz.id]: prev[quiz.id] === attempt.id ? null : attempt.id,
+                                          }))
+                                        }
+                                      >
+                                        {isExpanded ? "Masquer" : "Voir les reponses"}
+                                      </Button>
                                     </div>
+
+                                    {isExpanded && (
+                                      <div className="rounded-lg border bg-background p-4 space-y-4">
+                                        {quiz.questions.map((question, questionIndex) => {
+                                          const userAnswer = attempt.answers?.[question.id];
+                                          const userDisplay = getAnswerDisplay(userAnswer, question.options);
+                                          const correctDisplay = getAnswerDisplay(question.correctAnswer, question.options);
+                                          const userIndex = resolveAnswerIndex(userAnswer, question.options);
+                                          const correctIndex = resolveAnswerIndex(question.correctAnswer, question.options);
+                                          const isCorrect = userIndex !== null && correctIndex !== null && userIndex === correctIndex;
+
+                                          return (
+                                            <div key={question.id} className="space-y-2">
+                                              <div className="font-medium">
+                                                {questionIndex + 1}. {question.question}
+                                              </div>
+                                              <div className="text-sm">
+                                                <span className={`font-semibold ${isCorrect ? "text-green-600" : "text-red-600"}`}>
+                                                  Votre reponse:
+                                                </span>
+                                                <span className="ml-2">{userDisplay.label}</span>
+                                              </div>
+                                              <div className="text-sm">
+                                                <span className="font-semibold">Reponse correcte:</span>
+                                                <span className="ml-2">{correctDisplay.label}</span>
+                                              </div>
+                                              {question.explanation && (
+                                                <div className="text-sm text-muted-foreground">
+                                                  <span className="font-semibold">Explication:</span>
+                                                  <span className="ml-2">{question.explanation}</span>
+                                                </div>
+                                              )}
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    )}
                                   </div>
                                 );
                               })}
@@ -840,4 +963,3 @@ export function ModuleDetailPage({ courseId, moduleId, onBack, componentVisibili
     </div>
   );
 }
-
