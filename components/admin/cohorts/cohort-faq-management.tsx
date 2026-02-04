@@ -171,7 +171,7 @@ export function CohortFAQManagement({ cohortId }: CohortFAQManagementProps) {
     if (oldIndex === -1 || newIndex === -1) return;
     const reordered = arrayMove(faqs, oldIndex, newIndex);
     setFaqs(reordered);
-    const result = await reorderCohortFAQsAction(reordered.map((f) => f.id));
+    const result = await reorderCohortFAQsAction(cohortId, reordered.map((f) => f.id));
     if (!result.success) {
       toast.error(result.error || "Erreur lors du réordonnancement");
       loadFAQs();
