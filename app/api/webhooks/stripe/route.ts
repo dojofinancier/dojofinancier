@@ -49,6 +49,20 @@ export async function POST(request: NextRequest) {
     if (event.type === "payment_intent.succeeded") {
       const paymentIntent = event.data.object as any;
 
+      // Idempotency layer 1: Stripe can send the same event twice (~1s apart). Record event.id;
+      // duplicate delivery will hit unique constraint and we return 200 without processing.
+      try {
+        await prisma.stripeWebhookEvent.create({
+          data: { eventId: event.id },
+        });
+      } catch (eventErr: unknown) {
+        const code = (eventErr as { code?: string })?.code;
+        if (code === "P2002") {
+          return NextResponse.json({ received: true });
+        }
+        throw eventErr;
+      }
+
       const {
         userId,
         courseId,
@@ -81,8 +95,8 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ received: true });
       }
 
-      // Idempotency check: Check if enrollment already exists for this paymentIntentId
-      // This prevents duplicate enrollments if Stripe retries the webhook
+      // Idempotency layer 2: Check if enrollment already exists for this paymentIntentId
+      // (e.g. created by frontend fallback or a previous run before event-id table existed)
       let existingEnrollment;
       if (isCohortPayment) {
         existingEnrollment = await prisma.cohortEnrollment.findFirst({
@@ -124,12 +138,19 @@ export async function POST(request: NextRequest) {
         const expiresAt = new Date();
         expiresAt.setDate(expiresAt.getDate() + cohort.accessDuration);
 
-        enrollmentResult = await createCohortEnrollmentAction({
-          userId,
-          cohortId: cohortId!,
-          expiresAt,
-          paymentIntentId: paymentIntent.id,
-        });
+        try {
+          enrollmentResult = await createCohortEnrollmentAction({
+            userId,
+            cohortId: cohortId!,
+            expiresAt,
+            paymentIntentId: paymentIntent.id,
+          });
+        } catch (createErr: unknown) {
+          if ((createErr as { code?: string })?.code === "P2002") {
+            return NextResponse.json({ received: true });
+          }
+          throw createErr;
+        }
 
         if (!enrollmentResult.success || !enrollmentResult.data) {
           await logServerError({
@@ -158,12 +179,19 @@ export async function POST(request: NextRequest) {
         const expiresAt = new Date();
         expiresAt.setDate(expiresAt.getDate() + course.accessDuration);
 
-        enrollmentResult = await createEnrollmentAction({
-          userId,
-          courseId: courseId!,
-          expiresAt,
-          paymentIntentId: paymentIntent.id,
-        });
+        try {
+          enrollmentResult = await createEnrollmentAction({
+            userId,
+            courseId: courseId!,
+            expiresAt,
+            paymentIntentId: paymentIntent.id,
+          });
+        } catch (createErr: unknown) {
+          if ((createErr as { code?: string })?.code === "P2002") {
+            return NextResponse.json({ received: true });
+          }
+          throw createErr;
+        }
 
         if (!enrollmentResult.success || !enrollmentResult.data) {
           await logServerError({

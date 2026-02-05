@@ -544,6 +544,16 @@ enum NoteType {
   STUDENT
 }
 
+// Idempotency for Stripe webhooks: one row per processed event.id (Stripe can send the same event twice)
+model StripeWebhookEvent {
+  id        String   @id @default(uuid())
+  eventId   String   @unique @map("event_id") // Stripe event.id (e.g. evt_xxx)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([eventId])
+  @@map("stripe_webhook_events")
+}
+
 // Enrollments
 model Enrollment {
   id              String   @id @default(uuid())
@@ -551,7 +561,7 @@ model Enrollment {
   courseId        String   @map("course_id")
   purchaseDate    DateTime @default(now()) @map("purchase_date")
   expiresAt       DateTime @map("expires_at")
-  paymentIntentId String?  @map("payment_intent_id")
+  paymentIntentId String?  @map("payment_intent_id") // Unique per non-null value (enforced by partial unique index in DB)
   orderNumber     Int?     @unique @map("order_number") // Business order number starting at 5190
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
@@ -1010,7 +1020,7 @@ model CohortEnrollment {
   cohortId        String   @map("cohort_id")
   purchaseDate    DateTime @default(now()) @map("purchase_date")
   expiresAt       DateTime @map("expires_at")
-  paymentIntentId String?  @map("payment_intent_id")
+  paymentIntentId String?  @map("payment_intent_id") // Unique per non-null value (enforced by partial unique index in DB)
   orderNumber     Int?     @unique @map("order_number") // Business order number starting at 5190
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
