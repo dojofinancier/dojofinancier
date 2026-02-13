@@ -3,7 +3,8 @@
  * Content-aware, adaptive study plan generation with Phase 1, 2, and 3 scheduling
  */
 
-import { PrismaClient, TaskType, PlanEntryStatus } from "@prisma/client";
+import { TaskType, PlanEntryStatus } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import {
   getWeeksUntilExam,
   getBlocksPerWeek,
@@ -21,8 +22,6 @@ import {
   prioritizeFlashcards,
   prioritizeActivities,
 } from "./enhanced-study-plan-prioritization";
-
-const prisma = new PrismaClient();
 
 export interface EnhancedStudyBlock {
   date: Date;

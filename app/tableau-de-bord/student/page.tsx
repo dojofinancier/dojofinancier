@@ -9,7 +9,11 @@ export default async function StudentDashboardPage() {
     user = await requireStudent();
     console.log(`[StudentDashboardPage] User authenticated: ${user.email}, role: ${user.role}`);
   } catch (error) {
-    console.error("[StudentDashboardPage] Error in requireStudent:", error);
+    // Don't log NEXT_REDIRECT - it's expected when unauthenticated users are redirected to login
+    const isRedirect = error && typeof error === "object" && "digest" in error && String((error as { digest?: string }).digest)?.startsWith("NEXT_REDIRECT");
+    if (!isRedirect) {
+      console.error("[StudentDashboardPage] Error in requireStudent:", error);
+    }
     throw error; // Re-throw to let Next.js handle the redirect
   }
 

@@ -3,15 +3,14 @@
  * Implements the complete requirements for Phase 1, 2, and 3 with proper validation
  */
 
-import { PrismaClient, TaskType } from "@prisma/client";
+import { TaskType } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import {
   getWeeksUntilExam,
   getBlocksPerWeek,
   calculateWeek1StartDate,
   type StudyPlanConfig,
 } from "./study-plan";
-
-const prisma = new PrismaClient();
 
 export interface NewStudyBlock {
   date: Date;

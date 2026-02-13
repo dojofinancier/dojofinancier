@@ -4,6 +4,7 @@
  */
 
 import { DailyPlanEntry, TaskType } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 
 export interface WeeklyPlanTask {
   type: "LEARN" | "REVIEW" | "PRACTICE";
@@ -120,10 +121,6 @@ async function aggregateLearnTasks(
   });
   
   console.log(`[aggregateLearnTasks] Grouped into ${moduleMap.size} modules`);
-
-  // Get Prisma client to check content types
-  const { PrismaClient } = await import("@prisma/client");
-  const prisma = new PrismaClient();
 
   // Process each module
   for (const [moduleId, moduleEntries] of moduleMap.entries()) {
@@ -318,9 +315,6 @@ async function aggregatePracticeTasks(entries: DailyPlanEntry[]): Promise<Weekly
   const quizSessionEntries = practiceEntries.filter((e) => !e.targetQuizId);
 
   // Get exam names
-  const { PrismaClient } = await import("@prisma/client");
-  const prisma = new PrismaClient();
-
   for (const entry of examEntries) {
     if (!entry.targetQuizId) continue;
 

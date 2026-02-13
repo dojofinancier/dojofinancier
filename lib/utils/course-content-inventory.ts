@@ -3,9 +3,7 @@
  * Counts actual course content for adaptive study plan generation
  */
 
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export interface ModuleInventory {
   id: string;
