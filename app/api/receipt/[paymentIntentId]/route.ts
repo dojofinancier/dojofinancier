@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import path from "path";
+import fs from "fs";
 import { getReceiptDataAction } from "@/app/actions/payments";
 import { ReceiptPdfDocument } from "@/components/receipt/receipt-pdf-document";
 import { renderToBuffer } from "@react-pdf/renderer";
@@ -31,9 +32,16 @@ export async function GET(
     }
 
     const logoPath = path.join(process.cwd(), "public", "logo_dark.png");
+    let logoSrc: string | null = null;
+    try {
+      const logoBuffer = fs.readFileSync(logoPath);
+      logoSrc = `data:image/png;base64,${logoBuffer.toString("base64")}`;
+    } catch {
+      // Logo file not found - receipt will render without it
+    }
 
     const pdfBuffer = await renderToBuffer(
-      ReceiptPdfDocument({ data: result.data, logoPath })
+      ReceiptPdfDocument({ data: result.data, logoSrc })
     );
 
     const orderNum = result.data.orderNumber ?? paymentIntentId;
