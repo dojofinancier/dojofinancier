@@ -24,7 +24,7 @@ import {
 } from "@/app/actions/orders";
 import { exportOrdersToCSV } from "@/lib/utils/csv-export";
 import { toast } from "sonner";
-import { Loader2, Eye, Download } from "lucide-react";
+import { Loader2, Eye, Download, FileDown } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import Link from "next/link";
@@ -65,6 +65,7 @@ export function OrderList() {
   const [dateTo, setDateTo] = useState("");
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
+  const [downloadingReceiptId, setDownloadingReceiptId] = useState<string | null>(null);
 
   const loadOrders = useCallback(async (cursor?: string | null) => {
     try {
@@ -94,6 +95,44 @@ export function OrderList() {
   useEffect(() => {
     loadOrders();
   }, [loadOrders]);
+
+  const handleDownloadReceipt = async (paymentIntentId: string) => {
+    setDownloadingReceiptId(paymentIntentId);
+    try {
+      const res = await fetch(`/api/admin/receipt/${paymentIntentId}`, {
+        method: "GET",
+        credentials: "same-origin",
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        toast.error(
+          (err as { error?: string }).error ?? "Erreur lors du téléchargement du reçu"
+        );
+        return;
+      }
+
+      const blob = await res.blob();
+      const contentDisposition = res.headers.get("Content-Disposition");
+      const match = contentDisposition?.match(/filename="?([^";]+)"?/);
+      const filename = match?.[1] ?? `receipt-${paymentIntentId}.pdf`;
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast.success("Reçu téléchargé");
+    } catch {
+      toast.error("Erreur lors du téléchargement du reçu");
+    } finally {
+      setDownloadingReceiptId(null);
+    }
+  };
 
   const handleExportCSV = async () => {
     try {
@@ -258,11 +297,28 @@ export function OrderList() {
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Link href={`/tableau-de-bord/admin/orders/${order.id}`}>
-                          <Button variant="ghost" size="icon">
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </Link>
+                        <div className="flex items-center justify-end gap-1">
+                          {order.paymentIntentId && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDownloadReceipt(order.paymentIntentId!)}
+                              disabled={downloadingReceiptId === order.paymentIntentId}
+                              title="Télécharger le reçu"
+                            >
+                              {downloadingReceiptId === order.paymentIntentId ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <FileDown className="h-4 w-4" />
+                              )}
+                            </Button>
+                          )}
+                          <Link href={`/tableau-de-bord/admin/orders/${order.id}`}>
+                            <Button variant="ghost" size="icon" title="Voir les détails">
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </Link>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
