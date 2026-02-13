@@ -851,7 +851,7 @@ export function ModuleDetailPage({ courseId, moduleId, onBack, componentVisibili
                                           }))
                                         }
                                       >
-                                        {isExpanded ? "Masquer" : "Voir les reponses"}
+                                        {isExpanded ? "Masquer" : "Voir les réponses"}
                                       </Button>
                                     </div>
 
@@ -872,18 +872,18 @@ export function ModuleDetailPage({ courseId, moduleId, onBack, componentVisibili
                                               </div>
                                               <div className="text-sm">
                                                 <span className={`font-semibold ${isCorrect ? "text-green-600" : "text-red-600"}`}>
-                                                  Votre reponse:
+                                                  Votre réponse:
                                                 </span>
                                                 <span className="ml-2">{userDisplay.label}</span>
                                               </div>
                                               <div className="text-sm">
-                                                <span className="font-semibold">Reponse correcte:</span>
+                                                <span className="font-semibold">Réponse correcte:</span>
                                                 <span className="ml-2">{correctDisplay.label}</span>
                                               </div>
                                               {question.explanation && (
-                                                <div className="text-sm text-muted-foreground">
+                                                <div className="text-sm text-muted-foreground mt-2">
                                                   <span className="font-semibold">Explication:</span>
-                                                  <span className="ml-2">{question.explanation}</span>
+                                                  <div className="mt-1 whitespace-pre-wrap">{question.explanation}</div>
                                                 </div>
                                               )}
                                             </div>

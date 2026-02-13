@@ -55,7 +55,7 @@ export function RichTextEditor({
     },
     editorProps: {
       attributes: {
-        class: "tiptap-editor prose prose-sm sm:prose-base lg:prose-lg xl:prose-2xl mx-auto focus:outline-none min-h-[200px] p-4",
+        class: "tiptap-editor prose prose-sm sm:prose-base max-w-none focus:outline-none min-h-[200px] px-3 py-4",
       },
     },
   });

@@ -17,6 +17,8 @@ export type PurchaseHistoryItem = {
   purchaseDate: Date;
   amount: number;
   expiresAt: Date;
+  /** Set when payment was made via Stripe; used for receipt PDF download */
+  paymentIntentId: string | null;
 };
 
 /**
@@ -123,7 +125,7 @@ export async function getUserPurchaseHistoryAction(): Promise<{
   try {
     const user = await requireAuth();
 
-    // Get course enrollments
+    // Get course enrollments (include paymentIntentId for receipt download)
     const courseEnrollments = await prisma.enrollment.findMany({
       where: { userId: user.id },
       include: {
@@ -160,6 +162,7 @@ export async function getUserPurchaseHistoryAction(): Promise<{
         purchaseDate: enrollment.purchaseDate,
         amount: Number(enrollment.course.price),
         expiresAt: enrollment.expiresAt,
+        paymentIntentId: enrollment.paymentIntentId,
       })),
       ...cohortEnrollments.map((enrollment) => ({
         id: enrollment.id,
@@ -168,6 +171,7 @@ export async function getUserPurchaseHistoryAction(): Promise<{
         purchaseDate: enrollment.purchaseDate,
         amount: Number(enrollment.cohort.price),
         expiresAt: enrollment.expiresAt,
+        paymentIntentId: enrollment.paymentIntentId,
       })),
     ].sort((a, b) => b.purchaseDate.getTime() - a.purchaseDate.getTime());
 

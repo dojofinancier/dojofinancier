@@ -158,6 +158,15 @@ export function BrutalistNavbarClient({ user, variant = "transparent", dashboard
                 Connexion
               </Link>
             )}
+            <a
+              href="https://financedojo.ca/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-white font-black uppercase text-sm tracking-wider hover:opacity-70 transition-opacity"
+              aria-label="English version"
+            >
+              EN
+            </a>
           </div>
         </div>
       </nav>

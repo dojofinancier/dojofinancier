@@ -271,6 +271,36 @@ export async function getOrderDetailsAction(enrollmentId: string) {
 }
 
 /**
+ * Set whether an enrollment (order) is excluded from revenue and enrollment stats (admin only).
+ * Use this for test/mock orders so they do not skew dashboard metrics.
+ */
+export async function setEnrollmentExcludeFromStatsAction(
+  enrollmentId: string,
+  exclude: boolean
+): Promise<OrderActionResult> {
+  try {
+    await requireAdmin();
+
+    await prisma.enrollment.update({
+      where: { id: enrollmentId },
+      data: { excludeFromStats: exclude },
+    });
+
+    return { success: true };
+  } catch (error) {
+    await logServerError({
+      errorMessage: `Failed to set excludeFromStats: ${error instanceof Error ? error.message : "Unknown error"}`,
+      stackTrace: error instanceof Error ? error.stack : undefined,
+      severity: "MEDIUM",
+    });
+    return {
+      success: false,
+      error: "Impossible de mettre à jour l'exclusion des statistiques",
+    };
+  }
+}
+
+/**
  * Process refund (admin only)
  */
 export async function processRefundAction(

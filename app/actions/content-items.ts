@@ -36,6 +36,7 @@ const quizQuestionSchema = z.object({
   // JSON field: represent "no options" as undefined (not null) for Prisma compatibility
   options: z.record(z.string(), z.string()).optional(),
   correctAnswer: z.string().min(1, "La réponse correcte est requise"),
+  explanation: z.string().nullable().optional(),
   order: z.number().int().nonnegative(),
 });
 

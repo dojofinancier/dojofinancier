@@ -563,6 +563,7 @@ model Enrollment {
   expiresAt       DateTime @map("expires_at")
   paymentIntentId String?  @map("payment_intent_id") // Unique per non-null value (enforced by partial unique index in DB)
   orderNumber     Int?     @unique @map("order_number") // Business order number starting at 5190
+  excludeFromStats Boolean @default(false) @map("exclude_from_stats") // When true, excluded from revenue and enrollment stats (e.g. test orders)
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
@@ -1022,6 +1023,7 @@ model CohortEnrollment {
   expiresAt       DateTime @map("expires_at")
   paymentIntentId String?  @map("payment_intent_id") // Unique per non-null value (enforced by partial unique index in DB)
   orderNumber     Int?     @unique @map("order_number") // Business order number starting at 5190
+  excludeFromStats Boolean @default(false) @map("exclude_from_stats") // When true, excluded from revenue and enrollment stats (e.g. test orders)
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 

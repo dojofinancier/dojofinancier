@@ -327,9 +327,9 @@ export async function getStudyPlanAnalyticsAction(
   try {
     await requireAdmin();
 
-    // Get all enrollments for the course
+    // Get all enrollments for the course (exclude test orders from stats)
     const enrollments = await prisma.enrollment.findMany({
-      where: { courseId },
+      where: { courseId, excludeFromStats: false },
       include: {
         user: {
           select: {
@@ -464,10 +464,10 @@ export async function getFeatureUsageAction(
   try {
     await requireAdmin();
 
-    // Get enrollments
+    // Get enrollments (exclude test orders from stats)
     const enrollments = courseId
-      ? await prisma.enrollment.findMany({ where: { courseId } })
-      : await prisma.enrollment.findMany();
+      ? await prisma.enrollment.findMany({ where: { courseId, excludeFromStats: false } })
+      : await prisma.enrollment.findMany({ where: { excludeFromStats: false } });
 
     const userIds = enrollments.map(e => e.userId);
     const totalEnrolled = userIds.length;
@@ -580,9 +580,9 @@ export async function getDropOffAnalysisAction(
   try {
     await requireAdmin();
 
-    // Get enrollments
+    // Get enrollments (exclude test orders from stats)
     const enrollments = await prisma.enrollment.findMany({
-      where: { courseId },
+      where: { courseId, excludeFromStats: false },
       include: {
         user: {
           select: {

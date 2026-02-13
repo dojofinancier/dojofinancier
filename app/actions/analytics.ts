@@ -18,6 +18,7 @@ export async function getEnrollmentStatisticsAction(): Promise<AnalyticsActionRe
   try {
     await requireAdmin();
 
+    const statsWhere = { excludeFromStats: false };
     const [
       totalEnrollments,
       activeEnrollments,
@@ -25,25 +26,29 @@ export async function getEnrollmentStatisticsAction(): Promise<AnalyticsActionRe
       enrollmentsByCourse,
       enrollmentsByMonth,
     ] = await Promise.all([
-      prisma.enrollment.count(),
+      prisma.enrollment.count({ where: statsWhere }),
       prisma.enrollment.count({
         where: {
+          ...statsWhere,
           expiresAt: { gte: getEasternNow() }, // Use Eastern Time
         },
       }),
       prisma.enrollment.count({
         where: {
+          ...statsWhere,
           expiresAt: { lt: getEasternNow() }, // Use Eastern Time
         },
       }),
       prisma.enrollment.groupBy({
         by: ["courseId"],
         _count: true,
+        where: statsWhere,
       }),
       prisma.enrollment.groupBy({
         by: ["purchaseDate"],
         _count: true,
         where: {
+          ...statsWhere,
           purchaseDate: {
             gte: new Date(new Date().getFullYear(), 0, 1),
           },

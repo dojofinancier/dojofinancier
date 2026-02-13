@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,11 +23,13 @@ import {
 } from "@/components/ui/table";
 import {
   processRefundAction,
+  setEnrollmentExcludeFromStatsAction,
 } from "@/app/actions/orders";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { DollarSign, User, BookOpen, Calendar, CreditCard, RefreshCw } from "lucide-react";
+import { DollarSign, User, BookOpen, Calendar, CreditCard, RefreshCw, BarChart3 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import Link from "next/link";
 
 type OrderDetailsData = {
@@ -36,6 +38,7 @@ type OrderDetailsData = {
     purchaseDate: Date;
     expiresAt: Date;
     paymentIntentId: string | null;
+    excludeFromStats?: boolean;
     user: {
       id: string;
       email: string;
@@ -64,15 +67,44 @@ type OrderDetailsData = {
 
 interface OrderDetailsProps {
   orderData: OrderDetailsData;
+  onUpdated?: () => void;
 }
 
-export function OrderDetails({ orderData }: OrderDetailsProps) {
+export function OrderDetails({ orderData, onUpdated }: OrderDetailsProps) {
   const [refundDialogOpen, setRefundDialogOpen] = useState(false);
   const [refundAmount, setRefundAmount] = useState("");
   const [refundType, setRefundType] = useState<"full" | "partial">("full");
   const [processing, setProcessing] = useState(false);
+  const [excludeFromStats, setExcludeFromStats] = useState(!!orderData.enrollment.excludeFromStats);
+  const [excludeUpdating, setExcludeUpdating] = useState(false);
 
   const { enrollment, paymentIntent, refunds } = orderData;
+
+  useEffect(() => {
+    setExcludeFromStats(!!orderData.enrollment.excludeFromStats);
+  }, [orderData.enrollment.excludeFromStats]);
+
+  const handleExcludeFromStatsChange = async (checked: boolean) => {
+    setExcludeUpdating(true);
+    try {
+      const result = await setEnrollmentExcludeFromStatsAction(enrollment.id, checked);
+      if (result.success) {
+        setExcludeFromStats(checked);
+        toast.success(
+          checked
+            ? "Commande exclue des statistiques (revenus et inscriptions)"
+            : "Commande incluse dans les statistiques"
+        );
+        onUpdated?.();
+      } else {
+        toast.error(result.error || "Erreur");
+      }
+    } catch {
+      toast.error("Erreur lors de la mise à jour");
+    } finally {
+      setExcludeUpdating(false);
+    }
+  };
 
   const originalPrice = Number(enrollment.course.price);
   const discount = enrollment.couponUsage
@@ -221,6 +253,22 @@ export function OrderDetails({ orderData }: OrderDetailsProps) {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border p-4">
+            <div className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <Label className="font-medium">Exclure des statistiques</Label>
+                <p className="text-sm text-muted-foreground">
+                  Ne pas inclure cette commande dans les revenus ni les stats d&apos;inscriptions (ex. commandes test).
+                </p>
+              </div>
+            </div>
+            <Switch
+              checked={excludeFromStats}
+              onCheckedChange={handleExcludeFromStatsChange}
+              disabled={excludeUpdating}
+            />
+          </div>
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <Label className="text-muted-foreground">Prix original</Label>

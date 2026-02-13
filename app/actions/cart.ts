@@ -182,8 +182,7 @@ export async function validateCartCouponAction(
   courseId: string
 ): Promise<CartActionResult> {
   try {
-    await requireAuth();
-
+    // Coupon validation works for both authenticated and unauthenticated users
     const validation = await validateCouponAction(couponCode, courseId);
 
     if (!validation.success || !validation.data) {

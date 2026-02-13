@@ -32,10 +32,11 @@ export async function getRevenueByPeriodAction(
       999
     );
 
-    // Get enrollments in period
+    // Get enrollments in period (exclude test orders from stats)
     const enrollments = await prisma.enrollment.findMany({
       where: {
         paymentIntentId: { not: null },
+        excludeFromStats: false,
         purchaseDate: {
           gte: startDate,
           lte: endDate,
@@ -197,10 +198,11 @@ export async function getRefundStatisticsAction(
         )
       : new Date();
 
-    // Get all enrollments with payment intents
+    // Get all enrollments with payment intents (exclude test orders from stats)
     const enrollments = await prisma.enrollment.findMany({
       where: {
         paymentIntentId: { not: null },
+        excludeFromStats: false,
         purchaseDate: {
           gte: startDate,
           lte: endDate,
@@ -309,6 +311,7 @@ export async function getTotalRevenueAction(): Promise<FinancialActionResult> {
     const enrollments = await prisma.enrollment.findMany({
       where: {
         paymentIntentId: { not: null },
+        excludeFromStats: false,
       },
       include: {
         course: {
@@ -477,10 +480,11 @@ export async function getRevenueTrendsAction(): Promise<FinancialActionResult> {
     const startDate = new Date(now.getFullYear(), now.getMonth() - 11, 1);
     const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
 
-    // Fetch all enrollments for the 12-month period in one query
+    // Fetch all enrollments for the 12-month period in one query (exclude test orders from stats)
     const enrollments = await prisma.enrollment.findMany({
       where: {
         paymentIntentId: { not: null },
+        excludeFromStats: false,
         purchaseDate: {
           gte: startDate,
           lte: endDate,

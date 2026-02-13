@@ -36,6 +36,7 @@ type OrderItem = {
   paymentIntentId: string | null;
   paymentStatus: string;
   refunded: boolean;
+  excludeFromStats?: boolean;
   user: {
     id: string;
     email: string;
@@ -246,7 +247,16 @@ export function OrderList() {
                       <TableCell className="text-sm">
                         {format(new Date(order.purchaseDate), "d MMM yyyy, HH:mm", { locale: fr })}
                       </TableCell>
-                      <TableCell>{getStatusBadge(order)}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap items-center gap-1">
+                          {getStatusBadge(order)}
+                          {order.excludeFromStats && (
+                            <Badge variant="secondary" className="text-xs">
+                              Exclu des stats
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell className="text-right">
                         <Link href={`/tableau-de-bord/admin/orders/${order.id}`}>
                           <Button variant="ghost" size="icon">

@@ -1,10 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -16,12 +15,29 @@ import {
 import {
   replyToMessageThreadAction,
   updateThreadStatusAction,
+  deleteMessageAction,
 } from "@/app/actions/messages";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { MessageSquare, Send, Settings } from "lucide-react";
+import { MessageSquare, Send, Settings, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import Link from "next/link";
+import { Skeleton } from "@/components/ui/skeleton";
+
+const RichTextEditor = lazy(() =>
+  import("@/components/admin/courses/rich-text-editor").then((m) => ({ default: m.RichTextEditor }))
+);
 
 type ThreadData = {
   thread: {
@@ -63,9 +79,13 @@ export function MessageThreadDetails({ threadData: initialThreadData }: MessageT
   const [threadData, setThreadData] = useState(initialThreadData);
   const [replyMessage, setReplyMessage] = useState("");
   const [sendingReply, setSendingReply] = useState(false);
+  const [deletingMessageId, setDeletingMessageId] = useState<string | null>(null);
+
+  const isReplyEmpty = (html: string) =>
+    !html || html.replace(/<[^>]*>/g, "").trim() === "";
 
   const handleReply = async () => {
-    if (!replyMessage.trim()) {
+    if (isReplyEmpty(replyMessage)) {
       toast.error("Le message est requis");
       return;
     }
@@ -100,6 +120,24 @@ export function MessageThreadDetails({ threadData: initialThreadData }: MessageT
     }
   };
 
+  const handleDeleteMessage = async (messageId: string) => {
+    setDeletingMessageId(messageId);
+    try {
+      const result = await deleteMessageAction(messageId);
+      if (result.success) {
+        toast.success("Message supprimé");
+        setThreadData({
+          ...threadData,
+          messages: threadData.messages.filter((m) => m.id !== messageId),
+        });
+      } else {
+        toast.error(result.error || "Erreur lors de la suppression");
+      }
+    } finally {
+      setDeletingMessageId(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="grid gap-6 md:grid-cols-3">
@@ -129,9 +167,47 @@ export function MessageThreadDetails({ threadData: initialThreadData }: MessageT
                       {format(new Date(message.createdAt), "d MMMM yyyy, HH:mm", { locale: fr })}
                     </div>
                   </div>
-                  <Badge variant={message.isFromStudent ? "outline" : "default"}>
-                    {message.isFromStudent ? "Étudiant" : "Admin"}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={message.isFromStudent ? "outline" : "default"}>
+                      {message.isFromStudent ? "Étudiant" : "Admin"}
+                    </Badge>
+                    {!message.isFromStudent && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                            disabled={deletingMessageId === message.id}
+                            title="Supprimer ce message"
+                          >
+                            {deletingMessageId === message.id ? (
+                              <span className="text-xs">...</span>
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Supprimer ce message ?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Cette action est irréversible. Le message ne sera plus visible pour l&apos;étudiant.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Annuler</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handleDeleteMessage(message.id)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Supprimer
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
+                  </div>
                 </div>
                 <div 
                   className="mt-2 text-sm prose prose-sm max-w-none"
@@ -143,16 +219,17 @@ export function MessageThreadDetails({ threadData: initialThreadData }: MessageT
             <div className="border-t pt-4 space-y-4">
               <div>
                 <Label htmlFor="reply">Répondre</Label>
-                <Textarea
-                  id="reply"
-                  value={replyMessage}
-                  onChange={(e) => setReplyMessage(e.target.value)}
-                  placeholder="Tapez votre réponse..."
-                  rows={4}
-                  className="mt-2"
-                />
+                <Suspense fallback={<Skeleton className="h-32 w-full mt-2" />}>
+                  <div className="mt-2">
+                    <RichTextEditor
+                      content={replyMessage}
+                      onChange={setReplyMessage}
+                      placeholder="Tapez votre réponse (gras, listes, etc.)..."
+                    />
+                  </div>
+                </Suspense>
               </div>
-              <Button onClick={handleReply} disabled={sendingReply || !replyMessage.trim()}>
+              <Button onClick={handleReply} disabled={sendingReply || isReplyEmpty(replyMessage)}>
                 {sendingReply ? (
                   <>
                     <Send className="h-4 w-4 mr-2 animate-spin" />

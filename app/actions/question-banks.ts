@@ -824,6 +824,7 @@ export async function uploadQuizCSVToModulesAction(
                 type: "MULTIPLE_CHOICE",
                 options: convertedOptions,
                 correctAnswer: convertedCorrectAnswer,
+                explanation: q.explanation ?? null,
                 order: nextOrder++,
               },
             });
@@ -1000,6 +1001,7 @@ export async function addQuestionBankToPhase1QuizAction(
             type: "MULTIPLE_CHOICE",
             options: convertedOptions,
             correctAnswer: convertedCorrectAnswer,
+            explanation: q.explanation ?? null,
             order: nextOrder++,
           },
         });
@@ -1113,6 +1115,7 @@ export async function addSelectedQuestionsToPhase1QuizAction(
             type: "MULTIPLE_CHOICE",
             options: convertedOptions,
             correctAnswer: convertedCorrectAnswer,
+            explanation: q.explanation ?? null,
             order: nextOrder++,
           },
         });

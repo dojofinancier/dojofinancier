@@ -11,6 +11,7 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale/fr";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Download, Loader2 } from "lucide-react";
 
 type ProfileFormProps = {
   user: {
@@ -27,6 +28,7 @@ export function ProfileForm({ user }: ProfileFormProps) {
   const [isLoadingPassword, setIsLoadingPassword] = useState(false);
   const [isLoadingPurchases, setIsLoadingPurchases] = useState(true);
   const [purchases, setPurchases] = useState<PurchaseHistoryItem[]>([]);
+  const [downloadingReceiptId, setDownloadingReceiptId] = useState<string | null>(null);
   const [profileData, setProfileData] = useState({
     firstName: user.firstName || "",
     lastName: user.lastName || "",
@@ -120,6 +122,40 @@ export function ProfileForm({ user }: ProfileFormProps) {
 
   const isExpired = (expiresAt: Date) => {
     return new Date(expiresAt) < new Date();
+  };
+
+  const handleDownloadReceipt = async (paymentIntentId: string) => {
+    setDownloadingReceiptId(paymentIntentId);
+    try {
+      const res = await fetch(`/api/receipt/${paymentIntentId}`, {
+        method: "GET",
+        credentials: "same-origin",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        toast.error(
+          (err as { error?: string }).error ?? "Erreur lors du téléchargement du reçu"
+        );
+        return;
+      }
+      const blob = await res.blob();
+      const contentDisposition = res.headers.get("Content-Disposition");
+      const match = contentDisposition?.match(/filename="?([^";]+)"?/);
+      const filename = match?.[1] ?? `receipt-${paymentIntentId}.pdf`;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success("Reçu téléchargé");
+    } catch (error) {
+      toast.error("Erreur lors du téléchargement du reçu");
+    } finally {
+      setDownloadingReceiptId(null);
+    }
   };
 
   return (
@@ -277,6 +313,7 @@ export function ProfileForm({ user }: ProfileFormProps) {
                     <TableHead>Montant</TableHead>
                     <TableHead>Date d&apos;expiration</TableHead>
                     <TableHead>Statut</TableHead>
+                    <TableHead className="w-[140px]">Reçu</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -304,6 +341,25 @@ export function ProfileForm({ user }: ProfileFormProps) {
                           <Badge variant="destructive">Expiré</Badge>
                         ) : (
                           <Badge variant="default">Actif</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {purchase.paymentIntentId ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDownloadReceipt(purchase.paymentIntentId!)}
+                            disabled={downloadingReceiptId === purchase.paymentIntentId}
+                          >
+                            {downloadingReceiptId === purchase.paymentIntentId ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Download className="h-4 w-4 mr-1.5" />
+                            )}
+                            PDF
+                          </Button>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">—</span>
                         )}
                       </TableCell>
                     </TableRow>

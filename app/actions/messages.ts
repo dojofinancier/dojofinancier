@@ -505,6 +505,45 @@ export async function replyToMessageThreadAction(
 }
 
 /**
+ * Delete a message (admin only). Only admin-sent messages can be deleted.
+ */
+export async function deleteMessageAction(messageId: string): Promise<MessageActionResult> {
+  try {
+    const user = await requireAuth();
+
+    if (user.role !== "ADMIN") {
+      return { success: false, error: "Non autorisé" };
+    }
+
+    const message = await prisma.message.findUnique({
+      where: { id: messageId },
+      select: { id: true, isFromStudent: true },
+    });
+
+    if (!message) {
+      return { success: false, error: "Message introuvable" };
+    }
+
+    if (message.isFromStudent) {
+      return { success: false, error: "Seuls les messages envoyés par l'admin peuvent être supprimés" };
+    }
+
+    await prisma.message.delete({
+      where: { id: messageId },
+    });
+
+    return { success: true };
+  } catch (error) {
+    await logServerError({
+      errorMessage: `Failed to delete message: ${error instanceof Error ? error.message : "Unknown error"}`,
+      stackTrace: error instanceof Error ? error.stack : undefined,
+      severity: "MEDIUM",
+    });
+    return { success: false, error: "Erreur lors de la suppression" };
+  }
+}
+
+/**
  * Get all message threads (admin only)
  */
 export async function getAllMessageThreadsAction(params: {

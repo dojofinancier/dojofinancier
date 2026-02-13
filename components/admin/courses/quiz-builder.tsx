@@ -58,6 +58,7 @@ type EditableQuestion = {
   question: string;
   options: { id: string; label: string; value: string }[];
   correctAnswer: string;
+  explanation?: string | null;
 };
 
 export function QuizBuilder({ quizId, questions: initialQuestions, onChanged }: QuizBuilderProps) {
@@ -98,6 +99,7 @@ export function QuizBuilder({ quizId, questions: initialQuestions, onChanged }: 
       question: "",
       options: defaultMultipleChoiceOptions,
       correctAnswer: "",
+      explanation: "",
     });
     setIsDialogOpen(true);
   };
@@ -109,6 +111,7 @@ export function QuizBuilder({ quizId, questions: initialQuestions, onChanged }: 
       question: question.question,
       options: question.type === "MULTIPLE_CHOICE" ? parseOptions(question.options) : defaultMultipleChoiceOptions,
       correctAnswer: question.correctAnswer,
+      explanation: question.explanation ?? "",
     });
     setIsDialogOpen(true);
   };
@@ -206,6 +209,8 @@ export function QuizBuilder({ quizId, questions: initialQuestions, onChanged }: 
         payload.options = optionsRecord;
       }
 
+      payload.explanation = editingQuestion.explanation?.trim() || null;
+
       if (editingQuestion.id) {
         const result = await updateQuizQuestionAction(editingQuestion.id, payload);
         if (result.success) {
@@ -263,6 +268,12 @@ export function QuizBuilder({ quizId, questions: initialQuestions, onChanged }: 
         )}
         {question.type === "SHORT_ANSWER" && (
           <p className="text-sm text-muted-foreground">Réponse attendue: {question.correctAnswer}</p>
+        )}
+        {question.explanation && (
+          <div className="text-sm text-muted-foreground pt-1 border-t">
+            <span className="font-semibold">Explication:</span>{" "}
+            <span className="whitespace-pre-wrap">{question.explanation}</span>
+          </div>
         )}
       </div>
     );
@@ -420,6 +431,20 @@ export function QuizBuilder({ quizId, questions: initialQuestions, onChanged }: 
                   />
                 </div>
               )}
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-explanation">Explication (optionnel)</Label>
+                <Textarea
+                  id="edit-explanation"
+                  value={editingQuestion.explanation ?? ""}
+                  onChange={(event) =>
+                    setEditingQuestion({ ...editingQuestion, explanation: event.target.value })
+                  }
+                  placeholder="Explication affichée à l'étudiant après avoir répondu..."
+                  rows={3}
+                  className="resize-y"
+                />
+              </div>
 
               <div className="flex justify-end gap-2 pt-4">
                 <Button variant="outline" onClick={() => handleDialogClose(false)}>
