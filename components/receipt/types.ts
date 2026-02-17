@@ -12,6 +12,11 @@ export type ReceiptData = {
   tvq?: string | null;
   tpsNumber?: string | null;
   tvqNumber?: string | null;
+  /** Formatted discount amount (e.g. "-20,00 $") when coupon applied */
   discount?: string | null;
+  /** Coupon code (e.g. "PROMO20") when discount applied */
+  couponCode?: string | null;
+  /** Original amount before discount; when set, receipt shows subtotal → discount → total */
+  originalAmount?: number | null;
   status?: "Payé" | "Échoué" | "Remboursé";
 };

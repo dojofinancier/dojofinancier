@@ -155,6 +155,8 @@ const COMPANY_LINE = "Le Dojo Financier | dojofinancier.com | salut@dojofinancie
 
 export function ReceiptPdfDocument({ data, logoSrc }: ReceiptPdfDocumentProps) {
   const amountFormatted = `${data.price.toFixed(2)} ${data.currency}`;
+  const hasDiscount = data.discount != null && data.discount !== "";
+  const showSubtotal = hasDiscount && data.originalAmount != null;
 
   return (
     <Document>
@@ -203,13 +205,25 @@ export function ReceiptPdfDocument({ data, logoSrc }: ReceiptPdfDocumentProps) {
         </View>
         <View style={styles.tableRow}>
           <Text style={styles.tableDesc}>{data.productName}</Text>
-          <Text style={styles.tableAmount}>{amountFormatted}</Text>
+          <Text style={styles.tableAmount}>
+            {showSubtotal
+              ? `${data.originalAmount!.toFixed(2)} ${data.currency}`
+              : amountFormatted}
+          </Text>
         </View>
-        {data.discount != null && data.discount !== "" ? (
-          <View style={styles.discountRow}>
-            <Text style={styles.tableDesc}>Rabais</Text>
-            <Text style={styles.tableAmount}>{data.discount}</Text>
-          </View>
+        {hasDiscount ? (
+          <>
+            <View style={styles.discountRow}>
+              <Text style={styles.tableDesc}>
+                Rabais{data.couponCode ? ` (${data.couponCode})` : ""}
+              </Text>
+              <Text style={styles.tableAmount}>{data.discount}</Text>
+            </View>
+            <View style={styles.tableRow}>
+              <Text style={styles.tableDesc}>Montant payé</Text>
+              <Text style={styles.tableAmount}>{amountFormatted}</Text>
+            </View>
+          </>
         ) : null}
 
         {(data.tps != null || data.tvq != null) && (

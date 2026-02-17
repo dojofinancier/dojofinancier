@@ -121,4 +121,48 @@ To stay under the 500 MB limit while keeping the app on the free plan:
    - App DB (current Supabase): only app tables + `_prisma_migrations` → well under 500 MB.
    - Knowledge base DB: all pgvector/RAG tables → can grow independently (or use a separate free/small plan for that project).
 
+---
+
+## Migration to Target Database
+
+A migration script moves the 14 knowledge base tables to a separate database.
+
+### Prerequisites
+
+1. Add to `.env`:
+   ```
+   TARGET_DATABASE_URL="postgresql://postgres.[project-ref]:[password]@aws-0-us-west-2.pooler.supabase.com:6543/postgres"
+   TARGET_DIRECT_URL="postgresql://postgres.[project-ref]:[password]@db.[project-ref].supabase.co:5432/postgres"
+   ```
+   **Note:** Use `postgres.[project-ref]` (not just `postgres`) for the username. If your password contains `&` or `>`, URL-encode them (`%26` and `%3E`).
+
+2. PostgreSQL client tools (`pg_dump`, `psql`) in PATH. Install from [postgresql.org](https://www.postgresql.org/download/) or use Docker.
+
+### Run Migration
+
+```bash
+# Dry run (shows commands without executing)
+npm run db:migrate-knowledge-base -- --dry-run
+
+# Execute migration
+npm run db:migrate-knowledge-base
+```
+
+### Language column (French vs English)
+
+To distinguish French (migrated) content from English (existing) content in the target:
+
+1. **Before migration:** Run `scripts/add-language-column-source.sql` in the **source** Supabase SQL Editor. This adds a `language` column and sets all rows to `'fr'`.
+2. **On target:** Run `scripts/add-language-column-target.sql` in the **target** Supabase SQL Editor. This adds the column with default `'en'` for existing rows.
+3. Run the migration. French rows will have `language='fr'`, English rows will have `language='en'`.
+
+If migration already ran, add the column on target and use a timestamp-based UPDATE to mark French rows (see comments in `add-language-column-target.sql`).
+
+### After Migration
+
+1. Run `scripts/post-migration-cleanup.sql` in the **source** Supabase SQL Editor to drop the migrated tables and the `notes.element_id` FK.
+2. Update any RAG/content-generation scripts to use `TARGET_DATABASE_URL` when querying these tables.
+
+---
+
 If you want, the next step can be: (1) a small script to list only “app” vs “knowledge base” tables from `information_schema` for future checks, or (2) a migration plan (order of tables, dependencies, and example `pg_dump`/restore commands) for moving the knowledge base to the second database.

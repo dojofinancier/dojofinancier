@@ -15,7 +15,8 @@
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
-    "db:populate-slugs": "tsx scripts/populate-slugs.ts"
+    "db:populate-slugs": "tsx scripts/populate-slugs.ts",
+    "db:migrate-knowledge-base": "tsx scripts/migrate-knowledge-base.ts"
   },
   "dependencies": {
     "@date-fns/tz": "^1.4.1",
@@ -81,12 +82,14 @@
   "devDependencies": {
     "@tanstack/react-query-devtools": "^5.91.1",
     "@types/node": "^24",
+    "@types/pg": "^8.16.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "baseline-browser-mapping": "^2.9.11",
     "cross-env": "^10.1.0",
     "eslint": "^9",
     "eslint-config-next": "^16.0.3",
+    "pg": "^8.18.0",
     "prisma": "^6.19.0",
     "stripe-cli": "^0.1.0",
     "tailwindcss": "^4.1.17",

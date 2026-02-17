@@ -113,10 +113,26 @@ export async function POST(request: NextRequest) {
       let enrollmentResult;
       let enrollmentId: string;
 
-      // If enrollment already exists, use it (idempotency)
+      // If enrollment already exists, use it (idempotency) but still ensure coupon is tracked
       if (existingEnrollment) {
         enrollmentId = existingEnrollment.id;
-        // Return early - enrollment already processed, no need to create or send webhook again
+        // Backfill coupon usage if payment used a coupon but record was never created (e.g. frontend created enrollment first)
+        if (!isCohortPayment && couponId && enrollmentId) {
+          try {
+            await trackCouponUsageAction(
+              couponId,
+              enrollmentId,
+              parseFloat(discountAmount || "0")
+            );
+          } catch (err) {
+            // Ignore "already used" or duplicate; log other errors
+            await logServerError({
+              errorMessage: `Failed to backfill coupon usage for existing enrollment: ${err instanceof Error ? err.message : "Unknown error"}`,
+              stackTrace: err instanceof Error ? err.stack : undefined,
+              severity: "MEDIUM",
+            });
+          }
+        }
         return NextResponse.json({ received: true });
       }
 

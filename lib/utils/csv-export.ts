@@ -60,10 +60,11 @@ export function exportOrdersToCSV(orders: any[]) {
 
   const rows = orders.map((order) => {
     const discount = order.couponUsage
-      ? Number(order.couponUsage.coupon.discountAmount)
+      ? Number(order.couponUsage.discountAmount)
       : 0;
     const originalPrice = Number(order.course.price);
-    const finalPrice = Math.max(0, originalPrice - discount);
+    const finalPrice =
+      order.netAmount ?? order.amountCharged ?? Math.max(0, originalPrice - discount);
 
     return [
       order.id,

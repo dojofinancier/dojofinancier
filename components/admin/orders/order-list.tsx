@@ -37,6 +37,10 @@ type OrderItem = {
   paymentStatus: string;
   refunded: boolean;
   excludeFromStats?: boolean;
+  /** Net amount charged (after coupon); from Stripe when available, else computed */
+  amountCharged?: number;
+  /** Explicit net amount for display (same as amountCharged when present) */
+  netAmount?: number;
   user: {
     id: string;
     email: string;
@@ -49,9 +53,9 @@ type OrderItem = {
     price: number;
   };
   couponUsage: {
+    discountAmount: number;
     coupon: {
       code: string;
-      discountAmount: number;
     };
   } | null;
 };
@@ -169,9 +173,11 @@ export function OrderList() {
     }
   };
 
-  const calculateFinalPrice = (order: OrderItem) => {
-    const coursePrice = Number(order.course.price);
-    const discount = order.couponUsage ? Number(order.couponUsage.coupon.discountAmount) : 0;
+  const getNetAmount = (order: OrderItem) => {
+    const fromServer = order.netAmount ?? order.amountCharged;
+    if (fromServer != null && !Number.isNaN(fromServer)) return fromServer;
+    const coursePrice = Number(order.course?.price ?? 0);
+    const discount = order.couponUsage ? Number(order.couponUsage.discountAmount ?? 0) : 0;
     return Math.max(0, coursePrice - discount);
   };
 
@@ -256,7 +262,7 @@ export function OrderList() {
               </TableHeader>
               <TableBody>
                 {filteredOrders.map((order) => {
-                  const finalPrice = calculateFinalPrice(order);
+                  const netAmount = getNetAmount(order);
                   return (
                     <TableRow key={order.id}>
                       <TableCell className="font-mono text-sm">
@@ -275,10 +281,10 @@ export function OrderList() {
                       <TableCell>{order.course.title}</TableCell>
                       <TableCell>
                         <div>
-                          <div className="font-medium">${finalPrice.toFixed(2)}</div>
+                          <div className="font-medium">${netAmount.toFixed(2)}</div>
                           {order.couponUsage && (
                             <div className="text-xs text-muted-foreground">
-                              Coupon: {order.couponUsage.coupon.code} (-${Number(order.couponUsage.coupon.discountAmount).toFixed(2)})
+                              Coupon: {order.couponUsage.coupon.code} (-${Number(order.couponUsage.discountAmount).toFixed(2)})
                             </div>
                           )}
                         </div>

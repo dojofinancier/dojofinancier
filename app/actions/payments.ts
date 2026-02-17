@@ -523,10 +523,27 @@ export async function getReceiptDataAction(
     });
 
     if (enrollment) {
-      const paymentIntent = await stripe.paymentIntents.retrieve(
-        paymentIntentId,
-        { expand: ["latest_charge"] }
-      );
+      let paymentIntent;
+      try {
+        paymentIntent = await stripe.paymentIntents.retrieve(
+          paymentIntentId,
+          { expand: ["latest_charge"] }
+        );
+      } catch (stripeError: unknown) {
+        const msg = stripeError instanceof Error ? stripeError.message : "Stripe error";
+        await logServerError({
+          errorMessage: `Stripe retrieve failed in getReceiptDataAction: ${msg}`,
+          stackTrace: stripeError instanceof Error ? stripeError.stack : undefined,
+          severity: "MEDIUM",
+        });
+        return {
+          success: false,
+          error: process.env.NODE_ENV === "development"
+            ? `Stripe: ${msg}`
+            : "Impossible de récupérer les détails du paiement. Vérifiez votre connexion.",
+        };
+      }
+
       const charge =
         typeof paymentIntent.latest_charge === "object" &&
         paymentIntent.latest_charge !== null
@@ -549,11 +566,20 @@ export async function getReceiptDataAction(
       }
 
       const purchaseDate = enrollment.purchaseDate;
+      const dateObj = purchaseDate instanceof Date ? purchaseDate : new Date(purchaseDate);
+      const isValidDate = !Number.isNaN(dateObj.getTime());
+      const dateShort = isValidDate ? format(dateObj, "dd/MM/yyyy") : "—";
+      const dateLong = isValidDate ? format(dateObj, "d MMMM yyyy", { locale: fr }) : "—";
+
       const amount = paymentIntent.amount / 100;
       let discount: string | null = null;
+      let couponCode: string | null = null;
+      let originalAmount: number | null = null;
       if (enrollment.couponUsage?.discountAmount != null) {
         const discountAmount = Number(enrollment.couponUsage.discountAmount);
         discount = `-${formatAmount(discountAmount)}`;
+        couponCode = enrollment.couponUsage.coupon?.code ?? null;
+        originalAmount = Number(enrollment.course.price);
       }
 
       const data: ReceiptData = {
@@ -565,13 +591,15 @@ export async function getReceiptDataAction(
         userEmail: user.email,
         orderNumber: enrollment.orderNumber ?? null,
         paymentMethod,
-        dateShort: format(purchaseDate, "dd/MM/yyyy"),
-        dateLong: format(purchaseDate, "d MMMM yyyy", { locale: fr }),
+        dateShort,
+        dateLong,
         tps: null,
         tvq: null,
         tpsNumber: null,
         tvqNumber: null,
         discount,
+        couponCode,
+        originalAmount,
         status,
       };
 
@@ -588,10 +616,27 @@ export async function getReceiptDataAction(
     });
 
     if (cohortEnrollment) {
-      const paymentIntent = await stripe.paymentIntents.retrieve(
-        paymentIntentId,
-        { expand: ["latest_charge"] }
-      );
+      let paymentIntent;
+      try {
+        paymentIntent = await stripe.paymentIntents.retrieve(
+          paymentIntentId,
+          { expand: ["latest_charge"] }
+        );
+      } catch (stripeError: unknown) {
+        const msg = stripeError instanceof Error ? stripeError.message : "Stripe error";
+        await logServerError({
+          errorMessage: `Stripe retrieve failed (cohort) in getReceiptDataAction: ${msg}`,
+          stackTrace: stripeError instanceof Error ? stripeError.stack : undefined,
+          severity: "MEDIUM",
+        });
+        return {
+          success: false,
+          error: process.env.NODE_ENV === "development"
+            ? `Stripe: ${msg}`
+            : "Impossible de récupérer les détails du paiement. Vérifiez votre connexion.",
+        };
+      }
+
       const charge =
         typeof paymentIntent.latest_charge === "object" &&
         paymentIntent.latest_charge !== null
@@ -614,6 +659,11 @@ export async function getReceiptDataAction(
       }
 
       const purchaseDate = cohortEnrollment.purchaseDate;
+      const dateObj = purchaseDate instanceof Date ? purchaseDate : new Date(purchaseDate);
+      const isValidDate = !Number.isNaN(dateObj.getTime());
+      const dateShort = isValidDate ? format(dateObj, "dd/MM/yyyy") : "—";
+      const dateLong = isValidDate ? format(dateObj, "d MMMM yyyy", { locale: fr }) : "—";
+
       const amount = paymentIntent.amount / 100;
 
       const data: ReceiptData = {
@@ -625,8 +675,8 @@ export async function getReceiptDataAction(
         userEmail: user.email,
         orderNumber: cohortEnrollment.orderNumber ?? null,
         paymentMethod,
-        dateShort: format(purchaseDate, "dd/MM/yyyy"),
-        dateLong: format(purchaseDate, "d MMMM yyyy", { locale: fr }),
+        dateShort,
+        dateLong,
         tps: null,
         tvq: null,
         tpsNumber: null,
@@ -643,14 +693,18 @@ export async function getReceiptDataAction(
       error: "Paiement introuvable",
     };
   } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
     await logServerError({
-      errorMessage: `Failed to get receipt data: ${error instanceof Error ? error.message : "Unknown error"}`,
+      errorMessage: `Failed to get receipt data: ${message}`,
       stackTrace: error instanceof Error ? error.stack : undefined,
       severity: "MEDIUM",
     });
+    const isDev = process.env.NODE_ENV === "development";
     return {
       success: false,
-      error: "Erreur lors de la récupération du reçu",
+      error: isDev
+        ? `Erreur lors de la récupération du reçu: ${message}`
+        : "Erreur lors de la récupération du reçu",
     };
   }
 }
@@ -684,10 +738,27 @@ export async function getReceiptDataForAdminAction(
     });
 
     if (enrollment) {
-      const paymentIntent = await stripe.paymentIntents.retrieve(
-        paymentIntentId,
-        { expand: ["latest_charge"] }
-      );
+      let paymentIntent;
+      try {
+        paymentIntent = await stripe.paymentIntents.retrieve(
+          paymentIntentId,
+          { expand: ["latest_charge"] }
+        );
+      } catch (stripeError: unknown) {
+        const msg = stripeError instanceof Error ? stripeError.message : "Stripe error";
+        await logServerError({
+          errorMessage: `Stripe retrieve failed in getReceiptDataForAdminAction: ${msg}`,
+          stackTrace: stripeError instanceof Error ? stripeError.stack : undefined,
+          severity: "MEDIUM",
+        });
+        return {
+          success: false,
+          error: process.env.NODE_ENV === "development"
+            ? `Stripe: ${msg}`
+            : "Impossible de récupérer les détails du paiement. Vérifiez votre connexion.",
+        };
+      }
+
       const charge =
         typeof paymentIntent.latest_charge === "object" &&
         paymentIntent.latest_charge !== null
@@ -711,11 +782,20 @@ export async function getReceiptDataForAdminAction(
 
       const user = enrollment.user;
       const purchaseDate = enrollment.purchaseDate;
+      const dateObj = purchaseDate instanceof Date ? purchaseDate : new Date(purchaseDate);
+      const isValidDate = !Number.isNaN(dateObj.getTime());
+      const dateShort = isValidDate ? format(dateObj, "dd/MM/yyyy") : "—";
+      const dateLong = isValidDate ? format(dateObj, "d MMMM yyyy", { locale: fr }) : "—";
+
       const amount = paymentIntent.amount / 100;
       let discount: string | null = null;
+      let couponCode: string | null = null;
+      let originalAmount: number | null = null;
       if (enrollment.couponUsage?.discountAmount != null) {
         const discountAmount = Number(enrollment.couponUsage.discountAmount);
         discount = `-${formatAmount(discountAmount)}`;
+        couponCode = enrollment.couponUsage.coupon?.code ?? null;
+        originalAmount = Number(enrollment.course.price);
       }
 
       const data: ReceiptData = {
@@ -727,13 +807,15 @@ export async function getReceiptDataForAdminAction(
         userEmail: user.email,
         orderNumber: enrollment.orderNumber ?? null,
         paymentMethod,
-        dateShort: format(purchaseDate, "dd/MM/yyyy"),
-        dateLong: format(purchaseDate, "d MMMM yyyy", { locale: fr }),
+        dateShort,
+        dateLong,
         tps: null,
         tvq: null,
         tpsNumber: null,
         tvqNumber: null,
         discount,
+        couponCode,
+        originalAmount,
         status,
       };
 
@@ -750,10 +832,27 @@ export async function getReceiptDataForAdminAction(
     });
 
     if (cohortEnrollment) {
-      const paymentIntent = await stripe.paymentIntents.retrieve(
-        paymentIntentId,
-        { expand: ["latest_charge"] }
-      );
+      let paymentIntent;
+      try {
+        paymentIntent = await stripe.paymentIntents.retrieve(
+          paymentIntentId,
+          { expand: ["latest_charge"] }
+        );
+      } catch (stripeError: unknown) {
+        const msg = stripeError instanceof Error ? stripeError.message : "Stripe error";
+        await logServerError({
+          errorMessage: `Stripe retrieve failed (cohort) in getReceiptDataForAdminAction: ${msg}`,
+          stackTrace: stripeError instanceof Error ? stripeError.stack : undefined,
+          severity: "MEDIUM",
+        });
+        return {
+          success: false,
+          error: process.env.NODE_ENV === "development"
+            ? `Stripe: ${msg}`
+            : "Impossible de récupérer les détails du paiement. Vérifiez votre connexion.",
+        };
+      }
+
       const charge =
         typeof paymentIntent.latest_charge === "object" &&
         paymentIntent.latest_charge !== null
@@ -777,6 +876,11 @@ export async function getReceiptDataForAdminAction(
 
       const user = cohortEnrollment.user;
       const purchaseDate = cohortEnrollment.purchaseDate;
+      const dateObj = purchaseDate instanceof Date ? purchaseDate : new Date(purchaseDate);
+      const isValidDate = !Number.isNaN(dateObj.getTime());
+      const dateShort = isValidDate ? format(dateObj, "dd/MM/yyyy") : "—";
+      const dateLong = isValidDate ? format(dateObj, "d MMMM yyyy", { locale: fr }) : "—";
+
       const amount = paymentIntent.amount / 100;
 
       const data: ReceiptData = {
@@ -788,8 +892,8 @@ export async function getReceiptDataForAdminAction(
         userEmail: user.email,
         orderNumber: cohortEnrollment.orderNumber ?? null,
         paymentMethod,
-        dateShort: format(purchaseDate, "dd/MM/yyyy"),
-        dateLong: format(purchaseDate, "d MMMM yyyy", { locale: fr }),
+        dateShort,
+        dateLong,
         tps: null,
         tvq: null,
         tpsNumber: null,
@@ -806,14 +910,18 @@ export async function getReceiptDataForAdminAction(
       error: "Paiement introuvable",
     };
   } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
     await logServerError({
-      errorMessage: `Failed to get receipt data (admin): ${error instanceof Error ? error.message : "Unknown error"}`,
+      errorMessage: `Failed to get receipt data (admin): ${message}`,
       stackTrace: error instanceof Error ? error.stack : undefined,
       severity: "MEDIUM",
     });
+    const isDev = process.env.NODE_ENV === "development";
     return {
       success: false,
-      error: "Erreur lors de la récupération du reçu",
+      error: isDev
+        ? `Erreur lors de la récupération du reçu: ${message}`
+        : "Erreur lors de la récupération du reçu",
     };
   }
 }

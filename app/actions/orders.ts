@@ -88,11 +88,12 @@ export async function getOrdersAction(params: {
       },
     });
 
-    // Fetch Stripe payment intent status for each enrollment
+    // Fetch Stripe payment intent status and amount for each enrollment
     const ordersWithStatus = await Promise.all(
       enrollments.map(async (enrollment) => {
         let paymentStatus = "pending";
         let refunded = false;
+        let amountCharged: number | null = null;
 
         if (enrollment.paymentIntentId) {
           try {
@@ -100,6 +101,7 @@ export async function getOrdersAction(params: {
               enrollment.paymentIntentId
             );
             paymentStatus = paymentIntent.status;
+            amountCharged = paymentIntent.amount / 100;
 
             // Check for refunds
             const chargeId =
@@ -111,8 +113,14 @@ export async function getOrdersAction(params: {
               if (charge.amount_refunded > 0) refunded = true;
             }
           } catch (error) {
-            // Payment intent might not exist or be accessible
-            console.error("Error fetching payment intent:", error);
+            // Payment intent not accessible (e.g. live PI with test key on dev) – assume succeeded from our DB
+            paymentStatus = "succeeded";
+            refunded = false;
+            const coursePrice = Number(enrollment.course.price);
+            const discount = enrollment.couponUsage
+              ? Number(enrollment.couponUsage.discountAmount)
+              : 0;
+            amountCharged = Math.max(0, coursePrice - discount);
           }
         }
 
@@ -124,12 +132,19 @@ export async function getOrdersAction(params: {
           if (params.status === "failed" && paymentStatus !== "canceled" && paymentStatus !== "payment_failed") return null;
         }
 
+        const coursePriceNum = enrollment.course ? Number(enrollment.course.price) : 0;
+        const discountNum = enrollment.couponUsage
+          ? Number(enrollment.couponUsage.discountAmount)
+          : 0;
+        const netAmount =
+          amountCharged ?? Math.max(0, coursePriceNum - discountNum);
+
         return {
           ...enrollment,
           course: enrollment.course
             ? {
                 ...enrollment.course,
-                price: enrollment.course.price.toNumber(),
+                price: coursePriceNum,
               }
             : enrollment.course,
           couponUsage: enrollment.couponUsage
@@ -145,6 +160,8 @@ export async function getOrdersAction(params: {
             : enrollment.couponUsage,
           paymentStatus,
           refunded,
+          amountCharged: netAmount,
+          netAmount,
         };
       })
     );
