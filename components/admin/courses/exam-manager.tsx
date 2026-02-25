@@ -54,6 +54,7 @@ type Exam = {
     options: Record<string, string>;
     correctAnswer: string;
     order: number;
+    explanation?: string | null;
   }>;
 };
 
@@ -121,6 +122,7 @@ export function ExamManager({ courseId }: ExamManagerProps) {
     options: Record<string, string>;
     correctAnswer: string;
     order: number;
+    explanation?: string | null;
   } | null>(null);
   const [examFormState, setExamFormState] = useState({
     title: "",
@@ -136,6 +138,7 @@ export function ExamManager({ courseId }: ExamManagerProps) {
     optionC: "",
     optionD: "",
     correctAnswer: "A",
+    explanation: "",
   });
 
   const loadExams = async () => {
@@ -350,6 +353,7 @@ export function ExamManager({ courseId }: ExamManagerProps) {
         options,
         correctAnswer,
         order: nextOrder,
+        explanation: questionFormState.explanation?.trim() || null,
       });
 
       if (result.success) {
@@ -361,6 +365,7 @@ export function ExamManager({ courseId }: ExamManagerProps) {
           optionC: "",
           optionD: "",
           correctAnswer: "A",
+          explanation: "",
         });
         await loadExams();
         // Refresh selected exam
@@ -386,6 +391,7 @@ export function ExamManager({ courseId }: ExamManagerProps) {
     options: Record<string, string>;
     correctAnswer: string;
     order: number;
+    explanation?: string | null;
   }) => {
     setEditingQuestion(question);
     // Map options back to A, B, C, D format
@@ -406,6 +412,7 @@ export function ExamManager({ courseId }: ExamManagerProps) {
       optionC: optionValues[2] || "",
       optionD: optionValues[3] || "",
       correctAnswer: correctAnswerKey,
+      explanation: question.explanation ?? "",
     });
     setQuestionEditDialogOpen(true);
   };
@@ -447,6 +454,7 @@ export function ExamManager({ courseId }: ExamManagerProps) {
         question: questionFormState.question.trim(),
         options,
         correctAnswer,
+        explanation: questionFormState.explanation?.trim() || null,
       });
 
       if (result.success) {
@@ -1186,6 +1194,16 @@ export function ExamManager({ courseId }: ExamManagerProps) {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="space-y-2">
+                  <Label>Explication (optionnel)</Label>
+                  <Textarea
+                    value={questionFormState.explanation}
+                    onChange={(e) => setQuestionFormState({ ...questionFormState, explanation: e.target.value })}
+                    placeholder="Explication affichée à l'étudiant après avoir répondu..."
+                    rows={3}
+                    className="resize-y"
+                  />
+                </div>
                 <Button onClick={handleAddQuestion} className="w-full">
                   <Plus className="h-4 w-4 mr-2" />
                   Ajouter la question
@@ -1310,6 +1328,16 @@ export function ExamManager({ courseId }: ExamManagerProps) {
                 <option value="C">C</option>
                 <option value="D">D</option>
               </select>
+            </div>
+            <div className="space-y-2">
+              <Label>Explication (optionnel)</Label>
+              <Textarea
+                value={questionFormState.explanation}
+                onChange={(e) => setQuestionFormState({ ...questionFormState, explanation: e.target.value })}
+                placeholder="Explication affichée à l'étudiant après avoir répondu..."
+                rows={3}
+                className="resize-y"
+              />
             </div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setQuestionEditDialogOpen(false)}>

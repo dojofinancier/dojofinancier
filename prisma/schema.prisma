@@ -146,6 +146,7 @@ model Module {
   description          String?  @db.Text
   examWeight           Float?   @map("exam_weight") // Pondération à l'examen (e.g., 0.15 for 15%)
   detailedNotesPdfUrl  String?  @map("detailed_notes_pdf_url") // Admin-uploaded detailed notes PDF for this chapter
+  slideImages          Json?    @default("[]") @map("slide_images") // Array of image URLs for slide deck viewer
   createdAt            DateTime @default(now()) @map("created_at")
   updatedAt            DateTime @updatedAt @map("updated_at")
 

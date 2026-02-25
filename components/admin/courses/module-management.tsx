@@ -73,6 +73,8 @@ import {
   uploadModuleDetailedNotesPdfAction,
   removeModuleDetailedNotesPdfAction,
 } from "@/app/actions/course-notes-upload";
+import { updateModuleSlideImagesAction } from "@/app/actions/modules";
+import { Presentation } from "lucide-react";
 
 type FullContentItem = ContentItem & {
   video?: VideoModel | null;
@@ -531,6 +533,12 @@ function SortableModuleItem({
           initialUrl={(module as ModuleWithContent & { detailedNotesPdfUrl?: string | null }).detailedNotesPdfUrl ?? null}
           onRefresh={onRefresh}
         />
+        <ModuleSlideImagesRow
+          moduleId={module.id}
+          moduleTitle={module.title}
+          initialSlideImages={Array.isArray((module as any).slideImages) ? (module as any).slideImages : []}
+          onRefresh={onRefresh}
+        />
         <ModuleContentManager module={module} courseId={module.courseId} onRefresh={onRefresh} />
       </CardContent>
     </Card>
@@ -655,6 +663,95 @@ function ModuleDetailedNotesRow({
           </Button>
         </div>
       )}
+    </div>
+  );
+}
+
+interface ModuleSlideImagesRowProps {
+  moduleId: string;
+  moduleTitle: string;
+  initialSlideImages: string[];
+  onRefresh: () => void;
+}
+
+function ModuleSlideImagesRow({
+  moduleId,
+  moduleTitle,
+  initialSlideImages,
+  onRefresh,
+}: ModuleSlideImagesRowProps) {
+  const [slideText, setSlideText] = useState(initialSlideImages.join("\n"));
+  const [saving, setSaving] = useState(false);
+  const [dirty, setDirty] = useState(false);
+
+  useEffect(() => {
+    setSlideText(initialSlideImages.join("\n"));
+    setDirty(false);
+  }, [initialSlideImages]);
+
+  const handleChange = (value: string) => {
+    setSlideText(value);
+    setDirty(true);
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const urls = slideText
+        .split(/[\n,]/)
+        .map((url) => url.trim())
+        .filter((url) => url.length > 0);
+      const result = await updateModuleSlideImagesAction(moduleId, urls);
+      if (result.success) {
+        toast.success("Diapositives mises à jour");
+        setDirty(false);
+        onRefresh();
+      } else {
+        toast.error(result.error || "Erreur lors de la sauvegarde");
+      }
+    } catch {
+      toast.error("Erreur lors de la sauvegarde");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const imageCount = slideText
+    .split(/[\n,]/)
+    .map((url) => url.trim())
+    .filter((url) => url.length > 0).length;
+
+  return (
+    <div className="rounded-lg border p-3 bg-muted/40">
+      <div className="flex items-center gap-2 mb-2">
+        <Presentation className="h-4 w-4 text-muted-foreground" />
+        <span className="text-sm font-medium">Diapositives (Diapos) – {moduleTitle}</span>
+        {imageCount > 0 && (
+          <Badge variant="secondary" className="text-xs">{imageCount} diapo{imageCount > 1 ? "s" : ""}</Badge>
+        )}
+      </div>
+      <Textarea
+        value={slideText}
+        onChange={(e) => handleChange(e.target.value)}
+        placeholder={"https://example.com/slide1.png\nhttps://example.com/slide2.png"}
+        rows={3}
+        className="font-mono text-sm mb-2"
+      />
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-muted-foreground">
+          Une URL d'image par ligne. Formats supportés: PNG, JPG, WebP.
+        </p>
+        <Button
+          size="sm"
+          onClick={handleSave}
+          disabled={saving || !dirty}
+        >
+          {saving ? (
+            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+          ) : null}
+          Sauvegarder
+        </Button>
+      </div>
     </div>
   );
 }

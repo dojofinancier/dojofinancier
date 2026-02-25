@@ -15,7 +15,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
-import { ChevronLeft, ChevronRight, StickyNote, Save } from "lucide-react";
+import { ChevronLeft, ChevronRight, StickyNote, Save, Presentation } from "lucide-react";
+import { SlideDeckViewer } from "./slide-deck-viewer";
 
 interface ModuleDetailPageProps {
   courseId: string;
@@ -25,6 +26,7 @@ interface ModuleDetailPageProps {
     videos?: boolean;
     quizzes?: boolean;
     notes?: boolean;
+    slides?: boolean;
     consolidatedNotesPdf?: boolean;
   } | null;
   /** Admin-uploaded consolidated notes PDF (for download link in Notes tab) */
@@ -72,9 +74,10 @@ type Quiz = {
 
 export function ModuleDetailPage({ courseId, moduleId, onBack, componentVisibility, consolidatedNotesPdfUrl }: ModuleDetailPageProps) {
   // Get component visibility settings (default to enabled if not set)
-  const videosEnabled = componentVisibility?.videos !== false; // Default to true if not set
-  const quizzesEnabled = componentVisibility?.quizzes !== false; // Default to true if not set
-  const notesEnabled = componentVisibility?.notes !== false; // Default to true if not set
+  const videosEnabled = componentVisibility?.videos !== false;
+  const quizzesEnabled = componentVisibility?.quizzes !== false;
+  const notesEnabled = componentVisibility?.notes !== false;
+  const slidesEnabled = componentVisibility?.slides === true; // Default to false
   const showConsolidatedNotesDownload = !!consolidatedNotesPdfUrl;
   
   const [loading, setLoading] = useState(true);
@@ -82,21 +85,22 @@ export function ModuleDetailPage({ courseId, moduleId, onBack, componentVisibili
   const [videos, setVideos] = useState<Video[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
+  const [slideImages, setSlideImages] = useState<string[]>([]);
   const [progress, setProgress] = useState<any>(null);
   
   const detailedNotesPdfUrl = module?.detailedNotesPdfUrl ?? null;
   const showDetailedNotesDownload = !!detailedNotesPdfUrl;
   
   // Determine initial tab based on what's enabled and available
-  const getInitialTab = (): "videos" | "notes" | "quiz" => {
-    // Only show videos tab if enabled AND there are videos
+  const getInitialTab = (): "videos" | "notes" | "quiz" | "slides" => {
     if (videosEnabled && videos.length > 0) return "videos";
     if (notesEnabled) return "notes";
+    if (slidesEnabled && slideImages.length > 0) return "slides";
     if (quizzesEnabled) return "quiz";
-    return "notes"; // Fallback
+    return "notes";
   };
   
-  const [activeTab, setActiveTab] = useState<"videos" | "notes" | "quiz">(getInitialTab());
+  const [activeTab, setActiveTab] = useState<"videos" | "notes" | "quiz" | "slides">(getInitialTab());
   const [quizAnswers, setQuizAnswers] = useState<Record<string, Record<string, string>>>({});
   const [quizSubmitted, setQuizSubmitted] = useState<Record<string, boolean>>({});
   const [submittingQuiz, setSubmittingQuiz] = useState<string | null>(null);
@@ -122,7 +126,7 @@ export function ModuleDetailPage({ courseId, moduleId, onBack, componentVisibili
     // Check URL parameters for tab
     const params = new URLSearchParams(window.location.search);
     const tab = params.get('tab');
-    if (tab === 'videos' || tab === 'notes' || tab === 'quiz') {
+    if (tab === 'videos' || tab === 'notes' || tab === 'quiz' || tab === 'slides') {
       setActiveTab(tab);
     }
   }, [moduleId]);
@@ -134,17 +138,22 @@ export function ModuleDetailPage({ courseId, moduleId, onBack, componentVisibili
     }
   }, [quizzes]);
 
-  // Update active tab if videos tab is selected but there are no videos
+  // Update active tab if the selected tab is no longer available
   useEffect(() => {
-    if (activeTab === "videos" && (!videosEnabled || videos.length === 0)) {
-      // Switch to first available tab
-      if (notesEnabled) {
-        setActiveTab("notes");
-      } else if (quizzesEnabled) {
-        setActiveTab("quiz");
-      }
+    const tabAvailable =
+      (activeTab === "videos" && videosEnabled && videos.length > 0) ||
+      (activeTab === "notes" && notesEnabled) ||
+      (activeTab === "slides" && slidesEnabled && slideImages.length > 0) ||
+      (activeTab === "quiz" && quizzesEnabled);
+
+    if (!tabAvailable) {
+      if (videosEnabled && videos.length > 0) setActiveTab("videos");
+      else if (notesEnabled) setActiveTab("notes");
+      else if (slidesEnabled && slideImages.length > 0) setActiveTab("slides");
+      else if (quizzesEnabled) setActiveTab("quiz");
+      else setActiveTab("notes");
     }
-  }, [activeTab, videosEnabled, videos.length, notesEnabled, quizzesEnabled]);
+  }, [activeTab, videosEnabled, videos.length, notesEnabled, quizzesEnabled, slidesEnabled, slideImages.length]);
 
   const loadStudentNote = async () => {
     try {
@@ -187,6 +196,7 @@ export function ModuleDetailPage({ courseId, moduleId, onBack, componentVisibili
         setVideos(result.data.videos);
         setNotes(result.data.notes);
         setQuizzes(result.data.quizzes);
+        setSlideImages(result.data.slideImages || []);
         setProgress(result.data.progress);
       } else {
         toast.error(result.error || "Erreur lors du chargement du module");
@@ -492,7 +502,12 @@ export function ModuleDetailPage({ courseId, moduleId, onBack, componentVisibili
 
       {/* Content Tabs */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-        <TabsList className={`grid w-full ${videosEnabled && videos.length > 0 && quizzesEnabled && notesEnabled ? 'grid-cols-3' : videosEnabled && videos.length > 0 && quizzesEnabled ? 'grid-cols-2' : videosEnabled && videos.length > 0 && notesEnabled ? 'grid-cols-2' : quizzesEnabled && notesEnabled ? 'grid-cols-2' : 'grid-cols-1'}`}>
+        <TabsList className={`grid w-full ${
+          (() => {
+            const count = [videosEnabled && videos.length > 0, notesEnabled, slidesEnabled && slideImages.length > 0, quizzesEnabled].filter(Boolean).length;
+            return count === 4 ? 'grid-cols-4' : count === 3 ? 'grid-cols-3' : count === 2 ? 'grid-cols-2' : 'grid-cols-1';
+          })()
+        }`}>
           {videosEnabled && videos.length > 0 && (
             <TabsTrigger value="videos">
               <VideoIcon className="h-4 w-4 mr-2" />
@@ -503,6 +518,12 @@ export function ModuleDetailPage({ courseId, moduleId, onBack, componentVisibili
             <TabsTrigger value="notes">
               <FileText className="h-4 w-4 mr-2" />
               Notes du cours
+            </TabsTrigger>
+          )}
+          {slidesEnabled && slideImages.length > 0 && (
+            <TabsTrigger value="slides">
+              <Presentation className="h-4 w-4 mr-2" />
+              Diapos
             </TabsTrigger>
           )}
           {quizzesEnabled && (
@@ -628,6 +649,13 @@ export function ModuleDetailPage({ courseId, moduleId, onBack, componentVisibili
             </div>
           )}
         </TabsContent>
+
+        {/* Slides Tab */}
+        {slidesEnabled && slideImages.length > 0 && (
+          <TabsContent value="slides" className="mt-6">
+            <SlideDeckViewer slideImages={slideImages} />
+          </TabsContent>
+        )}
 
         {/* Quiz Tab */}
         <TabsContent value="quiz" className="mt-6">

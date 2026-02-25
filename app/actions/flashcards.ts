@@ -193,6 +193,33 @@ export async function updateFlashcardAction(
   }
 }
 
+export async function deleteMultipleFlashcardsAction(flashcardIds: string[]): Promise<FlashcardActionResult> {
+  try {
+    await requireAdmin();
+
+    if (flashcardIds.length === 0) {
+      return { success: false, error: "Aucune flashcard sélectionnée" };
+    }
+
+    const result = await prisma.flashcard.deleteMany({
+      where: { id: { in: flashcardIds } },
+    });
+
+    return { success: true, data: { count: result.count } };
+  } catch (error) {
+    await logServerError({
+      errorMessage: `Failed to delete multiple flashcards: ${error instanceof Error ? error.message : "Unknown error"}`,
+      stackTrace: error instanceof Error ? error.stack : undefined,
+      severity: "HIGH",
+    });
+
+    return {
+      success: false,
+      error: "Erreur lors de la suppression des flashcards",
+    };
+  }
+}
+
 export async function deleteFlashcardAction(flashcardId: string): Promise<FlashcardActionResult> {
   try {
     await requireAdmin();

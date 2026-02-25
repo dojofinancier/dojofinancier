@@ -39,6 +39,7 @@ const componentVisibilitySchema = z.object({
   caseStudies: z.boolean().default(false),
   notesPdfDownload: z.boolean().default(false),
   consolidatedNotesPdf: z.boolean().default(false),
+  slides: z.boolean().default(false),
 });
 
 // Form schema (keep inputs as strings for react-hook-form)
@@ -136,6 +137,7 @@ export function CourseForm({ courseId, initialData }: CourseFormProps) {
     caseStudies: initialData?.componentVisibility?.caseStudies ?? false,
     notesPdfDownload: initialData?.componentVisibility?.notesPdfDownload ?? false,
     consolidatedNotesPdf: initialData?.componentVisibility?.consolidatedNotesPdf ?? false,
+    slides: initialData?.componentVisibility?.slides ?? false,
   });
   const [productStats, setProductStats] = useState<Array<{ value: number; label: string }>>(
     Array.isArray((initialData as any)?.productStats) 
@@ -675,6 +677,18 @@ export function CourseForm({ courseId, initialData }: CourseFormProps) {
                 checked={componentVisibility.consolidatedNotesPdf}
                 onCheckedChange={(checked) =>
                   setComponentVisibility((prev) => ({ ...prev, consolidatedNotesPdf: checked }))
+                }
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="visibility-slides" className="cursor-pointer">
+                Diapositives (Diapos)
+              </Label>
+              <Switch
+                id="visibility-slides"
+                checked={componentVisibility.slides}
+                onCheckedChange={(checked) =>
+                  setComponentVisibility((prev) => ({ ...prev, slides: checked }))
                 }
               />
             </div>

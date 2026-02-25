@@ -19,6 +19,7 @@ const componentVisibilitySchema = z.object({
   caseStudies: z.boolean().default(false),
   notesPdfDownload: z.boolean().default(false),
   consolidatedNotesPdf: z.boolean().default(false),
+  slides: z.boolean().default(false),
 });
 
 const courseSchema = z.object({

@@ -16,12 +16,25 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   createFlashcardAction,
   deleteFlashcardAction,
+  deleteMultipleFlashcardsAction,
   getFlashcardsAction,
   updateFlashcardAction,
 } from "@/app/actions/flashcards";
 import { getModulesAction } from "@/app/actions/modules";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { Flashcard } from "@prisma/client";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { Loader2, Plus, Trash2, Edit } from "lucide-react";
 import { CSVUploadDialog } from "./csv-upload-dialog";
@@ -37,6 +50,8 @@ export function FlashcardManager({ courseId }: FlashcardManagerProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCard, setEditingCard] = useState<Flashcard | null>(null);
   const [formState, setFormState] = useState({ front: "", back: "", moduleId: "" as string | null });
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [deleting, setDeleting] = useState(false);
 
   const loadFlashcards = async () => {
     setLoading(true);
@@ -134,9 +149,51 @@ export function FlashcardManager({ courseId }: FlashcardManagerProps) {
     const result = await deleteFlashcardAction(cardId);
     if (result.success) {
       toast.success("Flashcard supprimée");
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(cardId);
+        return next;
+      });
       loadFlashcards();
     } else {
       toast.error(result.error || "Erreur lors de la suppression");
+    }
+  };
+
+  const toggleSelect = (cardId: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(cardId)) {
+        next.delete(cardId);
+      } else {
+        next.add(cardId);
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === flashcards.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(flashcards.map((c) => c.id)));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    setDeleting(true);
+    try {
+      const result = await deleteMultipleFlashcardsAction(Array.from(selectedIds));
+      if (result.success) {
+        toast.success(`${selectedIds.size} flashcard(s) supprimée(s)`);
+        setSelectedIds(new Set());
+        loadFlashcards();
+      } else {
+        toast.error(result.error || "Erreur lors de la suppression");
+      }
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -219,6 +276,57 @@ export function FlashcardManager({ courseId }: FlashcardManagerProps) {
         </div>
       </div>
 
+      {!loading && flashcards.length > 0 && (
+        <div className="flex items-center gap-3 rounded-lg border bg-muted/50 px-4 py-2">
+          <Checkbox
+            checked={selectedIds.size === flashcards.length && flashcards.length > 0}
+            onCheckedChange={toggleSelectAll}
+            aria-label="Tout sélectionner"
+          />
+          <button
+            type="button"
+            onClick={toggleSelectAll}
+            className="text-sm font-medium text-foreground hover:underline"
+          >
+            {selectedIds.size === flashcards.length ? "Tout désélectionner" : "Tout sélectionner"}
+          </button>
+          {selectedIds.size > 0 && (
+            <>
+              <span className="text-sm text-muted-foreground">
+                {selectedIds.size} sélectionnée(s)
+              </span>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" size="sm" disabled={deleting}>
+                    {deleting ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <Trash2 className="h-4 w-4 mr-2" />
+                    )}
+                    Supprimer la sélection
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Vous êtes sur le point de supprimer {selectedIds.size} flashcard(s).
+                      Cette action est irréversible.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Annuler</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleBulkDelete}>
+                      Supprimer
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </>
+          )}
+        </div>
+      )}
+
       {loading ? (
         <div className="flex items-center justify-center py-12 text-muted-foreground gap-2">
           <Loader2 className="h-5 w-5 animate-spin" />
@@ -233,13 +341,21 @@ export function FlashcardManager({ courseId }: FlashcardManagerProps) {
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {flashcards.map((card: Flashcard & { module?: { id: string; title: string } | null }) => (
-            <Card key={card.id}>
+            <Card key={card.id} className={selectedIds.has(card.id) ? "ring-2 ring-primary" : ""}>
               <CardHeader className="flex flex-row items-start justify-between space-y-0">
-                <div className="flex-1">
-                  <CardTitle className="text-base">Recto</CardTitle>
-                  {card.module && (
-                    <p className="text-xs text-muted-foreground mt-1">Module: {card.module.title}</p>
-                  )}
+                <div className="flex items-start gap-3 flex-1">
+                  <Checkbox
+                    checked={selectedIds.has(card.id)}
+                    onCheckedChange={() => toggleSelect(card.id)}
+                    className="mt-0.5"
+                    aria-label={`Sélectionner la flashcard: ${card.front.slice(0, 30)}`}
+                  />
+                  <div>
+                    <CardTitle className="text-base">Recto</CardTitle>
+                    {card.module && (
+                      <p className="text-xs text-muted-foreground mt-1">Module: {card.module.title}</p>
+                    )}
+                  </div>
                 </div>
                 <div className="flex gap-2">
                   <Button variant="ghost" size="icon" onClick={() => openEditDialog(card)}>
