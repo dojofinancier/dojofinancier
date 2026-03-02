@@ -5,6 +5,55 @@ import { requireAuth } from "@/lib/auth/require-auth";
 import { logServerError } from "@/lib/utils/error-logging";
 import { z } from "zod";
 
+/** Robust answer resolution - handles option1, A, option 1, etc. Same logic as quizzes.ts */
+function getOrderedOptionKeys(options: Record<string, string>) {
+  const optionKeys = Object.keys(options || {});
+  return optionKeys.slice().sort((a, b) => {
+    const aNum = Number.parseInt(a.replace(/\D/g, ""), 10);
+    const bNum = Number.parseInt(b.replace(/\D/g, ""), 10);
+    if (!Number.isNaN(aNum) && !Number.isNaN(bNum) && aNum !== bNum) return aNum - bNum;
+    return a.localeCompare(b);
+  });
+}
+
+function resolveAnswerIndex(answer: string | undefined, options: Record<string, string>): number | null {
+  if (!answer) return null;
+  const trimmed = answer.trim();
+  if (!trimmed) return null;
+
+  const lower = trimmed.toLowerCase();
+  const orderedKeys = getOrderedOptionKeys(options);
+
+  const directKey = orderedKeys.find((key) => key.toLowerCase() === lower);
+  if (directKey) return orderedKeys.indexOf(directKey);
+
+  const valueMatchKey = orderedKeys.find((key) => {
+    const value = options[key];
+    return value && value.trim().toLowerCase() === lower;
+  });
+  if (valueMatchKey) return orderedKeys.indexOf(valueMatchKey);
+
+  const letterMatch = lower.match(/^([a-d])\s*[\).:\-]?/);
+  if (letterMatch) {
+    const idx = ["a", "b", "c", "d"].indexOf(letterMatch[1]);
+    if (idx >= 0 && idx < orderedKeys.length) return idx;
+  }
+
+  const numberMatch = lower.match(/^([1-4])\s*[\).:\-]?/);
+  if (numberMatch) {
+    const idx = Number.parseInt(numberMatch[1], 10) - 1;
+    if (idx >= 0 && idx < orderedKeys.length) return idx;
+  }
+
+  const optionMatch = lower.match(/^option\s*([1-9]\d*)/);
+  if (optionMatch) {
+    const idx = Number.parseInt(optionMatch[1], 10) - 1;
+    if (idx >= 0 && idx < orderedKeys.length) return idx;
+  }
+
+  return null;
+}
+
 export type ExamTakingResult = {
   success: boolean;
   error?: string;
@@ -278,27 +327,29 @@ export async function submitExamAction(
       };
     }
 
-    // Calculate score
+    // Calculate score using robust answer resolution (handles option1, A, option 1, etc.)
     let correctAnswers = 0;
     const totalQuestions = exam.questions.length;
 
     exam.questions.forEach((question) => {
       const userAnswer = answers[question.id];
-      if (userAnswer) {
-        // For MCQ, compare with correctAnswer
-        if (question.type === "MULTIPLE_CHOICE") {
-          // Handle both "option1" format and direct answer format
-          const normalizedUserAnswer = userAnswer.trim().toLowerCase();
-          const normalizedCorrectAnswer = question.correctAnswer.trim().toLowerCase();
-          
-          if (normalizedUserAnswer === normalizedCorrectAnswer) {
-            correctAnswers++;
-          }
-        } else {
-          // For other types, direct comparison
-          if (userAnswer.trim().toLowerCase() === question.correctAnswer.trim().toLowerCase()) {
-            correctAnswers++;
-          }
+      const correctAnswer = question.correctAnswer;
+      if (!correctAnswer || typeof correctAnswer !== "string" || !correctAnswer.trim()) {
+        return; // Skip questions with invalid correctAnswer to avoid errors
+      }
+      if (!userAnswer) return;
+
+      if (question.type === "MULTIPLE_CHOICE") {
+        const options = (question.options as Record<string, string>) || {};
+        const userIndex = resolveAnswerIndex(userAnswer, options);
+        const correctIndex = resolveAnswerIndex(correctAnswer, options);
+        if (userIndex !== null && correctIndex !== null && userIndex === correctIndex) {
+          correctAnswers++;
+        }
+      } else {
+        // For other types, direct comparison
+        if (userAnswer.trim().toLowerCase() === correctAnswer.trim().toLowerCase()) {
+          correctAnswers++;
         }
       }
     });

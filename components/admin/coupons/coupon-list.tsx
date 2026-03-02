@@ -388,7 +388,12 @@ function CouponStatsDialog({ couponId, open, onOpenChange }: CouponStatsDialogPr
                           <TableCell>{usage.enrollment.course.title}</TableCell>
                           <TableCell>${Number(usage.discountAmount).toFixed(2)}</TableCell>
                           <TableCell>
-                            {format(new Date(usage.createdAt), "d MMM yyyy, HH:mm", { locale: fr })}
+                            {(() => {
+                              const date = usage.usedAt ?? usage.createdAt;
+                              if (!date) return "—";
+                              const d = new Date(date);
+                              return isNaN(d.getTime()) ? "—" : format(d, "d MMM yyyy, HH:mm", { locale: fr });
+                            })()}
                           </TableCell>
                         </TableRow>
                       ))}

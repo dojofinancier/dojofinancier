@@ -472,18 +472,25 @@ export async function getCouponUsageStatsAction(couponId: string) {
       0
     );
 
-    // Convert Decimal to number for Client Components
+    // Convert Decimal to number and serialize all couponUsage for Client Components (Decimal is not serializable)
+    const couponUsageSerialized = coupon.couponUsage.map((usage) => ({
+      ...usage,
+      discountAmount: Number(usage.discountAmount),
+      usedAt: usage.usedAt instanceof Date ? usage.usedAt.toISOString() : usage.usedAt,
+    }));
+
     return {
       success: true,
       data: {
         coupon: {
           ...coupon,
           discountValue: Number(coupon.discountValue),
+          couponUsage: couponUsageSerialized,
         },
         totalUsage: coupon.couponUsage.length,
         totalDiscount,
-        averageDiscount: coupon.couponUsage.length > 0 
-          ? totalDiscount / coupon.couponUsage.length 
+        averageDiscount: coupon.couponUsage.length > 0
+          ? totalDiscount / coupon.couponUsage.length
           : 0,
       },
     };

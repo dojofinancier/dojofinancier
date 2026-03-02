@@ -281,11 +281,13 @@ export function ExamPlayer({ examId, onExit }: ExamPlayerProps) {
 
     setSubmitting(true);
     try {
+      // Use answersRef to ensure we have the latest answers (avoids stale closure when time runs out)
+      const answersToSubmit = answersRef.current ?? answers;
       const timeSpent = exam?.timeLimit
-        ? exam.timeLimit - (timeRemaining || 0)
+        ? exam.timeLimit - (timeRemainingRef.current ?? timeRemaining ?? 0)
         : 0;
 
-      const result = await submitExamAction(examId, answers, timeSpent);
+      const result = await submitExamAction(examId, answersToSubmit, timeSpent);
 
       if (result.success && result.data) {
         setSubmitted(true);
