@@ -10,6 +10,9 @@
  * Optional: set DRY_RUN=1 to only log what would be done.
  */
 
+// Load .env first (before stripe init) - dotenv/config runs on import
+import "dotenv/config";
+
 import { prisma } from "../lib/prisma";
 import { stripe } from "../lib/stripe/server";
 import { trackCouponUsageAction } from "../app/actions/coupons";

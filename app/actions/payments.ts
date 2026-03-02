@@ -3,7 +3,7 @@
 import { stripe } from "@/lib/stripe/server";
 import { requireAuth, requireAdmin } from "@/lib/auth/require-auth";
 import { prisma } from "@/lib/prisma";
-import { validateCouponAction, applyCouponDiscountAction } from "@/app/actions/coupons";
+import { validateCouponAction, applyCouponDiscountAction, trackCouponUsageAction } from "@/app/actions/coupons";
 import { logServerError } from "@/lib/utils/error-logging";
 import { createEnrollmentAction } from "@/app/actions/enrollments";
 import { sendPaymentSuccessWebhook } from "@/lib/webhooks/make";
@@ -1111,6 +1111,25 @@ export async function createEnrollmentFromPaymentIntentAction(
           success: false,
           error: enrollmentResult.error || "Erreur lors de la création de l'inscription",
         };
+      }
+
+      // Track coupon usage when frontend creates enrollment (webhook may run later or fail - ensures we never miss it)
+      const { couponId, discountAmount } = paymentIntent.metadata || {};
+      if (couponId && discountAmount && enrollmentResult.data) {
+        try {
+          await trackCouponUsageAction(
+            couponId,
+            enrollmentResult.data.id,
+            parseFloat(typeof discountAmount === "string" ? discountAmount : String(discountAmount))
+          );
+        } catch (err) {
+          // "Already used" or duplicate is fine (webhook may have run first); log other errors
+          await logServerError({
+            errorMessage: `Failed to track coupon usage from payment intent fallback: ${err instanceof Error ? err.message : "Unknown"}`,
+            stackTrace: err instanceof Error ? err.stack : undefined,
+            severity: "MEDIUM",
+          });
+        }
       }
 
       // Send webhook as fallback if webhook handler hasn't fired yet
