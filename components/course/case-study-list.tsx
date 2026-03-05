@@ -4,16 +4,25 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Play, CheckCircle2, Target } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { FileText, Play, Clock, Infinity, Target } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { getCaseStudiesAction, getCaseStudyAttemptsAction } from "@/app/actions/case-studies";
 
+const CASE_STUDY_TIME_LIMIT_SECONDS = 28 * 60; // 28 minutes
+
 interface CaseStudyListProps {
   courseId: string;
-  onStartCaseStudy: (caseStudyId: string) => void;
+  onStartCaseStudy: (caseStudyId: string, timeLimit: number | null) => void;
 }
 
 type CaseStudy = {
@@ -35,9 +44,14 @@ type CaseStudy = {
   attemptCount: number;
 };
 
+const TIMED_MODE_EXPLANATION =
+  "L'examen 2 comporte 65 questions et vous avez 3h pour répondre. Vous avez donc 2:46 par question. Faites ce cas de 10 questions en 28 minutes ou moins pour évaluer votre rapidité.";
+
 export function CaseStudyList({ courseId, onStartCaseStudy }: CaseStudyListProps) {
   const [caseStudies, setCaseStudies] = useState<CaseStudy[]>([]);
   const [loading, setLoading] = useState(true);
+  const [modeModalOpen, setModeModalOpen] = useState(false);
+  const [selectedCaseStudy, setSelectedCaseStudy] = useState<CaseStudy | null>(null);
 
   useEffect(() => {
     loadCaseStudies();
@@ -145,7 +159,13 @@ export function CaseStudyList({ courseId, onStartCaseStudy }: CaseStudyListProps
                   </div>
                 )}
               </div>
-              <Button className="w-full sm:w-auto" onClick={() => onStartCaseStudy(caseStudy.id)}>
+              <Button
+                className="w-full sm:w-auto"
+                onClick={() => {
+                  setSelectedCaseStudy(caseStudy);
+                  setModeModalOpen(true);
+                }}
+              >
                 <Play className="h-4 w-4 mr-2" />
                 {caseStudy.latestAttempt ? "Reprendre" : "Commencer"}
               </Button>
@@ -154,6 +174,58 @@ export function CaseStudyList({ courseId, onStartCaseStudy }: CaseStudyListProps
           </CardHeader>
         </Card>
       ))}
+
+      {/* Timer mode selection modal */}
+      <Dialog open={modeModalOpen} onOpenChange={setModeModalOpen}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Choisir le mode</DialogTitle>
+            <DialogDescription className="break-words">
+              {selectedCaseStudy?.title}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-4">
+            <button
+              type="button"
+              className="w-full flex items-start gap-3 rounded-md border border-input bg-background px-4 py-4 text-left transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              onClick={() => {
+                if (selectedCaseStudy) {
+                  onStartCaseStudy(selectedCaseStudy.id, null);
+                  setModeModalOpen(false);
+                  setSelectedCaseStudy(null);
+                }
+              }}
+            >
+              <Infinity className="h-5 w-5 shrink-0 mt-0.5" />
+              <div className="min-w-0 flex-1">
+                <div className="font-medium">Aucune limite</div>
+                <div className="text-sm text-muted-foreground font-normal">
+                  Répondez à votre rythme, sans contrainte de temps
+                </div>
+              </div>
+            </button>
+            <button
+              type="button"
+              className="w-full flex items-start gap-3 rounded-md border border-input bg-background px-4 py-4 text-left transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              onClick={() => {
+                if (selectedCaseStudy) {
+                  onStartCaseStudy(selectedCaseStudy.id, CASE_STUDY_TIME_LIMIT_SECONDS);
+                  setModeModalOpen(false);
+                  setSelectedCaseStudy(null);
+                }
+              }}
+            >
+              <Clock className="h-5 w-5 shrink-0 mt-0.5" />
+              <div className="min-w-0 flex-1">
+                <div className="font-medium">Limite de temps (28 min)</div>
+                <div className="text-sm text-muted-foreground font-normal mt-1">
+                  {TIMED_MODE_EXPLANATION}
+                </div>
+              </div>
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

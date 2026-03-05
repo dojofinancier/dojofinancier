@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { Loader2, ChevronLeft, ChevronRight, CheckCircle2, ExternalLink, X } from "lucide-react";
+import { Loader2, ChevronLeft, ChevronRight, CheckCircle2, ExternalLink, X, Clock } from "lucide-react";
 import {
   getCaseStudyAction,
   submitCaseStudyAction,
@@ -25,8 +25,11 @@ import {
 import { CaseStudyResults } from "./case-study-results";
 import { marked } from "marked";
 
+const STORAGE_KEY_PREFIX = "casestudy_";
+
 interface CaseStudyPlayerProps {
   caseStudyId: string;
+  timeLimit?: number | null; // seconds, null = no timer
   onExit: () => void;
 }
 
@@ -72,10 +75,11 @@ function normalizeQuestionOptions(value: unknown): Record<string, string> {
   return toRecord(value);
 }
 
-export function CaseStudyPlayer({ caseStudyId, onExit }: CaseStudyPlayerProps) {
+export function CaseStudyPlayer({ caseStudyId, timeLimit = null, onExit }: CaseStudyPlayerProps) {
   const [caseStudy, setCaseStudy] = useState<CaseStudy | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -83,9 +87,64 @@ export function CaseStudyPlayer({ caseStudyId, onExit }: CaseStudyPlayerProps) {
   const [showResults, setShowResults] = useState(false);
   const [narrativeModalOpen, setNarrativeModalOpen] = useState(false);
 
+  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const answersRef = useRef<Record<string, string>>({});
+  const timeRemainingRef = useRef<number | null>(null);
+  const currentQuestionIndexRef = useRef<number>(0);
+  const handleTimeUpRef = useRef<() => Promise<void>>(() => Promise.resolve());
+
+  const storageKey = `${STORAGE_KEY_PREFIX}${caseStudyId}_${timeLimit ?? "none"}`;
+
+  useEffect(() => {
+    answersRef.current = answers;
+  }, [answers]);
+  useEffect(() => {
+    timeRemainingRef.current = timeRemaining;
+  }, [timeRemaining]);
+  useEffect(() => {
+    currentQuestionIndexRef.current = currentQuestionIndex;
+  }, [currentQuestionIndex]);
+
   useEffect(() => {
     loadCaseStudy();
-  }, [caseStudyId]);
+    return () => {
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+    };
+  }, [caseStudyId, timeLimit]);
+
+  const formatTime = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+    }
+    return `${minutes}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  const startTimer = (initialTime: number) => {
+    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+    timerIntervalRef.current = setInterval(() => {
+      setTimeRemaining((prev) => {
+        if (prev === null || prev <= 0) {
+          if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+          handleTimeUpRef.current();
+          return 0;
+        }
+        const newTime = prev - 1;
+        timeRemainingRef.current = newTime;
+        localStorage.setItem(
+          storageKey,
+          JSON.stringify({
+            answers: answersRef.current,
+            timeRemaining: newTime,
+            currentQuestionIndex: currentQuestionIndexRef.current,
+          })
+        );
+        return newTime;
+      });
+    }, 1000);
+  };
 
   const loadCaseStudy = async () => {
     try {
@@ -93,13 +152,56 @@ export function CaseStudyPlayer({ caseStudyId, onExit }: CaseStudyPlayerProps) {
       const result = await getCaseStudyAction(caseStudyId);
       if (result.success && result.data) {
         const data = result.data as any;
-        setCaseStudy({
+        const normalizedCaseStudy = {
           ...data,
           questions: data.questions.map((q: any) => ({
             ...q,
             options: normalizeQuestionOptions(q.options),
           })),
-        });
+        };
+        setCaseStudy(normalizedCaseStudy);
+
+        let restoredAnswers: Record<string, string> = {};
+        let restoredTimeRemaining: number | null = null;
+        let restoredQuestionIndex = 0;
+
+        if (timeLimit) {
+          const savedState = localStorage.getItem(storageKey);
+          if (savedState) {
+            try {
+              const parsed = JSON.parse(savedState);
+              restoredAnswers = parsed.answers || {};
+              restoredTimeRemaining = parsed.timeRemaining ?? null;
+              restoredQuestionIndex = parsed.currentQuestionIndex ?? 0;
+            } catch (e) {
+              console.error("Error parsing saved case study state:", e);
+            }
+          }
+
+          const savedStartTime = localStorage.getItem(`${storageKey}_startTime`);
+          const now = Date.now();
+
+          if (savedStartTime && restoredTimeRemaining !== null && restoredTimeRemaining > 0) {
+            const elapsed = Math.floor((now - parseInt(savedStartTime)) / 1000);
+            const remaining = Math.max(0, restoredTimeRemaining - elapsed);
+            setTimeRemaining(remaining);
+            timeRemainingRef.current = remaining;
+            setAnswers(restoredAnswers);
+            answersRef.current = restoredAnswers;
+            const validIndex = Math.max(
+              0,
+              Math.min(restoredQuestionIndex, normalizedCaseStudy.questions.length - 1)
+            );
+            setCurrentQuestionIndex(validIndex);
+            currentQuestionIndexRef.current = validIndex;
+            startTimer(remaining);
+          } else {
+            setTimeRemaining(timeLimit);
+            timeRemainingRef.current = timeLimit;
+            localStorage.setItem(`${storageKey}_startTime`, now.toString());
+            startTimer(timeLimit);
+          }
+        }
       } else {
         toast.error(result.error || "Erreur lors du chargement de l'étude de cas");
         onExit();
@@ -114,15 +216,27 @@ export function CaseStudyPlayer({ caseStudyId, onExit }: CaseStudyPlayerProps) {
   };
 
   const handleAnswerChange = (questionId: string, answer: string) => {
-    setAnswers((prev) => ({
-      ...prev,
-      [questionId]: answer,
-    }));
+    const newAnswers = { ...answers, [questionId]: answer };
+    setAnswers(newAnswers);
+    answersRef.current = newAnswers;
+    if (timeLimit) {
+      localStorage.setItem(
+        storageKey,
+        JSON.stringify({
+          answers: newAnswers,
+          timeRemaining: timeRemainingRef.current,
+          currentQuestionIndex: currentQuestionIndexRef.current,
+        })
+      );
+    }
   };
 
-  const handleSubmit = async () => {
-    if (caseStudy && caseStudy.questions.length > 0) {
-      const answeredCount = Object.keys(answers).length;
+  const handleSubmit = async (isTimeUp: boolean = false) => {
+    if (submitting || submitted) return;
+
+    if (caseStudy && caseStudy.questions.length > 0 && !isTimeUp) {
+      const answersToCheck = answersRef.current ?? answers;
+      const answeredCount = Object.keys(answersToCheck).length;
       if (answeredCount < caseStudy.questions.length) {
         const confirmSubmit = confirm(
           `Vous avez répondu à ${answeredCount} sur ${caseStudy.questions.length} questions. Voulez-vous vraiment soumettre ?`
@@ -133,11 +247,24 @@ export function CaseStudyPlayer({ caseStudyId, onExit }: CaseStudyPlayerProps) {
 
     setSubmitting(true);
     try {
-      const result = await submitCaseStudyAction(caseStudyId, answers);
+      const answersToSubmit = answersRef.current ?? answers;
+      const result = await submitCaseStudyAction(caseStudyId, answersToSubmit);
       if (result.success && result.data) {
         setResult(result.data);
         setSubmitted(true);
         setShowResults(true);
+
+        if (timeLimit) {
+          localStorage.removeItem(storageKey);
+          localStorage.removeItem(`${storageKey}_startTime`);
+        }
+        if (timerIntervalRef.current) {
+          clearInterval(timerIntervalRef.current);
+        }
+
+        if (!isTimeUp) {
+          toast.success("Étude de cas soumise avec succès !");
+        }
       } else {
         toast.error(result.error || "Erreur lors de la soumission");
       }
@@ -149,15 +276,42 @@ export function CaseStudyPlayer({ caseStudyId, onExit }: CaseStudyPlayerProps) {
     }
   };
 
+  useEffect(() => {
+    handleTimeUpRef.current = async () => {
+      if (submitted || submitting) return;
+      toast.warning("Le temps est écoulé. L'étude de cas est en cours de soumission...");
+      await handleSubmit(true);
+    };
+  });
+
+  const saveProgressToStorage = () => {
+    if (timeLimit) {
+      localStorage.setItem(
+        storageKey,
+        JSON.stringify({
+          answers: answersRef.current,
+          timeRemaining: timeRemainingRef.current,
+          currentQuestionIndex: currentQuestionIndexRef.current,
+        })
+      );
+    }
+  };
+
   const handleNext = () => {
     if (caseStudy && currentQuestionIndex < caseStudy.questions.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
+      const newIndex = currentQuestionIndex + 1;
+      setCurrentQuestionIndex(newIndex);
+      currentQuestionIndexRef.current = newIndex;
+      saveProgressToStorage();
     }
   };
 
   const handlePrevious = () => {
     if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(currentQuestionIndex - 1);
+      const newIndex = currentQuestionIndex - 1;
+      setCurrentQuestionIndex(newIndex);
+      currentQuestionIndexRef.current = newIndex;
+      saveProgressToStorage();
     }
   };
 
@@ -239,6 +393,10 @@ export function CaseStudyPlayer({ caseStudyId, onExit }: CaseStudyPlayerProps) {
         }}
         caseStudy={caseStudy}
         onRetake={() => {
+          if (timeLimit) {
+            localStorage.removeItem(storageKey);
+            localStorage.removeItem(`${storageKey}_startTime`);
+          }
           setSubmitted(false);
           setShowResults(false);
           setResult(null);
@@ -250,7 +408,29 @@ export function CaseStudyPlayer({ caseStudyId, onExit }: CaseStudyPlayerProps) {
     );
   }
 
+  if (!caseStudy.questions?.length) {
+    return (
+      <div className="py-12 text-center">
+        <p className="text-muted-foreground">Cette étude de cas n'a pas de questions.</p>
+        <Button className="mt-4" variant="outline" onClick={onExit}>
+          Retour
+        </Button>
+      </div>
+    );
+  }
+
   const currentQuestion = caseStudy.questions[currentQuestionIndex];
+  if (!currentQuestion) {
+    return (
+      <div className="py-12 text-center">
+        <p className="text-muted-foreground">Question introuvable.</p>
+        <Button className="mt-4" variant="outline" onClick={onExit}>
+          Retour
+        </Button>
+      </div>
+    );
+  }
+
   const progress = ((currentQuestionIndex + 1) / caseStudy.questions.length) * 100;
   const answeredCount = Object.keys(answers).length;
 
@@ -263,10 +443,25 @@ export function CaseStudyPlayer({ caseStudyId, onExit }: CaseStudyPlayerProps) {
             <p className="text-sm text-muted-foreground mt-1">{caseStudy.theme}</p>
           )}
         </div>
-        <Button className="w-full sm:w-auto" variant="outline" onClick={onExit}>
-          <X className="h-4 w-4 mr-2" />
-          Quitter
-        </Button>
+        <div className="flex items-center gap-3">
+          {timeLimit && timeRemaining !== null && (
+            <div className="text-right">
+              <div className="text-sm text-muted-foreground">Temps restant</div>
+              <div
+                className={`text-lg font-semibold flex items-center gap-2 ${
+                  timeRemaining < 300 ? "text-red-600" : ""
+                }`}
+              >
+                <Clock className="h-4 w-4" />
+                {formatTime(timeRemaining)}
+              </div>
+            </div>
+          )}
+          <Button className="w-full sm:w-auto" variant="outline" onClick={onExit}>
+            <X className="h-4 w-4 mr-2" />
+            Quitter
+          </Button>
+        </div>
       </div>
 
 
@@ -383,7 +578,11 @@ export function CaseStudyPlayer({ caseStudyId, onExit }: CaseStudyPlayerProps) {
                       variant={answers[q.id] ? "default" : "outline"}
                       size="sm"
                       className="h-9 w-9 p-0"
-                      onClick={() => setCurrentQuestionIndex(idx)}
+                      onClick={() => {
+                        setCurrentQuestionIndex(idx);
+                        currentQuestionIndexRef.current = idx;
+                        saveProgressToStorage();
+                      }}
                     >
                       {idx + 1}
                     </Button>

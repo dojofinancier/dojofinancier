@@ -86,10 +86,8 @@ export async function importCaseStudyAction(
     }
 
     // Check if case study already exists for this course
-    const existing = await prisma.caseStudy.findUnique({
-      where: {
-        courseId_caseId: { courseId, caseId },
-      },
+    const existing = await prisma.caseStudy.findFirst({
+      where: { courseId, caseId },
     });
 
     if (existing) {

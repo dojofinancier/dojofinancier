@@ -23,6 +23,7 @@ export function Phase3Practice({ courseId, course, settings }: Phase3PracticePro
   const [activeTab, setActiveTab] = useState<"exams" | "questions" | "case-studies">("exams");
   const [selectedExamId, setSelectedExamId] = useState<string | null>(null);
   const [selectedCaseStudyId, setSelectedCaseStudyId] = useState<string | null>(null);
+  const [selectedCaseStudyTimeLimit, setSelectedCaseStudyTimeLimit] = useState<number | null>(null);
   const [canAccess, setCanAccess] = useState<boolean | null>(null);
   const [gateMessage, setGateMessage] = useState<string | null>(null);
   const [unlearnedModules, setUnlearnedModules] = useState<Array<{ id: string; title: string; order: number }>>([]);
@@ -58,8 +59,10 @@ export function Phase3Practice({ courseId, course, settings }: Phase3PracticePro
     return (
       <CaseStudyPlayer
         caseStudyId={selectedCaseStudyId}
+        timeLimit={selectedCaseStudyTimeLimit}
         onExit={() => {
           setSelectedCaseStudyId(null);
+          setSelectedCaseStudyTimeLimit(null);
         }}
       />
     );
@@ -153,7 +156,13 @@ export function Phase3Practice({ courseId, course, settings }: Phase3PracticePro
             </TabsContent>
             {caseStudiesEnabled && (
               <TabsContent value="case-studies" className="mt-6">
-                <CaseStudyList courseId={courseId} onStartCaseStudy={setSelectedCaseStudyId} />
+                <CaseStudyList
+                  courseId={courseId}
+                  onStartCaseStudy={(id, limit) => {
+                    setSelectedCaseStudyId(id);
+                    setSelectedCaseStudyTimeLimit(limit);
+                  }}
+                />
               </TabsContent>
             )}
           </Tabs>

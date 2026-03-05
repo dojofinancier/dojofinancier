@@ -165,6 +165,7 @@ export function CohortLearningInterface({
   const [selectedTool, setSelectedTool] = useState<string | null>(null);
   const [selectedExamId, setSelectedExamId] = useState<string | null>(null);
   const [selectedCaseStudyId, setSelectedCaseStudyId] = useState<string | null>(null);
+  const [selectedCaseStudyTimeLimit, setSelectedCaseStudyTimeLimit] = useState<number | null>(null);
   const [unreadMessageCount, setUnreadMessageCount] = useState(0);
 
   // Load unread message count
@@ -274,12 +275,14 @@ export function CohortLearningInterface({
     setSelectedExamId(null);
   };
 
-  const handleStartCaseStudy = (caseStudyId: string) => {
+  const handleStartCaseStudy = (caseStudyId: string, timeLimit: number | null) => {
     setSelectedCaseStudyId(caseStudyId);
+    setSelectedCaseStudyTimeLimit(timeLimit);
   };
 
   const handleCaseStudyExit = () => {
     setSelectedCaseStudyId(null);
+    setSelectedCaseStudyTimeLimit(null);
   };
 
   return (
@@ -393,6 +396,7 @@ export function CohortLearningInterface({
                 <Suspense fallback={<PhaseSkeleton />}>
                   <CaseStudyPlayer
                     caseStudyId={selectedCaseStudyId}
+                    timeLimit={selectedCaseStudyTimeLimit}
                     onExit={handleCaseStudyExit}
                   />
                 </Suspense>

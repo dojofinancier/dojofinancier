@@ -9,17 +9,19 @@ import { ArrowLeft } from "lucide-react";
 interface CaseStudiesToolProps {
   courseId: string;
   onBack: () => void;
-  onStartCaseStudy?: (caseStudyId: string) => void;
+  onStartCaseStudy?: (caseStudyId: string, timeLimit: number | null) => void;
 }
 
 export function CaseStudiesTool({ courseId, onBack, onStartCaseStudy }: CaseStudiesToolProps) {
   const [selectedCaseStudyId, setSelectedCaseStudyId] = useState<string | null>(null);
+  const [selectedTimeLimit, setSelectedTimeLimit] = useState<number | null>(null);
 
-  const handleStartCaseStudy = (caseStudyId: string) => {
+  const handleStartCaseStudy = (caseStudyId: string, timeLimit: number | null) => {
     if (onStartCaseStudy) {
-      onStartCaseStudy(caseStudyId);
+      onStartCaseStudy(caseStudyId, timeLimit);
     } else {
       setSelectedCaseStudyId(caseStudyId);
+      setSelectedTimeLimit(timeLimit);
     }
   };
 
@@ -27,7 +29,11 @@ export function CaseStudiesTool({ courseId, onBack, onStartCaseStudy }: CaseStud
     return (
       <CaseStudyPlayer
         caseStudyId={selectedCaseStudyId}
-        onExit={() => setSelectedCaseStudyId(null)}
+        timeLimit={selectedTimeLimit}
+        onExit={() => {
+          setSelectedCaseStudyId(null);
+          setSelectedTimeLimit(null);
+        }}
       />
     );
   }
