@@ -27,8 +27,8 @@ export function Phase3Practice({ courseId, course, settings }: Phase3PracticePro
   const [gateMessage, setGateMessage] = useState<string | null>(null);
   const [unlearnedModules, setUnlearnedModules] = useState<Array<{ id: string; title: string; order: number }>>([]);
   
-  // Check if case studies are enabled
-  const caseStudiesEnabled = course?.componentVisibility?.caseStudies ?? false;
+  // Case studies are always shown in Phase 3 alongside exams and practice questions
+  const caseStudiesEnabled = true;
 
   useEffect(() => {
     checkAccess();

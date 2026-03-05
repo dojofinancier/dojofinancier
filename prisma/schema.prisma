@@ -290,7 +290,7 @@ model QuizAttempt {
 model CaseStudy {
   id           String   @id @default(uuid())
   courseId     String   @map("course_id")
-  caseId       String   @unique @map("case_id") // Unique identifier from JSON (e.g., "negp_cas_20260110_213403")
+  caseId       String   @map("case_id") // Identifier from JSON (e.g., "negp_cas_20260110_213403") - unique per course
   caseNumber   Int      @map("case_number")
   title        String
   theme        String?
@@ -305,6 +305,7 @@ model CaseStudy {
   questions CaseStudyQuestion[]
   attempts  CaseStudyAttempt[]
 
+  @@unique([courseId, caseId])
   @@index([courseId])
   @@map("case_studies")
 }

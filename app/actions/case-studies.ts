@@ -85,15 +85,17 @@ export async function importCaseStudyAction(
       };
     }
 
-    // Check if case study already exists
+    // Check if case study already exists for this course
     const existing = await prisma.caseStudy.findUnique({
-      where: { caseId },
+      where: {
+        courseId_caseId: { courseId, caseId },
+      },
     });
 
     if (existing) {
       return {
         success: false,
-        error: `Un cas avec l'ID ${caseId} existe déjà`,
+        error: `Un cas avec l'ID ${caseId} existe déjà dans ce cours`,
       };
     }
 
