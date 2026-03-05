@@ -555,7 +555,7 @@ export function CaseStudyPlayer({ caseStudyId, timeLimit = null, onExit }: CaseS
                       <ChevronRight className="h-4 w-4 ml-2" />
                     </Button>
                   ) : (
-                    <Button className="w-full sm:w-auto" onClick={handleSubmit} disabled={submitting}>
+                    <Button className="w-full sm:w-auto" onClick={() => handleSubmit()} disabled={submitting}>
                       {submitting ? (
                         <>
                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
