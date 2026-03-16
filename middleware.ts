@@ -1,32 +1,12 @@
-import { type NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 
 export async function middleware(request: NextRequest) {
-  // Public routes that don't require authentication
-  const publicRoutes = [
-    "/",
-    "/courses", // Keep for backward compatibility (redirects to /formations)
-    "/formations",
-    "/panier", // Cart page
-    "/blog",
-    "/login",
-    "/reset-password",
-    "/checkout", // Checkout is public (user creates account during checkout) - redirects to /paiement
-    "/paiement", // Payment checkout (public, user creates account during checkout)
-    "/api/webhooks", // Webhook endpoints are public
-  ];
-  const isPublicRoute = publicRoutes.some(
-    (route) =>
-      request.nextUrl.pathname === route ||
-      request.nextUrl.pathname.startsWith(`${route}/`)
-  );
-
-  // Only check auth for protected routes
-  if (!isPublicRoute) {
-    return await updateSession(request);
+  // Webhook/API routes handle their own auth -- skip session handling entirely
+  if (request.nextUrl.pathname.startsWith("/api/webhooks")) {
+    return NextResponse.next();
   }
 
-  // Still update session for public routes (to refresh tokens)
   return await updateSession(request);
 }
 

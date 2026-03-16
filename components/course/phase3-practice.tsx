@@ -1,17 +1,18 @@
-"use client";
+\"use client\";
 
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { Target, FileText, BookOpen, AlertCircle, Lock } from "lucide-react";
-import { ExamList } from "./exam-list";
-import { ExamPlayer } from "./exam-player";
-import { QuestionBankPractice } from "./question-bank-practice";
-import { CaseStudyList } from "./case-study-list";
-import { CaseStudyPlayer } from "./case-study-player";
-import { checkPhase3AccessAction } from "@/app/actions/study-plan";
+import { useState, useEffect } from \"react\";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from \"@/components/ui/card\";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from \"@/components/ui/tabs\";
+import { Alert, AlertDescription, AlertTitle } from \"@/components/ui/alert\";
+import { Button } from \"@/components/ui/button\";
+import { Target, FileText, BookOpen, AlertCircle, Lock } from \"lucide-react\";
+import { ExamList } from \"./exam-list\";
+import { ExamPlayer } from \"./exam-player\";
+import { QuestionBankPractice } from \"./question-bank-practice\";
+import { CaseStudyList } from \"./case-study-list\";
+import { CaseStudyPlayer } from \"./case-study-player\";
+import { checkPhase3AccessAction } from \"@/app/actions/study-plan\";
+import { getCaseStudiesAction } from \"@/app/actions/case-studies\";
 
 interface Phase3PracticeProps {
   courseId: string;
@@ -27,12 +28,13 @@ export function Phase3Practice({ courseId, course, settings }: Phase3PracticePro
   const [canAccess, setCanAccess] = useState<boolean | null>(null);
   const [gateMessage, setGateMessage] = useState<string | null>(null);
   const [unlearnedModules, setUnlearnedModules] = useState<Array<{ id: string; title: string; order: number }>>([]);
+  const [hasCaseStudies, setHasCaseStudies] = useState<boolean | null>(null);
   
-  // Case studies are always shown in Phase 3 alongside exams and practice questions
-  const caseStudiesEnabled = true;
+  const caseStudiesEnabled = !!hasCaseStudies;
 
   useEffect(() => {
     checkAccess();
+    loadCaseStudies();
   }, [courseId]);
 
   const checkAccess = async () => {
@@ -41,6 +43,19 @@ export function Phase3Practice({ courseId, course, settings }: Phase3PracticePro
       setCanAccess(result.data.canAccess);
       setGateMessage(result.data.message || null);
       setUnlearnedModules(result.data.unlearnedModules || []);
+    }
+  };
+
+  const loadCaseStudies = async () => {
+    try {
+      const result = await getCaseStudiesAction(courseId);
+      if (result.success && result.data) {
+        setHasCaseStudies(result.data.length > 0);
+      } else {
+        setHasCaseStudies(false);
+      }
+    } catch {
+      setHasCaseStudies(false);
     }
   };
 

@@ -9,32 +9,32 @@ import { logServerError } from "@/lib/utils/error-logging";
 export async function getCurrentUser() {
   try {
     const supabase = await createClient();
-    
+
+    // Use getSession() to read the JWT from cookies locally instead of making
+    // an HTTP call to Supabase Auth. The middleware already refreshes expired
+    // tokens, so the session is guaranteed to be current by this point.
     const {
-      data: { user: supabaseUser },
+      data: { session },
       error,
-    } = await supabase.auth.getUser();
+    } = await supabase.auth.getSession();
 
     if (error) {
-      // Missing session is expected when user is logged out - don't log as error
       const isMissingSession = error.message.includes("session missing") || 
                                error.message.includes("Auth session missing");
       
       if (isMissingSession) {
-        // Silent return for missing sessions (expected when logged out)
         return null;
       }
       
-      // Log actual errors (not missing sessions)
       console.error(`[getCurrentUser] Supabase auth error:`, error.message);
-      
       return null;
     }
 
-    if (!supabaseUser) {
-      // Expected when logged out; do not retry (retries can trip Next prerender hanging promises)
+    if (!session?.user) {
       return null;
     }
+
+    const supabaseUser = session.user;
 
     // Get Prisma user record
     let user = await getUserFromSupabaseId(supabaseUser.id);

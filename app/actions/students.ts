@@ -187,6 +187,108 @@ export async function getStudentDetailsAction(studentId: string) {
   }
 }
 
+export type StudentAttemptsResult = {
+  quizAttempts: Array<{
+    id: string;
+    score: number;
+    completedAt: Date;
+    timeSpent: number | null;
+    quiz: {
+      id: string;
+      title: string;
+      passingScore: number;
+      isMockExam: boolean;
+      course: { id: string; title: string };
+    };
+  }>;
+  caseStudyAttempts: Array<{
+    id: string;
+    score: number;
+    passed: boolean;
+    completedAt: Date;
+    caseStudy: {
+      id: string;
+      title: string;
+      passingScore: number;
+      course: { id: string; title: string };
+    };
+  }>;
+};
+
+/**
+ * Get student exam/quiz/case study attempts (admin only)
+ */
+export async function getStudentAttemptsAction(
+  studentId: string
+): Promise<{ success: true; data: StudentAttemptsResult } | { success: false; error: string }> {
+  try {
+    await requireAdmin();
+
+    const [quizAttempts, caseStudyAttempts] = await Promise.all([
+      prisma.quizAttempt.findMany({
+        where: { userId: studentId },
+        orderBy: { completedAt: "desc" },
+        include: {
+          quiz: {
+            select: {
+              id: true,
+              title: true,
+              passingScore: true,
+              isMockExam: true,
+              course: { select: { id: true, title: true } },
+            },
+          },
+        },
+      }),
+      prisma.caseStudyAttempt.findMany({
+        where: { userId: studentId },
+        orderBy: { completedAt: "desc" },
+        include: {
+          caseStudy: {
+            select: {
+              id: true,
+              title: true,
+              passingScore: true,
+              course: { select: { id: true, title: true } },
+            },
+          },
+        },
+      }),
+    ]);
+
+    return {
+      success: true,
+      data: {
+        quizAttempts: quizAttempts.map((a) => ({
+          id: a.id,
+          score: a.score,
+          completedAt: a.completedAt,
+          timeSpent: a.timeSpent,
+          quiz: a.quiz,
+        })),
+        caseStudyAttempts: caseStudyAttempts.map((a) => ({
+          id: a.id,
+          score: a.score,
+          passed: a.passed,
+          completedAt: a.completedAt,
+          caseStudy: a.caseStudy,
+        })),
+      },
+    };
+  } catch (error) {
+    await logServerError({
+      errorMessage: `Failed to get student attempts: ${error instanceof Error ? error.message : "Unknown error"}`,
+      stackTrace: error instanceof Error ? error.stack : undefined,
+      severity: "MEDIUM",
+    });
+
+    return {
+      success: false,
+      error: "Erreur lors du chargement des résultats",
+    };
+  }
+}
+
 /**
  * Suspend student account (admin only)
  */

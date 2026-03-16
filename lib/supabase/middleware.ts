@@ -33,32 +33,26 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  // IMPORTANT: Avoid writing any logic between createServerClient and
-  // supabase.auth.getUser(). A simple mistake could make it very hard to debug
-  // issues with users being randomly logged out.
+  // Use getSession() instead of getUser() to avoid an HTTP round-trip to
+  // Supabase Auth on every request. getSession() reads the JWT from cookies
+  // locally and only makes a network call when the token needs refreshing.
+  // The cookie setAll callback above ensures refreshed tokens are persisted.
 
   try {
     const {
-      data: { user },
-    } = await supabase.auth.getUser();
+      data: { session },
+    } = await supabase.auth.getSession();
 
-    // IMPORTANT:
-    // Only redirect to /login for routes we *explicitly* consider protected.
-    // Redirecting for "everything that's not public" breaks true public pages
-    // (e.g. /contact) and prevents real 404 pages from rendering (unknown paths
-    // would get redirected to /login instead).
     const protectedPrefixes = ["/tableau-de-bord", "/dashboard", "/apprendre", "/learn"];
     const isProtectedRoute = protectedPrefixes.some((p) => request.nextUrl.pathname === p || request.nextUrl.pathname.startsWith(`${p}/`));
 
-    if (!user && isProtectedRoute) {
+    if (!session?.user && isProtectedRoute) {
       const url = request.nextUrl.clone();
       url.pathname = "/login";
       return NextResponse.redirect(url);
     }
   } catch (error) {
     // If Supabase fails (timeout, network, etc), allow the request to continue.
-    // Avoids 502 + "edge function..." error body that crashes the RSC JSON parser.
-    // User may be unauthenticated but the site stays up.
   }
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is. If you're
