@@ -1,18 +1,18 @@
-\"use client\";
+"use client";
 
-import { useState, useEffect } from \"react\";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from \"@/components/ui/card\";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from \"@/components/ui/tabs\";
-import { Alert, AlertDescription, AlertTitle } from \"@/components/ui/alert\";
-import { Button } from \"@/components/ui/button\";
-import { Target, FileText, BookOpen, AlertCircle, Lock } from \"lucide-react\";
-import { ExamList } from \"./exam-list\";
-import { ExamPlayer } from \"./exam-player\";
-import { QuestionBankPractice } from \"./question-bank-practice\";
-import { CaseStudyList } from \"./case-study-list\";
-import { CaseStudyPlayer } from \"./case-study-player\";
-import { checkPhase3AccessAction } from \"@/app/actions/study-plan\";
-import { getCaseStudiesAction } from \"@/app/actions/case-studies\";
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Target, FileText, BookOpen, AlertCircle, Lock } from "lucide-react";
+import { ExamList } from "./exam-list";
+import { ExamPlayer } from "./exam-player";
+import { QuestionBankPractice } from "./question-bank-practice";
+import { CaseStudyList } from "./case-study-list";
+import { CaseStudyPlayer } from "./case-study-player";
+import { checkPhase3AccessAction } from "@/app/actions/study-plan";
+import { getCaseStudiesAction } from "@/app/actions/case-studies";
 
 interface Phase3PracticeProps {
   courseId: string;
