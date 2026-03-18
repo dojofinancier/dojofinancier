@@ -50,8 +50,18 @@ function generatePassword(length = 20): string {
   return out;
 }
 
+/** Admin client from createClient — typed loosely so Next.js `tsc` accepts the script in the repo. */
 async function findUserByEmail(
-  supabase: ReturnType<typeof createClient>,
+  supabase: {
+    auth: {
+      admin: {
+        listUsers: (args: { page: number; perPage: number }) => Promise<{
+          data: { users: { id: string; email?: string | null }[] };
+          error: { message: string } | null;
+        }>;
+      };
+    };
+  },
   email: string
 ) {
   const normalized = email.trim().toLowerCase();
