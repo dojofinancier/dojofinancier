@@ -27,11 +27,26 @@ import {
   revokeEnrollmentAccessAction,
   deleteEnrollmentAction,
 } from "@/app/actions/enrollments";
-import { getStudentAttemptsAction, type StudentAttemptsResult } from "@/app/actions/students";
+import {
+  getStudentAttemptsAction,
+  resetStudentPasswordAction,
+  type StudentAttemptsResult,
+} from "@/app/actions/students";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Ban, Trash2, Plus, Trophy, Loader2, CheckCircle2, XCircle } from "lucide-react";
+import {
+  Ban,
+  Trash2,
+  Plus,
+  Trophy,
+  Loader2,
+  CheckCircle2,
+  XCircle,
+  KeyRound,
+  Copy,
+  Check,
+} from "lucide-react";
 import type { UserRole } from "@prisma/client";
 
 type EnrollmentWithCourse = {
@@ -106,6 +121,12 @@ export function StudentDetails({ student }: StudentDetailsProps) {
   const [attemptsLoading, setAttemptsLoading] = useState(false);
 
   const [activeTab, setActiveTab] = useState("profile");
+
+  const [resetPwdOpen, setResetPwdOpen] = useState(false);
+  const [resetPwdStep, setResetPwdStep] = useState<"confirm" | "result">("confirm");
+  const [resetPwdLoading, setResetPwdLoading] = useState(false);
+  const [newPasswordDisplay, setNewPasswordDisplay] = useState<string | null>(null);
+  const [passwordCopied, setPasswordCopied] = useState(false);
 
   const loadAttempts = () => {
     if (attemptsData !== null || attemptsLoading) return;
@@ -270,6 +291,35 @@ export function StudentDetails({ student }: StudentDetailsProps) {
             </CardContent>
           </Card>
         </div>
+
+        <Card className="mt-6 border-amber-200/80 dark:border-amber-900/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <KeyRound className="h-5 w-5" />
+              Réinitialisation du mot de passe
+            </CardTitle>
+            <CardDescription>
+              Génère un nouveau mot de passe aléatoire dans Supabase Auth lorsque l&apos;étudiant ne
+              peut pas se connecter (ex. récupération par email défaillante). Communiquez le mot de
+              passe de façon sécurisée ; il ne sera plus affiché après fermeture de la fenêtre.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button
+              variant="outline"
+              className="border-amber-300 dark:border-amber-800"
+              onClick={() => {
+                setResetPwdStep("confirm");
+                setNewPasswordDisplay(null);
+                setPasswordCopied(false);
+                setResetPwdOpen(true);
+              }}
+            >
+              <KeyRound className="h-4 w-4 mr-2" />
+              Réinitialiser le mot de passe
+            </Button>
+          </CardContent>
+        </Card>
       </TabsContent>
 
       <TabsContent value="enrollments" className="mt-6">
@@ -663,6 +713,110 @@ export function StudentDetails({ student }: StudentDetailsProps) {
               Supprimer
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={resetPwdOpen}
+        onOpenChange={(open) => {
+          setResetPwdOpen(open);
+          if (!open) {
+            setNewPasswordDisplay(null);
+            setPasswordCopied(false);
+            setResetPwdStep("confirm");
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {resetPwdStep === "confirm"
+                ? "Réinitialiser le mot de passe ?"
+                : "Nouveau mot de passe"}
+            </DialogTitle>
+            <DialogDescription>
+              {resetPwdStep === "confirm" ? (
+                <>
+                  Un mot de passe aléatoire remplacera l&apos;actuel pour{" "}
+                  <span className="font-medium text-foreground">{student.email}</span>. L&apos;étudiant
+                  pourra se connecter avec ce nouveau mot de passe et le changer depuis son compte.
+                </>
+              ) : (
+                <>Copiez ce mot de passe maintenant. Il ne sera plus accessible après fermeture.</>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          {resetPwdStep === "confirm" && (
+            <div className="flex justify-end gap-2 mt-4">
+              <Button variant="outline" onClick={() => setResetPwdOpen(false)}>
+                Annuler
+              </Button>
+              <Button
+                disabled={resetPwdLoading}
+                onClick={async () => {
+                  setResetPwdLoading(true);
+                  try {
+                    const result = await resetStudentPasswordAction(student.id);
+                    if (result.success) {
+                      setNewPasswordDisplay(result.data.temporaryPassword);
+                      setResetPwdStep("result");
+                      toast.success("Mot de passe réinitialisé");
+                    } else {
+                      toast.error(result.error);
+                    }
+                  } finally {
+                    setResetPwdLoading(false);
+                  }
+                }}
+              >
+                {resetPwdLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Réinitialisation…
+                  </>
+                ) : (
+                  "Confirmer"
+                )}
+              </Button>
+            </div>
+          )}
+
+          {resetPwdStep === "result" && newPasswordDisplay && (
+            <div className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <Label>Mot de passe temporaire</Label>
+                <div className="flex gap-2">
+                  <Input readOnly value={newPasswordDisplay} className="font-mono text-sm" />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    title="Copier"
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(newPasswordDisplay);
+                        setPasswordCopied(true);
+                        toast.success("Copié dans le presse-papiers");
+                        setTimeout(() => setPasswordCopied(false), 2000);
+                      } catch {
+                        toast.error("Impossible de copier");
+                      }
+                    }}
+                  >
+                    {passwordCopied ? (
+                      <Check className="h-4 w-4 text-primary" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+              <Button className="w-full sm:w-auto" onClick={() => setResetPwdOpen(false)}>
+                Fermer
+              </Button>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </Tabs>

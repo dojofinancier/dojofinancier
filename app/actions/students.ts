@@ -1,5 +1,7 @@
 "use server";
 
+import { randomBytes } from "crypto";
+import { createClient } from "@supabase/supabase-js";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth/require-auth";
 import { logServerError } from "@/lib/utils/error-logging";
@@ -341,6 +343,94 @@ export async function activateStudentAction(studentId: string) {
     return {
       success: false,
       error: "Erreur lors de l'activation du compte",
+    };
+  }
+}
+
+function generateTemporaryPassword(length = 20): string {
+  const alphabet =
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*-_";
+  const bytes = randomBytes(length);
+  let out = "";
+  for (let i = 0; i < length; i++) {
+    out += alphabet[bytes[i]! % alphabet.length];
+  }
+  return out;
+}
+
+/**
+ * Reset a student's Supabase Auth password to a random value (admin only).
+ * Returns the temporary password once — share it securely with the student.
+ */
+export async function resetStudentPasswordAction(studentId: string): Promise<
+  | { success: true; data: { email: string; temporaryPassword: string } }
+  | { success: false; error: string }
+> {
+  try {
+    await requireAdmin();
+
+    const student = await prisma.user.findUnique({
+      where: { id: studentId, role: "STUDENT" },
+      select: { id: true, email: true, supabaseId: true },
+    });
+
+    if (!student) {
+      return { success: false, error: "Étudiant introuvable." };
+    }
+
+    if (!student.supabaseId) {
+      return {
+        success: false,
+        error: "Ce compte n'est pas lié à Supabase Auth.",
+      };
+    }
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!supabaseUrl || !serviceKey) {
+      return {
+        success: false,
+        error: "Configuration Supabase manquante sur le serveur.",
+      };
+    }
+
+    const temporaryPassword = generateTemporaryPassword();
+    const supabase = createClient(supabaseUrl, serviceKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+
+    const { error } = await supabase.auth.admin.updateUserById(student.supabaseId, {
+      password: temporaryPassword,
+    });
+
+    if (error) {
+      await logServerError({
+        errorMessage: `resetStudentPassword: ${error.message}`,
+        stackTrace: undefined,
+        severity: "HIGH",
+      });
+      return {
+        success: false,
+        error: error.message || "Impossible de réinitialiser le mot de passe.",
+      };
+    }
+
+    return {
+      success: true,
+      data: {
+        email: student.email,
+        temporaryPassword,
+      },
+    };
+  } catch (error) {
+    await logServerError({
+      errorMessage: `resetStudentPassword: ${error instanceof Error ? error.message : "Unknown"}`,
+      stackTrace: error instanceof Error ? error.stack : undefined,
+      severity: "HIGH",
+    });
+    return {
+      success: false,
+      error: "Erreur lors de la réinitialisation du mot de passe.",
     };
   }
 }
