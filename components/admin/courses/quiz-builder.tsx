@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -19,6 +18,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { RichTextEditor } from "@/components/admin/courses/rich-text-editor";
+import { isRichTextNonEmpty, plainTextFromHtml } from "@/lib/utils/quiz-html";
 import { QuizQuestion, QuizQuestionType } from "@prisma/client";
 import {
   createQuizQuestionAction,
@@ -160,7 +161,7 @@ export function QuizBuilder({ quizId, questions: initialQuestions, onChanged }: 
     if (!editingQuestion) return;
 
     // Validation
-    if (!editingQuestion.question.trim()) {
+    if (!isRichTextNonEmpty(editingQuestion.question)) {
       toast.error("L'énoncé de la question est requis");
       return;
     }
@@ -197,7 +198,7 @@ export function QuizBuilder({ quizId, questions: initialQuestions, onChanged }: 
       const payload: any = {
         quizId,
         type: editingQuestion.type,
-        question: editingQuestion.question.trim(),
+        question: editingQuestion.question,
         correctAnswer: editingQuestion.correctAnswer.trim(),
         order: editingQuestion.id
           ? questions.findIndex((q) => q.id === editingQuestion.id)
@@ -209,7 +210,9 @@ export function QuizBuilder({ quizId, questions: initialQuestions, onChanged }: 
         payload.options = optionsRecord;
       }
 
-      payload.explanation = editingQuestion.explanation?.trim() || null;
+      payload.explanation = isRichTextNonEmpty(editingQuestion.explanation ?? "")
+        ? editingQuestion.explanation ?? null
+        : null;
 
       if (editingQuestion.id) {
         const result = await updateQuizQuestionAction(editingQuestion.id, payload);
@@ -252,7 +255,7 @@ export function QuizBuilder({ quizId, questions: initialQuestions, onChanged }: 
     const record = (question.options as Record<string, string>) || {};
     return (
       <div className="space-y-2">
-        <p className="font-medium">{question.question}</p>
+        <p className="font-medium line-clamp-4">{plainTextFromHtml(question.question) || "—"}</p>
         <p className="text-xs text-muted-foreground uppercase tracking-wide">{question.type}</p>
         {question.type === "MULTIPLE_CHOICE" && (
           <ul className="text-sm text-muted-foreground space-y-1">
@@ -272,7 +275,9 @@ export function QuizBuilder({ quizId, questions: initialQuestions, onChanged }: 
         {question.explanation && (
           <div className="text-sm text-muted-foreground pt-1 border-t">
             <span className="font-semibold">Explication:</span>{" "}
-            <span className="whitespace-pre-wrap">{question.explanation}</span>
+            <span className="whitespace-pre-wrap line-clamp-3">
+              {plainTextFromHtml(question.explanation || "") || "—"}
+            </span>
           </div>
         )}
       </div>
@@ -315,7 +320,7 @@ export function QuizBuilder({ quizId, questions: initialQuestions, onChanged }: 
       )}
 
       <Dialog open={isDialogOpen} onOpenChange={handleDialogClose}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingQuestion?.id ? "Modifier la question" : "Nouvelle question"}</DialogTitle>
             <DialogDescription>
@@ -350,12 +355,12 @@ export function QuizBuilder({ quizId, questions: initialQuestions, onChanged }: 
 
               <div className="space-y-2">
                 <Label>Énoncé</Label>
-                <Textarea
-                  value={editingQuestion.question}
-                  onChange={(event) =>
-                    setEditingQuestion({ ...editingQuestion, question: event.target.value })
-                  }
+                <RichTextEditor
+                  key={editingQuestion.id ?? "new-quiz-question"}
+                  content={editingQuestion.question}
+                  onChange={(html) => setEditingQuestion({ ...editingQuestion, question: html })}
                   placeholder="Saisissez la question ici..."
+                  compact
                 />
               </div>
 
@@ -434,23 +439,24 @@ export function QuizBuilder({ quizId, questions: initialQuestions, onChanged }: 
 
               <div className="space-y-2">
                 <Label htmlFor="edit-explanation">Explication (optionnel)</Label>
-                <Textarea
-                  id="edit-explanation"
-                  value={editingQuestion.explanation ?? ""}
-                  onChange={(event) =>
-                    setEditingQuestion({ ...editingQuestion, explanation: event.target.value })
-                  }
+                <RichTextEditor
+                  key={`${editingQuestion.id ?? "new"}-quiz-explain`}
+                  content={editingQuestion.explanation ?? ""}
+                  onChange={(html) => setEditingQuestion({ ...editingQuestion, explanation: html })}
                   placeholder="Explication affichée à l'étudiant après avoir répondu..."
-                  rows={3}
-                  className="resize-y"
+                  compact
                 />
               </div>
 
               <div className="flex justify-end gap-2 pt-4">
-                <Button variant="outline" onClick={() => handleDialogClose(false)}>
+                <Button type="button" variant="outline" onClick={() => handleDialogClose(false)}>
                   Annuler
                 </Button>
-                <Button onClick={handleSave} disabled={saving || !editingQuestion.question.trim()}>
+                <Button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={saving || !isRichTextNonEmpty(editingQuestion.question)}
+                >
                   {editingQuestion.id ? "Enregistrer" : "Créer"}
                 </Button>
               </div>

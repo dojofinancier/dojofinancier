@@ -28,6 +28,8 @@ import { getExamsAction, upsertExamAction, deleteExamAction, uploadQuestionsToEx
 import { getModulesAction } from "@/app/actions/modules";
 import { createContentItemAction } from "@/app/actions/content-items";
 import { createQuizQuestionAction, updateQuizQuestionAction, deleteQuizQuestionAction } from "@/app/actions/content-items";
+import { RichTextEditor } from "@/components/admin/courses/rich-text-editor";
+import { isRichTextNonEmpty, plainTextFromHtml } from "@/lib/utils/quiz-html";
 import { toast } from "sonner";
 import { Loader2, Plus, Trash2, Edit, Clock, Target, Upload, FileText, ChevronDown, ChevronUp } from "lucide-react";
 
@@ -140,6 +142,8 @@ export function ExamManager({ courseId }: ExamManagerProps) {
     correctAnswer: "A",
     explanation: "",
   });
+  /** Bumps TipTap remount after reset so empty HTML editors clear (stable key alone would keep old content). */
+  const [examAddRteKey, setExamAddRteKey] = useState(0);
 
   const loadExams = async () => {
     setLoading(true);
@@ -310,7 +314,7 @@ export function ExamManager({ courseId }: ExamManagerProps) {
   const handleAddQuestion = async () => {
     if (!selectedExam) return;
 
-    if (!questionFormState.question.trim()) {
+    if (!isRichTextNonEmpty(questionFormState.question)) {
       toast.error("La question est requise");
       return;
     }
@@ -349,11 +353,11 @@ export function ExamManager({ courseId }: ExamManagerProps) {
       const result = await createQuizQuestionAction({
         quizId: selectedExam.id,
         type: "MULTIPLE_CHOICE",
-        question: questionFormState.question.trim(),
+        question: questionFormState.question,
         options,
         correctAnswer,
         order: nextOrder,
-        explanation: questionFormState.explanation?.trim() || null,
+        explanation: isRichTextNonEmpty(questionFormState.explanation) ? questionFormState.explanation : null,
       });
 
       if (result.success) {
@@ -367,6 +371,7 @@ export function ExamManager({ courseId }: ExamManagerProps) {
           correctAnswer: "A",
           explanation: "",
         });
+        setExamAddRteKey((k) => k + 1);
         await loadExams();
         // Refresh selected exam
         const updatedResult = await getExamsAction(courseId);
@@ -418,9 +423,9 @@ export function ExamManager({ courseId }: ExamManagerProps) {
   };
 
   const handleUpdateQuestion = async () => {
-    if (!editingQuestion || !selectedExam) return;
+    if (!editingQuestion) return;
 
-    if (!questionFormState.question.trim()) {
+    if (!isRichTextNonEmpty(questionFormState.question)) {
       toast.error("La question est requise");
       return;
     }
@@ -451,10 +456,10 @@ export function ExamManager({ courseId }: ExamManagerProps) {
 
     try {
       const result = await updateQuizQuestionAction(editingQuestion.id, {
-        question: questionFormState.question.trim(),
+        question: questionFormState.question,
         options,
         correctAnswer,
-        explanation: questionFormState.explanation?.trim() || null,
+        explanation: isRichTextNonEmpty(questionFormState.explanation) ? questionFormState.explanation : null,
       });
 
       if (result.success) {
@@ -462,12 +467,15 @@ export function ExamManager({ courseId }: ExamManagerProps) {
         setQuestionEditDialogOpen(false);
         setEditingQuestion(null);
         await loadExams();
-        // Refresh selected exam
-        const updatedResult = await getExamsAction(courseId);
-        if (updatedResult.success && updatedResult.data) {
-          const updatedExam = normalizeExams(updatedResult.data).find((e) => e.id === selectedExam.id);
-          if (updatedExam) {
-            setSelectedExam(updatedExam);
+        // Refresh selected exam when the questions dialog is open (selectedExam is set there).
+        // Inline "expand card" edit never sets selectedExam; skip to avoid a silent no-op guard.
+        if (selectedExam) {
+          const updatedResult = await getExamsAction(courseId);
+          if (updatedResult.success && updatedResult.data) {
+            const updatedExam = normalizeExams(updatedResult.data).find((e) => e.id === selectedExam.id);
+            if (updatedExam) {
+              setSelectedExam(updatedExam);
+            }
           }
         }
       } else {
@@ -1041,7 +1049,9 @@ export function ExamManager({ courseId }: ExamManagerProps) {
                             return (
                               <TableRow key={question.id}>
                                 <TableCell>{idx + 1}</TableCell>
-                                <TableCell className="max-w-md">{question.question}</TableCell>
+                                <TableCell className="max-w-md">
+                                  <span className="line-clamp-3">{plainTextFromHtml(question.question) || "—"}</span>
+                                </TableCell>
                                 <TableCell>
                                   <div className="space-y-1">
                                     {optionKeys.map((key) => (
@@ -1088,7 +1098,7 @@ export function ExamManager({ courseId }: ExamManagerProps) {
 
       {/* Questions Management Dialog */}
       <Dialog open={questionsDialogOpen} onOpenChange={setQuestionsDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Gérer les questions - {selectedExam?.title}</DialogTitle>
             <DialogDescription>
@@ -1128,7 +1138,8 @@ export function ExamManager({ courseId }: ExamManagerProps) {
               </div>
             </div>
 
-            {/* Add Question Form */}
+            {/* Add Question Form — hidden while editing so one RichTextEditor owns questionFormState */}
+            {!questionEditDialogOpen && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">Ajouter une question</CardTitle>
@@ -1136,11 +1147,12 @@ export function ExamManager({ courseId }: ExamManagerProps) {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label>Question *</Label>
-                  <Textarea
-                    value={questionFormState.question}
-                    onChange={(e) => setQuestionFormState({ ...questionFormState, question: e.target.value })}
+                  <RichTextEditor
+                    key={`exam-add-q-${examAddRteKey}`}
+                    content={questionFormState.question}
+                    onChange={(html) => setQuestionFormState({ ...questionFormState, question: html })}
                     placeholder="Entrez la question..."
-                    rows={3}
+                    compact
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -1196,20 +1208,21 @@ export function ExamManager({ courseId }: ExamManagerProps) {
                 </div>
                 <div className="space-y-2">
                   <Label>Explication (optionnel)</Label>
-                  <Textarea
-                    value={questionFormState.explanation}
-                    onChange={(e) => setQuestionFormState({ ...questionFormState, explanation: e.target.value })}
+                  <RichTextEditor
+                    key={`exam-add-ex-${examAddRteKey}`}
+                    content={questionFormState.explanation}
+                    onChange={(html) => setQuestionFormState({ ...questionFormState, explanation: html })}
                     placeholder="Explication affichée à l'étudiant après avoir répondu..."
-                    rows={3}
-                    className="resize-y"
+                    compact
                   />
                 </div>
-                <Button onClick={handleAddQuestion} className="w-full">
+                <Button type="button" onClick={handleAddQuestion} className="w-full">
                   <Plus className="h-4 w-4 mr-2" />
                   Ajouter la question
                 </Button>
               </CardContent>
             </Card>
+            )}
 
             {/* Questions List */}
             {selectedExam && selectedExam.questions.length > 0 && (
@@ -1233,7 +1246,9 @@ export function ExamManager({ courseId }: ExamManagerProps) {
                       return (
                         <TableRow key={question.id}>
                           <TableCell>{idx + 1}</TableCell>
-                          <TableCell className="max-w-md">{question.question}</TableCell>
+                          <TableCell className="max-w-md">
+                            <span className="line-clamp-3">{plainTextFromHtml(question.question) || "—"}</span>
+                          </TableCell>
                           <TableCell>
                             <Badge variant="default">{correctOptionValue}</Badge>
                           </TableCell>
@@ -1268,19 +1283,22 @@ export function ExamManager({ courseId }: ExamManagerProps) {
 
       {/* Edit Question Dialog */}
       <Dialog open={questionEditDialogOpen} onOpenChange={setQuestionEditDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Modifier la question</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 mt-4">
             <div className="space-y-2">
               <Label>Question *</Label>
-              <Textarea
-                value={questionFormState.question}
-                onChange={(e) => setQuestionFormState({ ...questionFormState, question: e.target.value })}
-                placeholder="Entrez la question..."
-                rows={3}
-              />
+              {editingQuestion && (
+                <RichTextEditor
+                  key={`exam-edit-q-${editingQuestion.id}`}
+                  content={questionFormState.question}
+                  onChange={(html) => setQuestionFormState({ ...questionFormState, question: html })}
+                  placeholder="Entrez la question..."
+                  compact
+                />
+              )}
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -1331,19 +1349,21 @@ export function ExamManager({ courseId }: ExamManagerProps) {
             </div>
             <div className="space-y-2">
               <Label>Explication (optionnel)</Label>
-              <Textarea
-                value={questionFormState.explanation}
-                onChange={(e) => setQuestionFormState({ ...questionFormState, explanation: e.target.value })}
-                placeholder="Explication affichée à l'étudiant après avoir répondu..."
-                rows={3}
-                className="resize-y"
-              />
+              {editingQuestion && (
+                <RichTextEditor
+                  key={`exam-edit-explain-${editingQuestion.id}`}
+                  content={questionFormState.explanation}
+                  onChange={(html) => setQuestionFormState({ ...questionFormState, explanation: html })}
+                  placeholder="Explication affichée à l'étudiant après avoir répondu..."
+                  compact
+                />
+              )}
             </div>
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setQuestionEditDialogOpen(false)}>
+              <Button type="button" variant="outline" onClick={() => setQuestionEditDialogOpen(false)}>
                 Annuler
               </Button>
-              <Button onClick={handleUpdateQuestion}>
+              <Button type="button" onClick={handleUpdateQuestion}>
                 Enregistrer
               </Button>
             </div>

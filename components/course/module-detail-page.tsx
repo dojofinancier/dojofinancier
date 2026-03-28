@@ -17,6 +17,7 @@ import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { ChevronLeft, ChevronRight, StickyNote, Save, Presentation } from "lucide-react";
 import { SlideDeckViewer } from "./slide-deck-viewer";
+import { SanitizedHtmlBlock } from "@/components/ui/sanitized-html-block";
 
 interface ModuleDetailPageProps {
   courseId: string;
@@ -717,9 +718,11 @@ export function ModuleDetailPage({ courseId, moduleId, onBack, componentVisibili
                       </CardHeader>
                       <CardContent className="space-y-6">
                         <div className="space-y-3">
-                          <div className="font-semibold text-lg">
-                            {currentQuestion.question}
-                          </div>
+                          <SanitizedHtmlBlock
+                            html={currentQuestion.question}
+                            className="text-lg"
+                            plainClassName="font-semibold text-lg"
+                          />
                           <RadioGroup
                             value={userAnswer || ""}
                             onValueChange={(value) =>
@@ -895,9 +898,12 @@ export function ModuleDetailPage({ courseId, moduleId, onBack, componentVisibili
 
                                           return (
                                             <div key={question.id} className="space-y-2">
-                                              <div className="font-medium">
-                                                {questionIndex + 1}. {question.question}
-                                              </div>
+                                              <div className="font-medium">{questionIndex + 1}.</div>
+                                              <SanitizedHtmlBlock
+                                                html={question.question}
+                                                plainClassName="font-medium"
+                                                className="text-sm"
+                                              />
                                               <div className="text-sm">
                                                 <span className={`font-semibold ${isCorrect ? "text-green-600" : "text-red-600"}`}>
                                                   Votre réponse:
@@ -911,7 +917,13 @@ export function ModuleDetailPage({ courseId, moduleId, onBack, componentVisibili
                                               {question.explanation && (
                                                 <div className="text-sm text-muted-foreground mt-2">
                                                   <span className="font-semibold">Explication:</span>
-                                                  <div className="mt-1 whitespace-pre-wrap">{question.explanation}</div>
+                                                  <div className="mt-1">
+                                                    <SanitizedHtmlBlock
+                                                      html={question.explanation}
+                                                      plainClassName="whitespace-pre-wrap"
+                                                      className="prose-sm text-muted-foreground"
+                                                    />
+                                                  </div>
                                                 </div>
                                               )}
                                             </div>

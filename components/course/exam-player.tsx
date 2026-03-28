@@ -14,6 +14,7 @@ import {
   saveExamAnswersAction,
   submitExamAction,
 } from "@/app/actions/exam-taking";
+import { SanitizedHtmlBlock } from "@/components/ui/sanitized-html-block";
 import { ExamResults } from "./exam-results";
 
 interface ExamPlayerProps {
@@ -428,7 +429,11 @@ export function ExamPlayer({ examId, onExit }: ExamPlayerProps) {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="text-lg">{currentQuestion.question}</div>
+          <SanitizedHtmlBlock
+            html={currentQuestion.question}
+            className="text-lg"
+            plainClassName="text-lg font-medium"
+          />
 
           <RadioGroup
             value={answers[currentQuestion.id] || ""}

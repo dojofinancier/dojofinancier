@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { RichTextEditor } from "@/components/admin/courses/rich-text-editor";
+import { isRichTextNonEmpty, plainTextFromHtml } from "@/lib/utils/quiz-html";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
@@ -318,7 +320,7 @@ export function QuestionBankManager({ courseId }: QuestionBankManagerProps) {
   const handleUpdateQuestion = async () => {
     if (!editingQuestion) return;
 
-    if (!questionFormState.question.trim()) {
+    if (!isRichTextNonEmpty(questionFormState.question)) {
       toast.error("La question est requise");
       return;
     }
@@ -341,10 +343,10 @@ export function QuestionBankManager({ courseId }: QuestionBankManagerProps) {
 
     try {
       const result = await updateQuestionInBankAction(editingQuestion.id, {
-        question: questionFormState.question.trim(),
+        question: questionFormState.question,
         options,
         correctAnswer: questionFormState.correctAnswer,
-        explanation: questionFormState.explanation.trim() || null,
+        explanation: isRichTextNonEmpty(questionFormState.explanation) ? questionFormState.explanation : null,
       });
 
       if (result.success) {
@@ -817,7 +819,9 @@ export function QuestionBankManager({ courseId }: QuestionBankManagerProps) {
                                   />
                                 </TableCell>
                                 <TableCell className="max-w-md">
-                                  <p className="line-clamp-2">{question.question}</p>
+                                  <p className="line-clamp-2">
+                                    {plainTextFromHtml(question.question) || "—"}
+                                  </p>
                                 </TableCell>
                                 <TableCell>
                                   <div className="space-y-1">
@@ -939,7 +943,7 @@ export function QuestionBankManager({ courseId }: QuestionBankManagerProps) {
 
       {/* Edit Question Dialog */}
       <Dialog open={questionEditDialogOpen} onOpenChange={setQuestionEditDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Modifier la question</DialogTitle>
             <DialogDescription>
@@ -949,14 +953,15 @@ export function QuestionBankManager({ courseId }: QuestionBankManagerProps) {
           <div className="space-y-4 mt-4">
             <div className="space-y-2">
               <Label>Question *</Label>
-              <Textarea
-                value={questionFormState.question}
-                onChange={(e) =>
-                  setQuestionFormState({ ...questionFormState, question: e.target.value })
-                }
-                placeholder="Entrez la question..."
-                rows={3}
-              />
+              {editingQuestion && (
+                <RichTextEditor
+                  key={`bank-q-${editingQuestion.id}`}
+                  content={questionFormState.question}
+                  onChange={(html) => setQuestionFormState({ ...questionFormState, question: html })}
+                  placeholder="Entrez la question..."
+                  compact
+                />
+              )}
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -1031,23 +1036,28 @@ export function QuestionBankManager({ courseId }: QuestionBankManagerProps) {
             </div>
             <div className="space-y-2">
               <Label>Explication (optionnel)</Label>
-              <Textarea
-                value={questionFormState.explanation}
-                onChange={(e) =>
-                  setQuestionFormState({ ...questionFormState, explanation: e.target.value })
-                }
-                placeholder="Explication de la réponse correcte..."
-                rows={3}
-              />
+              {editingQuestion && (
+                <RichTextEditor
+                  key={`bank-explain-${editingQuestion.id}`}
+                  content={questionFormState.explanation}
+                  onChange={(html) => setQuestionFormState({ ...questionFormState, explanation: html })}
+                  placeholder="Explication de la réponse correcte..."
+                  compact
+                />
+              )}
             </div>
             <div className="flex justify-end gap-2 pt-4">
-              <Button variant="outline" onClick={() => {
-                setQuestionEditDialogOpen(false);
-                setEditingQuestion(null);
-              }}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setQuestionEditDialogOpen(false);
+                  setEditingQuestion(null);
+                }}
+              >
                 Annuler
               </Button>
-              <Button onClick={handleUpdateQuestion}>
+              <Button type="button" onClick={handleUpdateQuestion}>
                 Mettre à jour
               </Button>
             </div>

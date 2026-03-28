@@ -24,7 +24,7 @@ export async function requireAdmin() {
   const user = await requireAuth();
 
   if (user.role !== "ADMIN") {
-    redirect("/dashboard");
+    redirect("/tableau-de-bord");
   }
 
   return user;
@@ -38,8 +38,8 @@ export async function requireStudent() {
   const user = await requireAuth();
 
   if (user.role !== "STUDENT") {
-    console.log(`[requireStudent] User role is ${user.role}, not STUDENT. Redirecting to /dashboard`);
-    redirect("/dashboard");
+    console.log(`[requireStudent] User role is ${user.role}, not STUDENT. Redirecting to /tableau-de-bord`);
+    redirect("/tableau-de-bord");
   }
 
   return user;
@@ -53,7 +53,7 @@ export async function requireInstructor() {
   const user = await requireAuth();
 
   if (user.role !== "INSTRUCTOR") {
-    redirect("/dashboard");
+    redirect("/tableau-de-bord");
   }
 
   return user;
@@ -67,7 +67,7 @@ export async function requireAdminOrInstructor() {
   const user = await requireAuth();
 
   if (user.role !== "ADMIN" && user.role !== "INSTRUCTOR") {
-    redirect("/dashboard");
+    redirect("/tableau-de-bord");
   }
 
   return user;

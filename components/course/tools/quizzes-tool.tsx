@@ -10,6 +10,7 @@ import { getModuleContentAction } from "@/app/actions/module-content";
 import { submitQuizAttemptAction } from "@/app/actions/quizzes";
 import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { SanitizedHtmlBlock } from "@/components/ui/sanitized-html-block";
 
 interface QuizItem {
   id: string;
@@ -193,7 +194,11 @@ export function QuizzesTool({ courseId, onBack }: QuizzesToolProps) {
             <>
               <div className="space-y-4">
                 <div>
-                  <Label className="text-base font-semibold">{currentQuestion.question}</Label>
+                  <SanitizedHtmlBlock
+                    html={currentQuestion.question}
+                    plainClassName="text-base font-semibold"
+                    className="text-base font-semibold prose-headings:font-semibold mb-2"
+                  />
                   <RadioGroup
                     value={answers[currentQuestion.id] || ""}
                     onValueChange={(value) => {

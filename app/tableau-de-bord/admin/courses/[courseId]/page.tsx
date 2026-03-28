@@ -11,6 +11,7 @@ import { QuestionBankManager } from "@/components/admin/courses/question-bank-ma
 import { CaseStudyManager } from "@/components/admin/courses/case-study-manager";
 import { CourseFAQManagement } from "@/components/admin/courses/course-faq-management";
 import { CourseAboutManagement } from "@/components/admin/courses/course-about-management";
+import { CourseProgramTimelineManagement } from "@/components/admin/courses/course-program-timeline-management";
 import { CourseFeaturesManagement } from "@/components/admin/courses/course-features-management";
 import { CourseTestimonialsManagement } from "@/components/admin/courses/course-testimonials-management";
 import { CourseConsolidatedNotesManagement } from "@/components/admin/courses/course-consolidated-notes-management";
@@ -76,6 +77,7 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
       <Tabs defaultValue="details" className="w-full">
         <TabsList className="flex-wrap h-auto gap-1">
           <TabsTrigger value="details">Détails</TabsTrigger>
+          <TabsTrigger value="parcours">Parcours</TabsTrigger>
           <TabsTrigger value="about">À propos</TabsTrigger>
           <TabsTrigger value="features">Fonctionnalités</TabsTrigger>
           <TabsTrigger value="testimonials">Témoignages</TabsTrigger>
@@ -131,6 +133,12 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
           <CourseConsolidatedNotesManagement
             courseId={courseId}
             initialConsolidatedNotesPdfUrl={(course as any).consolidatedNotesPdfUrl ?? null}
+          />
+        </TabsContent>
+        <TabsContent value="parcours" className="mt-6">
+          <CourseProgramTimelineManagement
+            courseId={courseId}
+            initialProgramTimelineSteps={(course as any).programTimelineSteps ?? null}
           />
         </TabsContent>
         <TabsContent value="about" className="mt-6">

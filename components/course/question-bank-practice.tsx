@@ -11,6 +11,7 @@ import { Loader2, CheckCircle2, XCircle, RotateCcw, ChevronLeft, ChevronRight } 
 import { submitQuestionBankAnswerAction } from "@/app/actions/question-bank-practice";
 import { useQuestionBankQuestions, useQuestionBankAttempts, useQuestionBankStats } from "@/lib/hooks/use-question-bank";
 import { useQueryClient } from "@tanstack/react-query";
+import { SanitizedHtmlBlock } from "@/components/ui/sanitized-html-block";
 
 interface QuestionBankPracticeProps {
   courseId: string;
@@ -297,7 +298,11 @@ export function QuestionBankPractice({ courseId }: QuestionBankPracticeProps) {
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="text-lg">{currentQuestion.question}</div>
+          <SanitizedHtmlBlock
+            html={currentQuestion.question}
+            className="text-lg"
+            plainClassName="text-lg font-medium"
+          />
 
           <RadioGroup
             value={currentState.answer}
@@ -362,7 +367,11 @@ export function QuestionBankPractice({ courseId }: QuestionBankPracticeProps) {
           {currentState.submitted && currentQuestion.explanation && (
             <div className="p-4 bg-muted rounded-lg">
               <div className="text-sm font-semibold mb-2">Explication:</div>
-              <div className="text-sm whitespace-pre-wrap">{currentQuestion.explanation}</div>
+              <SanitizedHtmlBlock
+                html={currentQuestion.explanation}
+                plainClassName="text-sm whitespace-pre-wrap"
+                className="prose-sm"
+              />
             </div>
           )}
 

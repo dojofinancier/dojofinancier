@@ -1189,6 +1189,71 @@ export async function updateCourseAboutAction(
   }
 }
 
+const programTimelineStepSchema = z.object({
+  label: z.string().optional(),
+  title: z.string().min(1, "Chaque étape doit avoir un titre"),
+  description: z.string().min(1, "Chaque étape doit avoir une description"),
+});
+
+/**
+ * Update program timeline ("Comment ça fonctionne") — admin only.
+ * Pass `null` to use the site default template for this course.
+ */
+export async function updateCourseProgramTimelineAction(
+  courseId: string,
+  data: { programTimelineSteps: unknown[] | null }
+): Promise<CourseActionResult> {
+  try {
+    await requireAdmin();
+
+    let value: unknown = null;
+    if (data.programTimelineSteps !== null) {
+      const parsed = z.array(programTimelineStepSchema).length(5).safeParse(data.programTimelineSteps);
+      if (!parsed.success) {
+        return {
+          success: false,
+          error: "Exactement 5 étapes complètes (titre et description) sont requises.",
+        };
+      }
+      value = parsed.data.map((s) => ({
+        label: s.label?.trim() || undefined,
+        title: s.title.trim(),
+        description: s.description.trim(),
+      }));
+    }
+
+    await prisma.course.update({
+      where: { id: courseId },
+      data: { programTimelineSteps: value } as any,
+    });
+
+    const updated = await prisma.course.findUnique({
+      where: { id: courseId },
+      select: { slug: true },
+    });
+
+    revalidatePath(`/tableau-de-bord/admin/courses/${courseId}`);
+    revalidatePath(`/formations/${courseId}`);
+    if (updated?.slug) {
+      revalidatePath(`/formations/${updated.slug}`);
+    }
+    revalidatePath("/formations");
+
+    return { success: true };
+  } catch (error) {
+    await logServerError({
+      errorMessage: `Failed to update program timeline: ${error instanceof Error ? error.message : "Unknown error"}`,
+      stackTrace: error instanceof Error ? error.stack : undefined,
+      severity: "HIGH",
+    });
+
+    return {
+      success: false,
+      error: "Erreur lors de la mise à jour du parcours",
+    };
+  }
+}
+
 /**
  * Clone a full course including all modules, content, questions, flashcards, etc. (admin only)
  * @param sourceCourseId - ID of the course to clone
@@ -1323,6 +1388,7 @@ export async function cloneCourseAction(
           orientationVideoUrl: sourceCourse.orientationVideoUrl,
           orientationText: sourceCourse.orientationText,
           launchDate: sourceCourse.launchDate,
+          programTimelineSteps: (sourceCourse as any).programTimelineSteps ?? null,
         } as any,
       });
 

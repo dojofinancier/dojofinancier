@@ -34,7 +34,7 @@ export async function Navbar() {
       case 'STUDENT':
         return '/tableau-de-bord/etudiant'
       case 'INSTRUCTOR':
-        return '/tableau-de-bord/instructeur' // Instructor dashboard not implemented yet
+        return '/tableau-de-bord/instructeur'
       default:
         return '/tableau-de-bord'
     }

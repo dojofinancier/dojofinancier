@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, XCircle, Target, RotateCcw, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
+import { SanitizedHtmlBlock } from "@/components/ui/sanitized-html-block";
 
 interface ExamResultsProps {
   result: {
@@ -150,9 +151,12 @@ export function ExamResults({ result, exam, onRetake, onExit }: ExamResultsProps
 
               return (
                 <div key={question.id} className="border-b pb-6 last:border-0">
-                  <div className="font-semibold mb-3">
-                    Question {index + 1}: {question.question}
-                  </div>
+                  <div className="font-semibold mb-1">Question {index + 1}</div>
+                  <SanitizedHtmlBlock
+                    html={question.question}
+                    plainClassName="font-medium mb-3"
+                    className="mb-3"
+                  />
                   <div className="space-y-2">
                     {optionKeys.map((key, keyIndex) => {
                       const optionValue = question.options[key];
@@ -191,7 +195,11 @@ export function ExamResults({ result, exam, onRetake, onExit }: ExamResultsProps
                   {question.explanation && (
                     <div className="mt-3 p-3 bg-muted rounded-lg">
                       <div className="text-sm font-semibold mb-1">Explication:</div>
-                      <div className="text-sm">{question.explanation}</div>
+                      <SanitizedHtmlBlock
+                        html={question.explanation}
+                        plainClassName="text-sm whitespace-pre-wrap"
+                        className="prose-sm text-sm"
+                      />
                     </div>
                   )}
                 </div>

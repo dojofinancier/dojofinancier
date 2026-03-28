@@ -3,7 +3,8 @@ import Link from "next/link";
 import { RecommendedArticles } from "./recommended-articles";
 import { ArticleCTA } from "./article-cta";
 import { ArticleContent } from "./article-content";
-import { Clock, Calendar, Tag } from "lucide-react";
+import { Clock, Calendar, Tag, User, RefreshCw } from "lucide-react";
+import { formatArticleDisplayUpdatedFr } from "@/lib/utils/article-display-updated";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 
@@ -22,9 +23,11 @@ interface ArticlePageProps {
     };
   }> | null;
   readingTime: number;
+  /** Deterministic display date (see lib/utils/article-display-updated.ts) */
+  displayUpdatedAt: Date;
 }
 
-export function ArticlePage({ article, recommendedArticles, courses, readingTime }: ArticlePageProps) {
+export function ArticlePage({ article, recommendedArticles, courses, readingTime, displayUpdatedAt }: ArticlePageProps) {
   const publishedDate = article.publishedAt
     ? new Date(article.publishedAt).toLocaleDateString("fr-CA", {
         year: "numeric",
@@ -80,15 +83,25 @@ export function ArticlePage({ article, recommendedArticles, courses, readingTime
               </h1>
 
               {/* Meta Information */}
-              <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 mb-6">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-600 mb-6">
+                <div className="flex items-center gap-2">
+                  <User className="w-4 h-4 shrink-0" aria-hidden />
+                  <span>par Le Dojo Financier</span>
+                </div>
                 {publishedDate && (
                   <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4" />
+                    <Calendar className="w-4 h-4 shrink-0" aria-hidden />
                     <time dateTime={article.publishedAt?.toISOString()}>{publishedDate}</time>
                   </div>
                 )}
                 <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4" />
+                  <RefreshCw className="w-4 h-4 shrink-0" aria-hidden />
+                  <time dateTime={displayUpdatedAt.toISOString()}>
+                    Mis à jour le {formatArticleDisplayUpdatedFr(displayUpdatedAt)}
+                  </time>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 shrink-0" aria-hidden />
                   <span>{readingTime} min de lecture</span>
                 </div>
               </div>

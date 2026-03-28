@@ -22,6 +22,8 @@ import { addToCart, isInCart } from "@/lib/utils/cart";
 import { toast } from "sonner";
 import { TestimonialCarousel } from "./testimonial-carousel";
 import { StickyBottomCTA } from "./sticky-bottom-cta";
+import { ProgramTimelineSection } from "./program-timeline-section";
+import { resolveProgramTimelineSteps } from "@/lib/utils/resolve-program-timeline";
 import Image from "next/image";
 
 // Lucide dynamic icons use kebab-case; dashboard stores PascalCase
@@ -101,6 +103,8 @@ interface Course {
   totalQuestionBankQuestions?: number;
   totalLearningActivities?: number;
   productStats?: Array<{ value: number; label: string }>;
+  /** Custom program timeline; null/undefined = site default in resolver */
+  programTimelineSteps?: unknown;
 }
 
 interface CourseProductPageProps {
@@ -194,6 +198,11 @@ export function CourseProductPage({ course, isEnrolled }: CourseProductPageProps
   const features = useMemo(() => Array.isArray(course.features) ? course.features : [], [course.features]);
   const testimonials = useMemo(() => Array.isArray(course.testimonials) ? course.testimonials : [], [course.testimonials]);
   const faqs = useMemo(() => Array.isArray(course.faqs) ? course.faqs : [], [course.faqs]);
+  const programTimelineResolved = useMemo(
+    () => resolveProgramTimelineSteps(course.programTimelineSteps),
+    [course.programTimelineSteps]
+  );
+
   const aboutAccordionItems = useMemo(
     () => Array.isArray(course.aboutAccordionItems)
       ? course.aboutAccordionItems.filter((item) => item && (item.title || item.subtitle || item.richText))
@@ -541,6 +550,10 @@ export function CourseProductPage({ course, isEnrolled }: CourseProductPageProps
         </section>
       )}
 
+      {programTimelineResolved && programTimelineResolved.length === 5 && (
+        <ProgramTimelineSection steps={programTimelineResolved} />
+      )}
+
       {/* ============================================ */}
       {/* SECTION 2 & 3: About & Course Content */}
       {/* ============================================ */}
@@ -696,7 +709,7 @@ export function CourseProductPage({ course, isEnrolled }: CourseProductPageProps
             Prêt à commencer votre préparation ?
           </h2>
           <p className="text-white/80 text-lg mb-8 max-w-2xl mx-auto">
-            Rejoignez les {856 + course._count.enrollments} étudiants qui ont déjà fait confiance à cette formation.
+            Rejoignez les {856 + course._count.enrollments} étudiants qui ont déjà fait confiance à nos formations.
           </p>
           
           <div className="flex flex-col items-center gap-4">

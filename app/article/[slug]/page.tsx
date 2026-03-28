@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getArticleBySlug, getRecommendedArticles, getProfessionalCourses, getInvestorCourses } from "@/app/actions/blog";
 import { calculateReadingTime } from "@/lib/utils/blog";
+import { getArticleDisplayUpdatedDate } from "@/lib/utils/article-display-updated";
+import { stripLeadingDuplicateH1 } from "@/lib/utils/strip-duplicate-article-heading";
 import { ArticlePage } from "@/components/blog/article-page";
 import { ArticleSEO } from "@/components/blog/article-seo";
 
@@ -79,16 +81,20 @@ export default async function ArticlePageRoute({ params }: { params: Promise<{ s
     courses = await getInvestorCourses();
   }
 
-  const readingTime = calculateReadingTime(article.content || "");
+  const canonicalTitle = article.h1 || article.title;
+  const cleanedContent = stripLeadingDuplicateH1(article.content || "", canonicalTitle);
+  const readingTime = calculateReadingTime(cleanedContent || "");
+  const displayUpdatedAt = getArticleDisplayUpdatedDate(article.slug);
 
   return (
     <>
       <ArticleSEO article={article} />
       <ArticlePage
-        article={article}
+        article={{ ...article, content: cleanedContent }}
         recommendedArticles={recommendedArticles}
         courses={courses}
         readingTime={readingTime}
+        displayUpdatedAt={displayUpdatedAt}
       />
     </>
   );

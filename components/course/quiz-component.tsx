@@ -12,6 +12,7 @@ import { submitQuizAttemptAction } from "@/app/actions/quizzes";
 import { toast } from "sonner";
 import { Clock, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { SanitizedHtmlBlock } from "@/components/ui/sanitized-html-block";
 
 type Quiz = {
   id: string;
@@ -172,15 +173,11 @@ export function QuizComponent({ quiz, contentItemId }: QuizComponentProps) {
               <div className="flex items-start gap-2">
                 <span className="font-semibold">{index + 1}.</span>
                 <div className="flex-1">
-                  {/* Case studies are MULTIPLE_CHOICE questions with HTML content */}
-                  {question.type === "MULTIPLE_CHOICE" && question.question.includes("<") ? (
-                    <div
-                      className="prose max-w-none mb-4 p-4 bg-muted rounded-md"
-                      dangerouslySetInnerHTML={{ __html: question.question }}
-                    />
-                  ) : (
-                    <p className="font-medium">{question.question}</p>
-                  )}
+                  <SanitizedHtmlBlock
+                    html={question.question}
+                    plainClassName="font-medium"
+                    className="font-medium mb-4"
+                  />
 
                   {question.type === "MULTIPLE_CHOICE" && (
                     <RadioGroup

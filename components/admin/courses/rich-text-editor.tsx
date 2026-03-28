@@ -25,12 +25,15 @@ interface RichTextEditorProps {
   content: string;
   onChange: (content: string) => void;
   placeholder?: string;
+  /** Smaller editor area for dialogs */
+  compact?: boolean;
 }
 
 export function RichTextEditor({
   content,
   onChange,
   placeholder = "Commencez à écrire...",
+  compact = false,
 }: RichTextEditorProps) {
   const editor = useEditor({
     extensions: [
@@ -55,7 +58,9 @@ export function RichTextEditor({
     },
     editorProps: {
       attributes: {
-        class: "tiptap-editor prose prose-sm sm:prose-base max-w-none focus:outline-none min-h-[200px] px-3 py-4",
+        class: `tiptap-editor prose prose-sm sm:prose-base max-w-none focus:outline-none px-3 py-4 ${
+          compact ? "min-h-[120px]" : "min-h-[200px]"
+        }`,
       },
     },
   });
@@ -163,7 +168,9 @@ export function RichTextEditor({
           pointer-events: none !important;
         }
       ` }} />
-      <div className="border rounded-lg max-h-[500px] flex flex-col overflow-hidden">
+      <div
+        className={`border rounded-lg flex flex-col overflow-hidden ${compact ? "max-h-[320px]" : "max-h-[500px]"}`}
+      >
         <div className="border-b p-2 flex gap-1 flex-wrap flex-shrink-0">
         <Button
           type="button"

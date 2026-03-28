@@ -105,6 +105,7 @@ model Course {
   launchDate               DateTime?   @map("launch_date") // Optional launch date - course accessible only after this date (if published)
   productStats             Json?       @default("[]") @map("product_stats") // Customizable product page stats: [{value: number, label: string}]
   consolidatedNotesPdfUrl String?     @map("consolidated_notes_pdf_url") // Admin-uploaded consolidated notes PDF (public URL)
+  programTimelineSteps     Json?      @map("program_timeline_steps") // 5 steps; null = site default (see lib/constants/program-timeline-defaults)
   createdAt                DateTime    @default(now()) @map("created_at")
   updatedAt                DateTime    @updatedAt @map("updated_at")
 
