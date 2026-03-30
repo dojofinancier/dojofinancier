@@ -6,6 +6,7 @@ import { getArticleDisplayUpdatedDate } from "@/lib/utils/article-display-update
 import { stripLeadingDuplicateH1 } from "@/lib/utils/strip-duplicate-article-heading";
 import { ArticlePage } from "@/components/blog/article-page";
 import { ArticleSEO } from "@/components/blog/article-seo";
+import { getSiteOrigin } from "@/lib/seo/json-ld";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
@@ -17,7 +18,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     };
   }
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://ledojofinancier.com";
+  const siteUrl = getSiteOrigin();
   const articleUrl = `${siteUrl}/article/${article.slug}`;
   const description = article.metaDescription || article.excerpt || "";
 

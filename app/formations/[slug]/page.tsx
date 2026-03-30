@@ -1,6 +1,7 @@
 import { getPublishedCourseBySlugAction } from "@/app/actions/courses";
 import { notFound } from "next/navigation";
 import { CourseProductPage } from "@/components/courses/course-product-page";
+import { CourseJsonLd } from "@/components/courses/course-json-ld";
 import { Suspense } from "react";
 import { CourseProductPageAuthed } from "./course-product-page-authed";
 
@@ -43,8 +44,20 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
   };
 
   return (
-    <Suspense fallback={<CourseProductPage course={courseWithDefaults} isEnrolled={false} />}>
-      <CourseProductPageAuthed course={courseWithDefaults} />
-    </Suspense>
+    <>
+      <CourseJsonLd
+        course={{
+          title: courseWithDefaults.title,
+          shortDescription: courseWithDefaults.shortDescription,
+          description: courseWithDefaults.description,
+          slug: courseWithDefaults.slug,
+          price: courseWithDefaults.price,
+          heroImages: courseWithDefaults.heroImages,
+        }}
+      />
+      <Suspense fallback={<CourseProductPage course={courseWithDefaults} isEnrolled={false} />}>
+        <CourseProductPageAuthed course={courseWithDefaults} />
+      </Suspense>
+    </>
   );
 }

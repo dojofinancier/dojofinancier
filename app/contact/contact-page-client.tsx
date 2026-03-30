@@ -177,8 +177,8 @@ export function ContactPageClient() {
                   <div className="space-y-6 font-mono text-sm">
                     <div>
                       <div className="uppercase tracking-wider opacity-70 mb-2">COURRIEL</div>
-                      <a href="mailto:contact@dojofinancier.ca" className="hover:text-primary transition-colors">
-                        contact@dojofinancier.ca
+                      <a href="mailto:salut@dojofinancier.com" className="hover:text-primary transition-colors">
+                        salut@dojofinancier.com
                       </a>
                     </div>
                     <div>

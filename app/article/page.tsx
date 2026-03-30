@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getArticlesList, getArticleCategories } from "@/app/actions/blog";
 import { ArticleList } from "@/components/blog/article-list";
+import { ArticleListingJsonLd } from "@/components/blog/article-listing-json-ld";
 import { Suspense } from "react";
 
 export const metadata: Metadata = {
@@ -37,13 +38,18 @@ async function ArticleListContent({ searchParams }: { searchParams: Promise<{ pa
   ]);
 
   return (
-    <ArticleList
-      initialArticles={result.articles}
-      initialTotal={result.pagination.total}
-      categories={categories}
-      currentCategory={category}
-      currentSearch={search}
-    />
+    <>
+      <ArticleListingJsonLd
+        articles={result.articles.map((a) => ({ title: a.title, slug: a.slug }))}
+      />
+      <ArticleList
+        initialArticles={result.articles}
+        initialTotal={result.pagination.total}
+        categories={categories}
+        currentCategory={category}
+        currentSearch={search}
+      />
+    </>
   );
 }
 

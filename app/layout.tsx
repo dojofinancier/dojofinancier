@@ -11,6 +11,7 @@ import { OfflineIndicator } from "@/components/error/offline-indicator";
 import { ErrorBoundary } from "@/components/error/error-boundary";
 import { GoogleAnalytics } from "@/components/analytics/google-analytics";
 import { RouteChrome } from "@/components/layout/route-chrome";
+import { buildSiteWideJsonLdGraph } from "@/lib/seo/json-ld";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   variable: "--font-sans",
@@ -73,6 +74,13 @@ export default function RootLayout({
         {/* Preload critical resources for LCP improvement */}
         <link rel="preload" href="/logo_light.png" as="image" type="image/png" />
         <link rel="preload" href="/logo_dark.png" as="image" type="image/png" />
+
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(buildSiteWideJsonLdGraph()),
+          }}
+        />
         
         {/* Blocking script to prevent theme flash - runs before page renders */}
         <script

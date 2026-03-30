@@ -104,9 +104,20 @@ export async function getProfessionalCourses() {
     const courses = await prisma.course.findMany({
       where: {
         published: true,
-        category: {
-          name: "Professionnels",
-        },
+        OR: [
+          {
+            slug: {
+              equals: "erci",
+              mode: "insensitive",
+            },
+          },
+          {
+            slug: {
+              equals: "evmcd",
+              mode: "insensitive",
+            },
+          },
+        ],
       },
       select: {
         id: true,
@@ -121,17 +132,25 @@ export async function getProfessionalCourses() {
           },
         },
       },
-      take: 3,
-      orderBy: {
-        displayOrder: "asc",
-      },
     });
 
-    // Convert Decimal to number
-    return courses.map((course) => ({
+    // Keep fixed order: ERCI first, then EVMCD.
+    const slugOrder = new Map([
+      ["erci", 0],
+      ["evmcd", 1],
+    ]);
+
+    // Convert Decimal to number and enforce deterministic order.
+    return courses
+      .map((course) => ({
       ...course,
       price: course.price.toNumber(),
-    }));
+      }))
+      .sort((a, b) => {
+        const aOrder = slugOrder.get(a.slug?.toLowerCase() ?? "") ?? 99;
+        const bOrder = slugOrder.get(b.slug?.toLowerCase() ?? "") ?? 99;
+        return aOrder - bOrder;
+      });
   } catch (error) {
     console.error("Error fetching professional courses:", error);
     return [];
