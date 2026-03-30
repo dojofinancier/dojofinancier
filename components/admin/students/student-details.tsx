@@ -32,6 +32,11 @@ import {
   resetStudentPasswordAction,
   type StudentAttemptsResult,
 } from "@/app/actions/students";
+import {
+  grantQuizCorrectionsAccessAction,
+  revokeQuizCorrectionsGrantAction,
+} from "@/app/actions/quiz-corrections-grants";
+import { findActiveGrantForAttempt } from "@/lib/quiz-corrections-access";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -118,6 +123,7 @@ export function StudentDetails({ student }: StudentDetailsProps) {
   const [selectedEnrollment, setSelectedEnrollment] = useState<any>(null);
   const [additionalDays, setAdditionalDays] = useState("30");
   const [attemptsData, setAttemptsData] = useState<StudentAttemptsResult | null>(null);
+  const [correctionsActionId, setCorrectionsActionId] = useState<string | null>(null);
   const [attemptsLoading, setAttemptsLoading] = useState(false);
 
   const [activeTab, setActiveTab] = useState("profile");
@@ -128,15 +134,20 @@ export function StudentDetails({ student }: StudentDetailsProps) {
   const [newPasswordDisplay, setNewPasswordDisplay] = useState<string | null>(null);
   const [passwordCopied, setPasswordCopied] = useState(false);
 
+  const fetchAttempts = async () => {
+    setAttemptsLoading(true);
+    try {
+      const result = await getStudentAttemptsAction(student.id);
+      if (result.success) setAttemptsData(result.data);
+      else toast.error(result.error);
+    } finally {
+      setAttemptsLoading(false);
+    }
+  };
+
   const loadAttempts = () => {
     if (attemptsData !== null || attemptsLoading) return;
-    setAttemptsLoading(true);
-    getStudentAttemptsAction(student.id)
-      .then((result) => {
-        if (result.success) setAttemptsData(result.data);
-        else toast.error(result.error);
-      })
-      .finally(() => setAttemptsLoading(false));
+    void fetchAttempts();
   };
 
   useEffect(() => {
@@ -507,11 +518,21 @@ export function StudentDetails({ student }: StudentDetailsProps) {
                           <TableHead>Note de passage</TableHead>
                           <TableHead>Résultat</TableHead>
                           <TableHead>Date</TableHead>
+                          <TableHead className="text-right w-[280px]">Corrections</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {attemptsData.quizAttempts.map((attempt) => {
                           const passed = attempt.score >= attempt.quiz.passingScore;
+                          const grants = attemptsData.quizCorrectionsGrants ?? [];
+                          const matchingGrant = findActiveGrantForAttempt(
+                            grants,
+                            attempt.quiz.id,
+                            attempt.id
+                          );
+                          const showCorrectionsAdmin =
+                            attempt.quiz.isMockExam && attempt.score > 0 && !passed;
+
                           return (
                             <TableRow key={attempt.id}>
                               <TableCell>
@@ -540,6 +561,95 @@ export function StudentDetails({ student }: StudentDetailsProps) {
                                 {format(new Date(attempt.completedAt), "d MMM yyyy, HH:mm", {
                                   locale: fr,
                                 })}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {showCorrectionsAdmin ? (
+                                  <div className="flex flex-col items-end gap-1">
+                                    {matchingGrant ? (
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-8"
+                                        disabled={correctionsActionId !== null}
+                                        onClick={async () => {
+                                          setCorrectionsActionId(matchingGrant.id);
+                                          const res = await revokeQuizCorrectionsGrantAction({
+                                            grantId: matchingGrant.id,
+                                          });
+                                          setCorrectionsActionId(null);
+                                          if (res.success) {
+                                            toast.success("Accès aux corrections révoqué");
+                                            await fetchAttempts();
+                                          } else toast.error(res.error);
+                                        }}
+                                      >
+                                        {correctionsActionId === matchingGrant.id ? (
+                                          <Loader2 className="h-4 w-4 animate-spin" />
+                                        ) : (
+                                          "Révoquer l'accès"
+                                        )}
+                                      </Button>
+                                    ) : (
+                                      <>
+                                        <Button
+                                          type="button"
+                                          variant="secondary"
+                                          size="sm"
+                                          className="h-8"
+                                          disabled={correctionsActionId !== null}
+                                          onClick={async () => {
+                                            setCorrectionsActionId(`one-${attempt.id}`);
+                                            const res = await grantQuizCorrectionsAccessAction({
+                                              studentUserId: student.id,
+                                              quizId: attempt.quiz.id,
+                                              attemptId: attempt.id,
+                                            });
+                                            setCorrectionsActionId(null);
+                                            if (res.success) {
+                                              toast.success("Corrections autorisées pour cette tentative");
+                                              await fetchAttempts();
+                                            } else toast.error(res.error);
+                                          }}
+                                        >
+                                          {correctionsActionId === `one-${attempt.id}` ? (
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                          ) : (
+                                            "Cette tentative"
+                                          )}
+                                        </Button>
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          size="sm"
+                                          className="h-8"
+                                          disabled={correctionsActionId !== null}
+                                          onClick={async () => {
+                                            setCorrectionsActionId(`all-${attempt.quiz.id}`);
+                                            const res = await grantQuizCorrectionsAccessAction({
+                                              studentUserId: student.id,
+                                              quizId: attempt.quiz.id,
+                                              attemptId: null,
+                                            });
+                                            setCorrectionsActionId(null);
+                                            if (res.success) {
+                                              toast.success("Corrections autorisées pour toutes les tentatives");
+                                              await fetchAttempts();
+                                            } else toast.error(res.error);
+                                          }}
+                                        >
+                                          {correctionsActionId === `all-${attempt.quiz.id}` ? (
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                          ) : (
+                                            "Tout l'examen"
+                                          )}
+                                        </Button>
+                                      </>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span className="text-muted-foreground text-sm">—</span>
+                                )}
                               </TableCell>
                             </TableRow>
                           );
@@ -570,6 +680,9 @@ export function StudentDetails({ student }: StudentDetailsProps) {
                               {format(new Date(attempt.completedAt), "d MMM yyyy, HH:mm", {
                                 locale: fr,
                               })}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <span className="text-muted-foreground text-sm">—</span>
                             </TableCell>
                           </TableRow>
                         ))}

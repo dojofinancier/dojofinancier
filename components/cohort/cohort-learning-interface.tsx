@@ -21,6 +21,7 @@ import { ExamPlayer } from "@/components/course/exam-player";
 import { AskQuestionPage } from "@/components/course/ask-question-page";
 import { getCohortUnreadMessageCountAction } from "@/app/actions/cohort-messages";
 import type { Prisma } from "@prisma/client";
+import { useQueryClient } from "@tanstack/react-query";
 
 // Lazy load phase components
 const Phase1Learn = lazy(() => import("@/components/course/phase1-learn").then(m => ({ default: m.Phase1Learn })));
@@ -158,6 +159,7 @@ export function CohortLearningInterface({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
   
   // Default to coaching sessions (home page)
   const [activeItem, setActiveItem] = useState<NavigationItem>("coaching");
@@ -273,6 +275,7 @@ export function CohortLearningInterface({
 
   const handleExamExit = () => {
     setSelectedExamId(null);
+    void queryClient.invalidateQueries({ queryKey: ["available-exams", contentCourseId] });
   };
 
   const handleStartCaseStudy = (caseStudyId: string, timeLimit: number | null) => {

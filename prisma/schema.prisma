@@ -52,6 +52,8 @@ model User {
   learningActivityAttempts LearningActivityAttempt[]
   questionBankAttempts     QuestionBankAttempt[]
   caseStudyAttempts        CaseStudyAttempt[]
+  quizCorrectionsGrantsAsStudent QuizCorrectionsGrant[] @relation("QuizCorrectionsGrantStudent")
+  quizCorrectionsGrantsGranted   QuizCorrectionsGrant[] @relation("QuizCorrectionsGrantGranter")
 
   @@map("users")
 }
@@ -236,8 +238,9 @@ model Quiz {
   // Relations
   course      Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
   contentItem ContentItem    @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
-  questions   QuizQuestion[]
-  attempts    QuizAttempt[]
+  questions            QuizQuestion[]
+  attempts             QuizAttempt[]
+  correctionsGrants  QuizCorrectionsGrant[]
 
   @@index([courseId])
   @@index([courseId, isMockExam]) // For efficient exam queries
@@ -281,10 +284,30 @@ model QuizAttempt {
   timeSpent   Int?     @map("time_spent") // seconds
 
   // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  quiz Quiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  user               User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quiz               Quiz                   @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  correctionsGrants  QuizCorrectionsGrant[]
 
   @@map("quiz_attempts")
+}
+
+// Manual access to quiz/exam answer review (e.g. below passing score)
+model QuizCorrectionsGrant {
+  id              String    @id @default(uuid())
+  userId          String    @map("user_id")
+  quizId          String    @map("quiz_id")
+  attemptId       String?   @map("attempt_id") // null = all attempts for this quiz
+  grantedByUserId String    @map("granted_by_user_id")
+  grantedAt       DateTime  @default(now()) @map("granted_at")
+  revokedAt       DateTime? @map("revoked_at")
+
+  user      User         @relation("QuizCorrectionsGrantStudent", fields: [userId], references: [id], onDelete: Cascade)
+  grantedBy User         @relation("QuizCorrectionsGrantGranter", fields: [grantedByUserId], references: [id], onDelete: Cascade)
+  quiz      Quiz         @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  attempt   QuizAttempt? @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+
+  @@index([userId, quizId])
+  @@map("quiz_corrections_grants")
 }
 
 // Case Studies

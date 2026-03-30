@@ -18,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ChevronLeft, ChevronRight, StickyNote, Save, Presentation } from "lucide-react";
 import { SlideDeckViewer } from "./slide-deck-viewer";
 import { SanitizedHtmlBlock } from "@/components/ui/sanitized-html-block";
+import { getAnswerDisplay, getOptionLetter, resolveAnswerIndex } from "@/lib/utils/quiz-answer-display";
 
 interface ModuleDetailPageProps {
   courseId: string;
@@ -367,76 +368,6 @@ export function ModuleDetailPage({ courseId, moduleId, onBack, componentVisibili
     }
     
     return vimeoUrl;
-  };
-
-  // Helper function to map option keys to letters
-  const getOptionLetter = (key: string, index: number): string => {
-    if (/^[A-Z]$/i.test(key)) {
-      return key.toUpperCase();
-    }
-    return String.fromCharCode(65 + index);
-  };
-
-  const getOrderedOptionKeys = (options: Record<string, string>) => {
-    const optionKeys = Object.keys(options || {});
-    return optionKeys.slice().sort((a, b) => {
-      const aNum = Number.parseInt(a.replace(/\D/g, ""), 10);
-      const bNum = Number.parseInt(b.replace(/\D/g, ""), 10);
-      if (!Number.isNaN(aNum) && !Number.isNaN(bNum) && aNum !== bNum) return aNum - bNum;
-      return a.localeCompare(b);
-    });
-  };
-
-  const resolveAnswerIndex = (answer: string | undefined, options: Record<string, string>) => {
-    if (!answer) return null;
-    const trimmed = answer.trim();
-    if (!trimmed) return null;
-
-    const lower = trimmed.toLowerCase();
-    const orderedKeys = getOrderedOptionKeys(options);
-
-    const directKey = orderedKeys.find((key) => key.toLowerCase() === lower);
-    if (directKey) return orderedKeys.indexOf(directKey);
-
-    const valueMatchKey = orderedKeys.find((key) => {
-      const value = options[key];
-      return value && value.trim().toLowerCase() === lower;
-    });
-    if (valueMatchKey) return orderedKeys.indexOf(valueMatchKey);
-
-    const letterMatch = lower.match(/^([a-d])\s*[\).:\-]?/);
-    if (letterMatch) {
-      const idx = ["a", "b", "c", "d"].indexOf(letterMatch[1]);
-      if (idx >= 0 && idx < orderedKeys.length) return idx;
-    }
-
-    const numberMatch = lower.match(/^([1-4])\s*[\).:\-]?/);
-    if (numberMatch) {
-      const idx = Number.parseInt(numberMatch[1], 10) - 1;
-      if (idx >= 0 && idx < orderedKeys.length) return idx;
-    }
-
-    const optionMatch = lower.match(/^option\s*([1-9]\d*)/);
-    if (optionMatch) {
-      const idx = Number.parseInt(optionMatch[1], 10) - 1;
-      if (idx >= 0 && idx < orderedKeys.length) return idx;
-    }
-
-    return null;
-  };
-
-  const getAnswerDisplay = (answer: string | undefined, options: Record<string, string>) => {
-    if (!answer) {
-      return { label: "Non repondu", value: null };
-    }
-    const index = resolveAnswerIndex(answer, options);
-    const orderedKeys = getOrderedOptionKeys(options);
-    if (index === null || index < 0 || index >= orderedKeys.length) {
-      return { label: answer, value: null };
-    }
-    const key = orderedKeys[index];
-    const letter = getOptionLetter(key, index);
-    return { label: `${letter}: ${options[key]}`, value: key };
   };
 
   if (loading) {

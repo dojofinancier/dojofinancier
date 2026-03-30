@@ -4,25 +4,30 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, XCircle, Target, RotateCcw, ArrowLeft } from "lucide-react";
+import { CheckCircle2, XCircle, Target, RotateCcw, ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { SanitizedHtmlBlock } from "@/components/ui/sanitized-html-block";
+import { getExamCorrectionsAction } from "@/app/actions/exam-taking";
+
+export type ExamResultQuestion = {
+  id: string;
+  question: string;
+  options: Record<string, string>;
+  correctAnswer: string;
+  explanation?: string | null;
+};
 
 interface ExamResultsProps {
   result: {
+    attemptId: string;
     score: number;
     passingScore: number;
     passed: boolean;
     correctAnswers: number;
     totalQuestions: number;
     userAnswers: Record<string, string>;
-    questions: Array<{
-      id: string;
-      question: string;
-      options: Record<string, string>;
-      correctAnswer: string;
-      explanation?: string | null;
-    }>;
+    canViewCorrections: boolean;
+    questions?: ExamResultQuestion[];
   };
   exam: {
     id: string;
@@ -36,18 +41,38 @@ interface ExamResultsProps {
 
 export function ExamResults({ result, exam, onRetake, onExit }: ExamResultsProps) {
   const [showAnswers, setShowAnswers] = useState(false);
+  const [loadedQuestions, setLoadedQuestions] = useState<ExamResultQuestion[] | null>(null);
+  const [loadingCorrections, setLoadingCorrections] = useState(false);
 
-  // Helper function to map option keys to letters (option1 -> A, option2 -> B, etc.)
+  const questionsForReview = loadedQuestions ?? result.questions ?? [];
+  const belowPassing = result.score < exam.passingScore;
+
   const getOptionLetter = (key: string, index: number): string => {
-    // If already a letter, return it
     if (/^[A-Z]$/i.test(key)) {
       return key.toUpperCase();
     }
-    // Map option1, option2, etc. to A, B, C, D
-    return String.fromCharCode(65 + index); // 65 is 'A' in ASCII
+    return String.fromCharCode(65 + index);
   };
 
-  const shouldEncourageRetry = result.score < exam.passingScore;
+  const openCorrections = async () => {
+    if (questionsForReview.length > 0) {
+      setShowAnswers(true);
+      return;
+    }
+
+    setLoadingCorrections(true);
+    try {
+      const res = await getExamCorrectionsAction(result.attemptId);
+      if (res.success && res.data?.questions?.length) {
+        setLoadedQuestions(res.data.questions);
+        setShowAnswers(true);
+      } else {
+        toast.error(res.error || "Impossible de charger les corrections");
+      }
+    } finally {
+      setLoadingCorrections(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -56,7 +81,6 @@ export function ExamResults({ result, exam, onRetake, onExit }: ExamResultsProps
           <CardTitle className="text-2xl">Résultats de l'examen</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Score Display */}
           <div className="text-center space-y-4">
             <div className="text-6xl font-bold">{result.score}%</div>
             <div className="flex items-center justify-center gap-2">
@@ -86,8 +110,7 @@ export function ExamResults({ result, exam, onRetake, onExit }: ExamResultsProps
             </div>
           </div>
 
-          {/* Encouragement Message */}
-          {shouldEncourageRetry && (
+          {belowPassing && (
             <Card className="bg-yellow-50 border-yellow-200">
               <CardContent className="py-4">
                 <div className="flex items-start gap-3">
@@ -97,9 +120,11 @@ export function ExamResults({ result, exam, onRetake, onExit }: ExamResultsProps
                       Continuez à vous entraîner!
                     </div>
                     <div className="text-sm text-yellow-800">
-                      Votre score est inférieur à {exam.passingScore}%. Nous vous encourageons à
-                      refaire l'examen pour améliorer votre compréhension avant de consulter les
-                      corrections.
+                      Votre score est inférieur à {exam.passingScore}%. Nous vous encourageons à refaire
+                      l'examen pour améliorer votre compréhension
+                      {result.canViewCorrections
+                        ? ", ou à consulter les corrections si l'accès vous a été accordé."
+                        : " avant de consulter les corrections."}
                     </div>
                   </div>
                 </div>
@@ -107,26 +132,33 @@ export function ExamResults({ result, exam, onRetake, onExit }: ExamResultsProps
             </Card>
           )}
 
-          {/* Action Buttons */}
-          <div className="flex items-center justify-center gap-4">
-            {shouldEncourageRetry ? (
+          <div className="flex flex-wrap items-center justify-center gap-4">
+            {belowPassing && (
               <Button size="lg" onClick={onRetake}>
                 <RotateCcw className="h-5 w-5 mr-2" />
                 Réessayer l'examen
               </Button>
-            ) : (
-              <>
-                {!showAnswers && (
-                  <Button size="lg" onClick={() => setShowAnswers(true)}>
+            )}
+            {result.canViewCorrections && !showAnswers && (
+              <Button size="lg" onClick={openCorrections} disabled={loadingCorrections}>
+                {loadingCorrections ? (
+                  <>
+                    <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                    Chargement…
+                  </>
+                ) : (
+                  <>
                     <CheckCircle2 className="h-5 w-5 mr-2" />
                     Voir les corrections
-                  </Button>
+                  </>
                 )}
-                <Button size="lg" variant="outline" onClick={onRetake}>
-                  <RotateCcw className="h-5 w-5 mr-2" />
-                  Refaire l'examen
-                </Button>
-              </>
+              </Button>
+            )}
+            {!belowPassing && (
+              <Button size="lg" variant="outline" onClick={onRetake}>
+                <RotateCcw className="h-5 w-5 mr-2" />
+                Refaire l'examen
+              </Button>
             )}
             <Button size="lg" variant="outline" onClick={onExit}>
               <ArrowLeft className="h-5 w-5 mr-2" />
@@ -136,18 +168,16 @@ export function ExamResults({ result, exam, onRetake, onExit }: ExamResultsProps
         </CardContent>
       </Card>
 
-      {/* Answers Review */}
-      {showAnswers && !shouldEncourageRetry && (
+      {showAnswers && result.canViewCorrections && questionsForReview.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>Corrections</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            {result.questions.map((question, index) => {
+            {questionsForReview.map((question, index) => {
               const userAnswer = result.userAnswers[question.id];
               const optionKeys = question.options ? Object.keys(question.options).sort() : [];
               const correctOptionKey = question.correctAnswer;
-              const isUserCorrect = userAnswer && userAnswer.trim().toLowerCase() === correctOptionKey.trim().toLowerCase();
 
               return (
                 <div key={question.id} className="border-b pb-6 last:border-0">
@@ -161,7 +191,8 @@ export function ExamResults({ result, exam, onRetake, onExit }: ExamResultsProps
                     {optionKeys.map((key, keyIndex) => {
                       const optionValue = question.options[key];
                       const isCorrect = key === correctOptionKey;
-                      const isUserAnswer = userAnswer && userAnswer.trim().toLowerCase() === key.trim().toLowerCase();
+                      const isUserAnswer =
+                        userAnswer && userAnswer.trim().toLowerCase() === key.trim().toLowerCase();
                       const optionLetter = getOptionLetter(key, keyIndex);
 
                       return (
@@ -178,12 +209,8 @@ export function ExamResults({ result, exam, onRetake, onExit }: ExamResultsProps
                           <div className="flex items-center gap-2">
                             <span className="font-medium">{optionLetter}:</span>
                             <span>{optionValue}</span>
-                            {isCorrect && (
-                              <CheckCircle2 className="h-4 w-4 text-green-600 ml-auto" />
-                            )}
-                            {isUserAnswer && !isCorrect && (
-                              <XCircle className="h-4 w-4 text-red-600 ml-auto" />
-                            )}
+                            {isCorrect && <CheckCircle2 className="h-4 w-4 text-green-600 ml-auto" />}
+                            {isUserAnswer && !isCorrect && <XCircle className="h-4 w-4 text-red-600 ml-auto" />}
                             {isUserAnswer && (
                               <span className="text-xs text-muted-foreground ml-2">(Votre réponse)</span>
                             )}
@@ -211,4 +238,3 @@ export function ExamResults({ result, exam, onRetake, onExit }: ExamResultsProps
     </div>
   );
 }
-

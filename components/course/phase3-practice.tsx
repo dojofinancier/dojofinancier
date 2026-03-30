@@ -13,6 +13,7 @@ import { CaseStudyList } from "./case-study-list";
 import { CaseStudyPlayer } from "./case-study-player";
 import { checkPhase3AccessAction } from "@/app/actions/study-plan";
 import { getCaseStudiesAction } from "@/app/actions/case-studies";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface Phase3PracticeProps {
   courseId: string;
@@ -21,6 +22,7 @@ interface Phase3PracticeProps {
 }
 
 export function Phase3Practice({ courseId, course, settings }: Phase3PracticeProps) {
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<"exams" | "questions" | "case-studies">("exams");
   const [selectedExamId, setSelectedExamId] = useState<string | null>(null);
   const [selectedCaseStudyId, setSelectedCaseStudyId] = useState<string | null>(null);
@@ -65,6 +67,7 @@ export function Phase3Practice({ courseId, course, settings }: Phase3PracticePro
         examId={selectedExamId}
         onExit={() => {
           setSelectedExamId(null);
+          void queryClient.invalidateQueries({ queryKey: ["available-exams", courseId] });
         }}
       />
     );

@@ -203,6 +203,13 @@ export type StudentAttemptsResult = {
       course: { id: string; title: string };
     };
   }>;
+  /** Active manual corrections grants for mock exams / quizzes */
+  quizCorrectionsGrants: Array<{
+    id: string;
+    quizId: string;
+    attemptId: string | null;
+    grantedAt: Date;
+  }>;
   caseStudyAttempts: Array<{
     id: string;
     score: number;
@@ -226,7 +233,7 @@ export async function getStudentAttemptsAction(
   try {
     await requireAdmin();
 
-    const [quizAttempts, caseStudyAttempts] = await Promise.all([
+    const [quizAttempts, caseStudyAttempts, quizCorrectionsGrants] = await Promise.all([
       prisma.quizAttempt.findMany({
         where: { userId: studentId },
         orderBy: { completedAt: "desc" },
@@ -256,6 +263,16 @@ export async function getStudentAttemptsAction(
           },
         },
       }),
+      prisma.quizCorrectionsGrant.findMany({
+        where: { userId: studentId, revokedAt: null },
+        select: {
+          id: true,
+          quizId: true,
+          attemptId: true,
+          grantedAt: true,
+        },
+        orderBy: { grantedAt: "desc" },
+      }),
     ]);
 
     return {
@@ -267,6 +284,12 @@ export async function getStudentAttemptsAction(
           completedAt: a.completedAt,
           timeSpent: a.timeSpent,
           quiz: a.quiz,
+        })),
+        quizCorrectionsGrants: quizCorrectionsGrants.map((g) => ({
+          id: g.id,
+          quizId: g.quizId,
+          attemptId: g.attemptId,
+          grantedAt: g.grantedAt,
         })),
         caseStudyAttempts: caseStudyAttempts.map((a) => ({
           id: a.id,

@@ -28,6 +28,7 @@ import { AskQuestionPage } from "./ask-question-page";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCourseSettings } from "@/lib/hooks/use-course-settings";
+import { useQueryClient } from "@tanstack/react-query";
 
 // Lazy load phase components to reduce initial bundle size
 const Phase1Learn = lazy(() => import("./phase1-learn").then(m => ({ default: m.Phase1Learn })));
@@ -225,13 +226,16 @@ export function PhaseBasedLearningInterface({
     setSelectedTool(null);
   }, []);
 
+  const queryClient = useQueryClient();
+
   const handleStartExam = useCallback((examId: string) => {
     setSelectedExamId(examId);
   }, []);
 
   const handleExamExit = useCallback(() => {
     setSelectedExamId(null);
-  }, []);
+    void queryClient.invalidateQueries({ queryKey: ["available-exams", course.id] });
+  }, [course.id, queryClient]);
 
   if (settingsLoading) {
     return (
