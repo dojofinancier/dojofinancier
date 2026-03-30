@@ -22,8 +22,10 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const articleUrl = `${siteUrl}/article/${article.slug}`;
   const description = article.metaDescription || article.excerpt || "";
 
+  const indexable = article.published === true && article.isIndexable !== false;
+
   return {
-    title: `${article.title} | Le Dojo Financier`,
+    title: article.title,
     description,
     openGraph: {
       title: article.title,
@@ -47,7 +49,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       canonical: articleUrl,
     },
     robots: {
-      index: article.published === true,
+      index: indexable,
       follow: true,
     },
     keywords: article.secondaryKeywords && article.secondaryKeywords.length > 0 ? article.secondaryKeywords : undefined,
@@ -89,7 +91,7 @@ export default async function ArticlePageRoute({ params }: { params: Promise<{ s
 
   return (
     <>
-      <ArticleSEO article={article} />
+      {article.isIndexable !== false ? <ArticleSEO article={article} /> : null}
       <ArticlePage
         article={{ ...article, content: cleanedContent }}
         recommendedArticles={recommendedArticles}

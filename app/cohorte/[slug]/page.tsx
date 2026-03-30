@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { getPublishedCohortBySlugAction } from "@/app/actions/cohorts";
 import { notFound } from "next/navigation";
 import { CohortProductPage } from "@/components/cohorts/cohort-product-page";
@@ -6,9 +7,40 @@ import { prisma } from "@/lib/prisma";
 import { Suspense } from "react";
 import { BrutalistNavbar } from "@/components/layout/brutalist-navbar";
 import { BrutalistNavbarClient } from "@/components/layout/brutalist-navbar-client";
+import { getSiteOrigin } from "@/lib/seo/json-ld";
+import { siteOpenGraphDefaults, siteTwitterDefaults, toPlainMetaDescription } from "@/lib/seo/metadata-helpers";
 
 interface CohortDetailPageProps {
   params: Promise<{ slug: string }>;
+}
+
+export async function generateMetadata({ params }: CohortDetailPageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const cohort = await getPublishedCohortBySlugAction(slug);
+  if (!cohort) {
+    return { title: "Cohorte non trouvée" };
+  }
+  const origin = getSiteOrigin();
+  const pathSlug = cohort.slug || slug;
+  const canonical = `${origin}/cohorte/${pathSlug}`;
+  const description = toPlainMetaDescription(cohort.shortDescription || cohort.description);
+
+  return {
+    title: cohort.title,
+    description: description || cohort.title,
+    alternates: { canonical },
+    openGraph: {
+      ...siteOpenGraphDefaults(),
+      title: cohort.title,
+      description: description || cohort.title,
+      url: canonical,
+    },
+    twitter: {
+      ...siteTwitterDefaults(),
+      title: cohort.title,
+      description: description || cohort.title,
+    },
+  };
 }
 
 async function CohortDetailContent({ params }: CohortDetailPageProps) {

@@ -3,16 +3,55 @@ import { getArticlesList, getArticleCategories } from "@/app/actions/blog";
 import { ArticleList } from "@/components/blog/article-list";
 import { ArticleListingJsonLd } from "@/components/blog/article-listing-json-ld";
 import { Suspense } from "react";
+import {
+  absoluteUrl,
+  ARTICLE_INDEX_CANONICAL_PATH,
+  siteOpenGraphDefaults,
+  siteTwitterDefaults,
+} from "@/lib/seo/metadata-helpers";
 
-export const metadata: Metadata = {
-  title: "Articles | Le Dojo Financier",
-  description: "Découvrez nos articles sur la finance, l'investissement et la gestion financière.",
-  openGraph: {
-    title: "Articles | Le Dojo Financier",
-    description: "Découvrez nos articles sur la finance, l'investissement et la gestion financière.",
-    type: "website",
-  },
-};
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string; category?: string; search?: string }>;
+}): Promise<Metadata> {
+  const params = await searchParams;
+  const cat = params.category?.trim();
+  const q = params.search?.trim();
+
+  let titleSegment = "Articles";
+  if (cat && q) titleSegment = `${cat} · « ${q} »`;
+  else if (cat) titleSegment = `Catégorie : ${cat}`;
+  else if (q) titleSegment = `Recherche « ${q} »`;
+
+  const baseDescription =
+    "Découvrez nos articles sur la finance, l'investissement et la gestion financière.";
+  const description =
+    cat || q
+      ? [q && `Résultats pour « ${q} »`, cat && `Catégorie : ${cat}`, baseDescription].filter(Boolean).join(". ") + "."
+      : baseDescription;
+
+  const canonical = absoluteUrl(ARTICLE_INDEX_CANONICAL_PATH);
+  const hasFilters = Boolean(cat || q);
+
+  return {
+    title: titleSegment,
+    description,
+    alternates: { canonical },
+    robots: hasFilters ? { index: false, follow: true } : { index: true, follow: true },
+    openGraph: {
+      ...siteOpenGraphDefaults(),
+      title: titleSegment,
+      description,
+      url: canonical,
+    },
+    twitter: {
+      ...siteTwitterDefaults(),
+      title: titleSegment,
+      description,
+    },
+  };
+}
 
 interface ArticlePageProps {
   searchParams: Promise<{
@@ -37,11 +76,15 @@ async function ArticleListContent({ searchParams }: { searchParams: Promise<{ pa
     getArticleCategories(),
   ]);
 
+  const hasFilters = Boolean(category?.trim() || search?.trim());
+
   return (
     <>
-      <ArticleListingJsonLd
-        articles={result.articles.map((a) => ({ title: a.title, slug: a.slug }))}
-      />
+      {!hasFilters ? (
+        <ArticleListingJsonLd
+          articles={result.articles.map((a) => ({ title: a.title, slug: a.slug }))}
+        />
+      ) : null}
       <ArticleList
         initialArticles={result.articles}
         initialTotal={result.pagination.total}

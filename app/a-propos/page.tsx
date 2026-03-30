@@ -1,8 +1,24 @@
 import type { Metadata } from "next";
+import { absoluteUrl, siteOpenGraphDefaults, siteTwitterDefaults } from "@/lib/seo/metadata-helpers";
+
+const TITLE = "À propos";
+const DESCRIPTION = "Découvrez l'histoire et la mission du Dojo Financier.";
 
 export const metadata: Metadata = {
-  title: "À propos | Le Dojo Financier",
-  description: "Découvrez l'histoire et la mission du Dojo Financier",
+  title: TITLE,
+  description: DESCRIPTION,
+  alternates: { canonical: "/a-propos" },
+  openGraph: {
+    ...siteOpenGraphDefaults(),
+    title: TITLE,
+    description: DESCRIPTION,
+    url: absoluteUrl("/a-propos"),
+  },
+  twitter: {
+    ...siteTwitterDefaults(),
+    title: TITLE,
+    description: DESCRIPTION,
+  },
 };
 
 export default function AboutPage() {

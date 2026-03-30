@@ -1,15 +1,49 @@
+import type { Metadata } from "next";
 import { getPublishedCourseBySlugAction } from "@/app/actions/courses";
 import { notFound } from "next/navigation";
 import { CourseProductPage } from "@/components/courses/course-product-page";
 import { CourseJsonLd } from "@/components/courses/course-json-ld";
 import { Suspense } from "react";
 import { CourseProductPageAuthed } from "./course-product-page-authed";
+import { getSiteOrigin } from "@/lib/seo/json-ld";
+import { siteOpenGraphDefaults, siteTwitterDefaults, toPlainMetaDescription } from "@/lib/seo/metadata-helpers";
 
 // Note: Caching is handled automatically by Next.js 16 with cacheComponents enabled
 // The page will be cached and revalidated based on Next.js defaults
 
 interface CourseDetailPageProps {
   params: Promise<{ slug: string }>;
+}
+
+export async function generateMetadata({ params }: CourseDetailPageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const course = await getPublishedCourseBySlugAction(slug);
+  if (!course) {
+    return { title: "Formation non trouvée" };
+  }
+  const origin = getSiteOrigin();
+  const pathSlug = course.slug || slug;
+  const canonical = `${origin}/formations/${pathSlug}`;
+  const description = toPlainMetaDescription(
+    (course as { shortDescription?: string | null }).shortDescription || course.description
+  );
+
+  return {
+    title: course.title,
+    description: description || course.title,
+    alternates: { canonical },
+    openGraph: {
+      ...siteOpenGraphDefaults(),
+      title: course.title,
+      description: description || course.title,
+      url: canonical,
+    },
+    twitter: {
+      ...siteTwitterDefaults(),
+      title: course.title,
+      description: description || course.title,
+    },
+  };
 }
 
 export default async function CourseDetailPage({ params }: CourseDetailPageProps) {

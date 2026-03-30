@@ -1,10 +1,27 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { absoluteUrl, siteOpenGraphDefaults, siteTwitterDefaults } from "@/lib/seo/metadata-helpers";
+
+const TITLE = "Diagnostic investisseur";
+const DESCRIPTION =
+  "Un diagnostic court et structuré pour clarifier ta manière de décider en investissement.";
 
 export const metadata: Metadata = {
-  title: "Diagnostic Investisseur | Le Dojo Financier",
-  description: "Un diagnostic court et structuré pour clarifier ta manière de décider en investissement.",
+  title: TITLE,
+  description: DESCRIPTION,
+  alternates: { canonical: "/investisseur" },
+  openGraph: {
+    ...siteOpenGraphDefaults(),
+    title: TITLE,
+    description: DESCRIPTION,
+    url: absoluteUrl("/investisseur"),
+  },
+  twitter: {
+    ...siteTwitterDefaults(),
+    title: TITLE,
+    description: DESCRIPTION,
+  },
 };
 
 export default function InvestisseurLandingPage() {

@@ -1,8 +1,31 @@
+import type { Metadata } from "next";
 import { getPublishedCoursesAction } from "@/app/actions/courses";
 import { getPublishedCohortsAction } from "@/app/actions/cohorts";
 import { CourseCatalog } from "@/components/courses/course-catalog";
 import { CohortCatalog } from "@/components/cohorts/cohort-catalog";
 import { Suspense } from "react";
+import { absoluteUrl, siteOpenGraphDefaults, siteTwitterDefaults } from "@/lib/seo/metadata-helpers";
+
+const FORMATIONS_TITLE = "Formations en finance";
+const FORMATIONS_DESCRIPTION =
+  "Catalogue de formations : parcours OCRI, AMF et CSI (ERCI, EVMCD, CCVM, NEGP) et cohortes professionnelles avec accompagnement.";
+
+export const metadata: Metadata = {
+  title: FORMATIONS_TITLE,
+  description: FORMATIONS_DESCRIPTION,
+  alternates: { canonical: "/formations" },
+  openGraph: {
+    ...siteOpenGraphDefaults(),
+    title: FORMATIONS_TITLE,
+    description: FORMATIONS_DESCRIPTION,
+    url: absoluteUrl("/formations"),
+  },
+  twitter: {
+    ...siteTwitterDefaults(),
+    title: FORMATIONS_TITLE,
+    description: FORMATIONS_DESCRIPTION,
+  },
+};
 
 async function CoursesSection() {
   const courses = await getPublishedCoursesAction({});

@@ -1,8 +1,24 @@
 import type { Metadata } from "next";
+import { absoluteUrl, siteOpenGraphDefaults, siteTwitterDefaults } from "@/lib/seo/metadata-helpers";
+
+const TITLE = "Termes et conditions";
+const DESCRIPTION = "Termes et conditions d'utilisation du Dojo Financier.";
 
 export const metadata: Metadata = {
-  title: "Termes et conditions | Le Dojo Financier",
-  description: "Termes et conditions d'utilisation du Dojo Financier",
+  title: TITLE,
+  description: DESCRIPTION,
+  alternates: { canonical: "/termes-et-conditions" },
+  openGraph: {
+    ...siteOpenGraphDefaults(),
+    title: TITLE,
+    description: DESCRIPTION,
+    url: absoluteUrl("/termes-et-conditions"),
+  },
+  twitter: {
+    ...siteTwitterDefaults(),
+    title: TITLE,
+    description: DESCRIPTION,
+  },
 };
 
 export default function TermsAndConditionsPage() {

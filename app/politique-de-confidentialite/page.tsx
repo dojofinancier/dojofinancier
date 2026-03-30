@@ -1,8 +1,24 @@
 import type { Metadata } from "next";
+import { absoluteUrl, siteOpenGraphDefaults, siteTwitterDefaults } from "@/lib/seo/metadata-helpers";
+
+const TITLE = "Politique de confidentialité";
+const DESCRIPTION = "Politique de confidentialité du Dojo Financier.";
 
 export const metadata: Metadata = {
-  title: "Politique de confidentialité | Le Dojo Financier",
-  description: "Politique de confidentialité du Dojo Financier",
+  title: TITLE,
+  description: DESCRIPTION,
+  alternates: { canonical: "/politique-de-confidentialite" },
+  openGraph: {
+    ...siteOpenGraphDefaults(),
+    title: TITLE,
+    description: DESCRIPTION,
+    url: absoluteUrl("/politique-de-confidentialite"),
+  },
+  twitter: {
+    ...siteTwitterDefaults(),
+    title: TITLE,
+    description: DESCRIPTION,
+  },
 };
 
 export default function PrivacyPolicyPage() {

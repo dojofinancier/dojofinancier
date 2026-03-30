@@ -11,7 +11,8 @@ import { OfflineIndicator } from "@/components/error/offline-indicator";
 import { ErrorBoundary } from "@/components/error/error-boundary";
 import { GoogleAnalytics } from "@/components/analytics/google-analytics";
 import { RouteChrome } from "@/components/layout/route-chrome";
-import { buildSiteWideJsonLdGraph } from "@/lib/seo/json-ld";
+import { buildSiteWideJsonLdGraph, getSiteOrigin, SITE_ORGANIZATION_NAME } from "@/lib/seo/json-ld";
+import { siteOpenGraphDefaults, siteTwitterDefaults } from "@/lib/seo/metadata-helpers";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   variable: "--font-sans",
@@ -38,12 +39,30 @@ const jetBrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Le Dojo Financier",
-  description: "Plateforme d'apprentissage en finance",
+  metadataBase: new URL(getSiteOrigin()),
+  title: {
+    default: SITE_ORGANIZATION_NAME,
+    template: `%s | ${SITE_ORGANIZATION_NAME}`,
+  },
+  description:
+    "Préparation aux examens OCRI, CSI et AMF : formations, articles et outils pour professionnels et investisseurs.",
+  applicationName: SITE_ORGANIZATION_NAME,
   icons: {
     icon: "/Favicon.ico",
     shortcut: "/Favicon.ico",
     apple: "/Favicon.ico",
+  },
+  openGraph: {
+    ...siteOpenGraphDefaults(),
+    title: SITE_ORGANIZATION_NAME,
+    description:
+      "Préparation aux examens OCRI, CSI et AMF : formations, articles et outils pour professionnels et investisseurs.",
+  },
+  twitter: {
+    ...siteTwitterDefaults(),
+    title: SITE_ORGANIZATION_NAME,
+    description:
+      "Préparation aux examens OCRI, CSI et AMF : formations, articles et outils pour professionnels et investisseurs.",
   },
 };
 
