@@ -121,7 +121,7 @@ export function StudentDashboard({
                   {activeTab === "appointments" && (
                     <>
                       <Calendar className="h-4 w-4" />
-                      Rendez-vous
+                      Coaching
                     </>
                   )}
                   {activeTab === "support" && (
@@ -161,7 +161,7 @@ export function StudentDashboard({
                 className={activeTab === "appointments" ? "bg-accent" : ""}
               >
                 <Calendar className="h-4 w-4 mr-2" />
-                Rendez-vous
+                Coaching
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => setActiveTab("support")}
@@ -206,7 +206,7 @@ export function StudentDashboard({
             className="flex items-center gap-2"
           >
             <Calendar className="h-4 w-4" />
-            Rendez-vous
+            Coaching
           </Button>
           <Button
             variant={activeTab === "support" ? "default" : "outline"}
