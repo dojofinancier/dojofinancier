@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth/require-auth";
 import { logServerError } from "@/lib/utils/error-logging";
 import type { PaginatedResult } from "@/lib/utils/pagination";
+import type { QuizQuestionType } from "@prisma/client";
 
 /**
  * Get all students (admin only)
@@ -310,6 +311,113 @@ export async function getStudentAttemptsAction(
     return {
       success: false,
       error: "Erreur lors du chargement des résultats",
+    };
+  }
+}
+
+function quizOptionsToRecord(raw: unknown): Record<string, string> {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  const o = raw as Record<string, unknown>;
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(o)) {
+    if (v == null) continue;
+    out[k] = typeof v === "string" ? v : String(v);
+  }
+  return out;
+}
+
+export type AdminQuizAttemptReviewData = {
+  quizTitle: string;
+  courseTitle: string;
+  isMockExam: boolean;
+  score: number;
+  passingScore: number;
+  passed: boolean;
+  completedAt: Date;
+  userAnswers: Record<string, string>;
+  questions: Array<{
+    id: string;
+    question: string;
+    options: Record<string, string>;
+    correctAnswer: string;
+    explanation: string | null;
+    type: QuizQuestionType;
+  }>;
+};
+
+/**
+ * Full quiz/exam attempt review for admin (student answers + correct answers + explanations).
+ * Scoped to the given student so attempt IDs cannot be used across students from this UI.
+ */
+export async function getAdminQuizAttemptReviewAction(
+  studentUserId: string,
+  attemptId: string
+): Promise<
+  { success: true; data: AdminQuizAttemptReviewData } | { success: false; error: string }
+> {
+  try {
+    await requireAdmin();
+
+    const attempt = await prisma.quizAttempt.findFirst({
+      where: { id: attemptId, userId: studentUserId },
+      include: {
+        quiz: {
+          include: {
+            course: { select: { title: true } },
+            questions: { orderBy: { order: "asc" } },
+          },
+        },
+      },
+    });
+
+    if (!attempt) {
+      return { success: false, error: "Tentative introuvable" };
+    }
+
+    const rawAnswers = attempt.answers;
+    const userAnswers =
+      rawAnswers && typeof rawAnswers === "object" && !Array.isArray(rawAnswers)
+        ? Object.fromEntries(
+            Object.entries(rawAnswers as Record<string, unknown>).map(([k, v]) => [
+              k,
+              v == null ? "" : typeof v === "string" ? v : String(v),
+            ])
+          )
+        : {};
+
+    const questions = attempt.quiz.questions.map((q) => ({
+      id: q.id,
+      question: q.question,
+      options: quizOptionsToRecord(q.options),
+      correctAnswer: q.correctAnswer,
+      explanation: q.explanation ?? null,
+      type: q.type,
+    }));
+
+    return {
+      success: true,
+      data: {
+        quizTitle: attempt.quiz.title,
+        courseTitle: attempt.quiz.course.title,
+        isMockExam: attempt.quiz.isMockExam,
+        score: attempt.score,
+        passingScore: attempt.quiz.passingScore,
+        passed: attempt.score >= attempt.quiz.passingScore,
+        completedAt: attempt.completedAt,
+        userAnswers,
+        questions,
+      },
+    };
+  } catch (error) {
+    await logServerError({
+      errorMessage: `getAdminQuizAttemptReviewAction: ${error instanceof Error ? error.message : "Unknown error"}`,
+      stackTrace: error instanceof Error ? error.stack : undefined,
+      severity: "MEDIUM",
+    });
+
+    return {
+      success: false,
+      error: "Erreur lors du chargement de la tentative",
     };
   }
 }

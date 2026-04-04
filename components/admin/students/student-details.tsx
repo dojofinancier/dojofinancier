@@ -32,6 +32,7 @@ import {
   resetStudentPasswordAction,
   type StudentAttemptsResult,
 } from "@/app/actions/students";
+import { AdminQuizAttemptReviewDialog } from "@/components/admin/students/admin-quiz-attempt-review-dialog";
 import {
   grantQuizCorrectionsAccessAction,
   revokeQuizCorrectionsGrantAction,
@@ -51,6 +52,7 @@ import {
   KeyRound,
   Copy,
   Check,
+  Eye,
 } from "lucide-react";
 import type { UserRole } from "@prisma/client";
 
@@ -125,6 +127,7 @@ export function StudentDetails({ student }: StudentDetailsProps) {
   const [attemptsData, setAttemptsData] = useState<StudentAttemptsResult | null>(null);
   const [correctionsActionId, setCorrectionsActionId] = useState<string | null>(null);
   const [attemptsLoading, setAttemptsLoading] = useState(false);
+  const [reviewAttemptId, setReviewAttemptId] = useState<string | null>(null);
 
   const [activeTab, setActiveTab] = useState("profile");
 
@@ -518,6 +521,7 @@ export function StudentDetails({ student }: StudentDetailsProps) {
                           <TableHead>Note de passage</TableHead>
                           <TableHead>Résultat</TableHead>
                           <TableHead>Date</TableHead>
+                          <TableHead className="text-right w-[120px]">Réponses</TableHead>
                           <TableHead className="text-right w-[280px]">Corrections</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -561,6 +565,18 @@ export function StudentDetails({ student }: StudentDetailsProps) {
                                 {format(new Date(attempt.completedAt), "d MMM yyyy, HH:mm", {
                                   locale: fr,
                                 })}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-8 gap-1"
+                                  onClick={() => setReviewAttemptId(attempt.id)}
+                                >
+                                  <Eye className="h-3.5 w-3.5" />
+                                  Voir
+                                </Button>
                               </TableCell>
                               <TableCell className="text-right">
                                 {showCorrectionsAdmin ? (
@@ -680,6 +696,9 @@ export function StudentDetails({ student }: StudentDetailsProps) {
                               {format(new Date(attempt.completedAt), "d MMM yyyy, HH:mm", {
                                 locale: fr,
                               })}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <span className="text-muted-foreground text-sm">—</span>
                             </TableCell>
                             <TableCell className="text-right">
                               <span className="text-muted-foreground text-sm">—</span>
@@ -932,6 +951,15 @@ export function StudentDetails({ student }: StudentDetailsProps) {
           )}
         </DialogContent>
       </Dialog>
+
+      <AdminQuizAttemptReviewDialog
+        open={reviewAttemptId !== null}
+        onOpenChange={(o) => {
+          if (!o) setReviewAttemptId(null);
+        }}
+        studentUserId={student.id}
+        attemptId={reviewAttemptId}
+      />
     </Tabs>
   );
 }
