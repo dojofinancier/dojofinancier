@@ -27,6 +27,7 @@ import {
   revokeEnrollmentAccessAction,
   deleteEnrollmentAction,
 } from "@/app/actions/enrollments";
+import { cancelAccompagnementEnrollmentAdminAction } from "@/app/actions/accompagnement-admin";
 import {
   getStudentAttemptsAction,
   resetStudentPasswordAction,
@@ -99,6 +100,19 @@ type ProgressRow = {
   };
 };
 
+type AccompagnementEnrollmentRow = {
+  id: string;
+  expiresAt: Date;
+  isActive: boolean;
+  onboardingCompleted: boolean;
+  createdAt: Date;
+  product: {
+    id: string;
+    title: string;
+    course: { title: string; slug: string | null };
+  };
+};
+
 type StudentWithDetails = {
   id: string;
   email: string;
@@ -112,6 +126,7 @@ type StudentWithDetails = {
   enrollments: EnrollmentWithCourse[];
   subscriptions: SubscriptionRow[];
   progressTracking: ProgressRow[];
+  accompagnementEnrollments: AccompagnementEnrollmentRow[];
 };
 
 interface StudentDetailsProps {
@@ -122,7 +137,10 @@ export function StudentDetails({ student }: StudentDetailsProps) {
   const [extendDialogOpen, setExtendDialogOpen] = useState(false);
   const [revokeDialogOpen, setRevokeDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [cancelAccompDialogOpen, setCancelAccompDialogOpen] = useState(false);
   const [selectedEnrollment, setSelectedEnrollment] = useState<any>(null);
+  const [selectedAccompagnementEnrollment, setSelectedAccompagnementEnrollment] =
+    useState<AccompagnementEnrollmentRow | null>(null);
   const [additionalDays, setAdditionalDays] = useState("30");
   const [attemptsData, setAttemptsData] = useState<StudentAttemptsResult | null>(null);
   const [correctionsActionId, setCorrectionsActionId] = useState<string | null>(null);
@@ -196,6 +214,37 @@ export function StudentDetails({ student }: StudentDetailsProps) {
     } else {
       toast.error(result.error || "Erreur lors de la suppression");
     }
+  };
+
+  const handleCancelAccompagnement = async () => {
+    if (!selectedAccompagnementEnrollment) return;
+    const result = await cancelAccompagnementEnrollmentAdminAction({
+      enrollmentId: selectedAccompagnementEnrollment.id,
+      studentUserId: student.id,
+    });
+    if (result.success) {
+      toast.success("Accompagnement annulé pour cet étudiant");
+      setCancelAccompDialogOpen(false);
+      setSelectedAccompagnementEnrollment(null);
+      window.location.reload();
+    } else {
+      toast.error(result.error || "Erreur lors de l'annulation");
+    }
+  };
+
+  const isAccompagnementEffectivelyActive = (row: AccompagnementEnrollmentRow) => {
+    if (!row.isActive) return false;
+    return new Date(row.expiresAt).getTime() >= Date.now();
+  };
+
+  const getAccompagnementStatus = (row: AccompagnementEnrollmentRow) => {
+    if (!isAccompagnementEffectivelyActive(row)) {
+      if (!row.isActive) {
+        return { label: "Annulé", variant: "secondary" as const };
+      }
+      return { label: "Expiré", variant: "destructive" as const };
+    }
+    return { label: "Actif", variant: "default" as const };
   };
 
   const getEnrollmentStatus = (enrollment: { expiresAt: Date }) => {
@@ -418,6 +467,90 @@ export function StudentDetails({ student }: StudentDetailsProps) {
                                 <Trash2 className="h-4 w-4 text-destructive" />
                               </Button>
                             </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle>Accompagnement</CardTitle>
+            <CardDescription>
+              Inscriptions aux programmes d&apos;accompagnement (hors cours principal)
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {student.accompagnementEnrollments.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                Aucune inscription à l&apos;accompagnement
+              </div>
+            ) : (
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Produit</TableHead>
+                      <TableHead>Formation</TableHead>
+                      <TableHead>Début</TableHead>
+                      <TableHead>Fin prévue</TableHead>
+                      <TableHead>Onboarding</TableHead>
+                      <TableHead>Statut</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {student.accompagnementEnrollments.map((row) => {
+                      const status = getAccompagnementStatus(row);
+                      const canCancel = isAccompagnementEffectivelyActive(row);
+                      return (
+                        <TableRow key={row.id}>
+                          <TableCell className="font-medium">{row.product.title}</TableCell>
+                          <TableCell>
+                            <div className="text-sm">{row.product.course.title}</div>
+                            {row.product.course.slug && (
+                              <div className="text-xs text-muted-foreground">
+                                {row.product.course.slug}
+                              </div>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {format(new Date(row.createdAt), "d MMM yyyy", { locale: fr })}
+                          </TableCell>
+                          <TableCell>
+                            {format(new Date(row.expiresAt), "d MMM yyyy", { locale: fr })}
+                          </TableCell>
+                          <TableCell>
+                            {row.onboardingCompleted ? (
+                              <Badge className="bg-primary">Terminé</Badge>
+                            ) : (
+                              <Badge variant="secondary">En cours</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={status.variant}>{status.label}</Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {canCancel ? (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedAccompagnementEnrollment(row);
+                                  setCancelAccompDialogOpen(true);
+                                }}
+                              >
+                                <Ban className="h-4 w-4 mr-1" />
+                                Annuler
+                              </Button>
+                            ) : (
+                              <span className="text-sm text-muted-foreground">—</span>
+                            )}
                           </TableCell>
                         </TableRow>
                       );
@@ -843,6 +976,48 @@ export function StudentDetails({ student }: StudentDetailsProps) {
             </Button>
             <Button variant="destructive" onClick={handleDeleteEnrollment}>
               Supprimer
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={cancelAccompDialogOpen}
+        onOpenChange={(open) => {
+          setCancelAccompDialogOpen(open);
+          if (!open) setSelectedAccompagnementEnrollment(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Annuler l&apos;accompagnement</DialogTitle>
+            <DialogDescription>
+              {selectedAccompagnementEnrollment ? (
+                <>
+                  L&apos;étudiant perdra immédiatement l&apos;accès à l&apos;accompagnement{" "}
+                  <span className="font-medium text-foreground">
+                    {selectedAccompagnementEnrollment.product.title}
+                  </span>{" "}
+                  et ne recevra plus de suivis (e-mails / SMS). Cette action ne supprime pas
+                  l&apos;historique en base.
+                </>
+              ) : (
+                "Confirmer l&apos;annulation de cette inscription."
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setCancelAccompDialogOpen(false);
+                setSelectedAccompagnementEnrollment(null);
+              }}
+            >
+              Retour
+            </Button>
+            <Button variant="destructive" onClick={handleCancelAccompagnement}>
+              Annuler l&apos;accompagnement
             </Button>
           </div>
         </DialogContent>

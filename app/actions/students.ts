@@ -130,79 +130,98 @@ export async function getStudentDetailsAction(studentId: string) {
     await requireAdmin();
 
     // Fetch all data in parallel for better performance
-    const [student, enrollments, subscriptions, recentProgress] = await Promise.all([
-      // Student basic info
-      prisma.user.findUnique({
-        where: { id: studentId, role: "STUDENT" },
-        select: {
-          id: true,
-          email: true,
-          firstName: true,
-          lastName: true,
-          phone: true,
-          createdAt: true,
-          updatedAt: true,
-          suspendedAt: true,
-          role: true,
-        },
-      }),
-      // Enrollments with course info
-      prisma.enrollment.findMany({
-        where: { userId: studentId },
-        orderBy: { purchaseDate: "desc" },
-        select: {
-          id: true,
-          purchaseDate: true,
-          expiresAt: true,
-          orderNumber: true,
-          course: {
-            select: {
-              id: true,
-              title: true,
-              code: true,
-              category: {
-                select: { id: true, name: true },
+    const [student, enrollments, subscriptions, recentProgress, accompagnementEnrollments] =
+      await Promise.all([
+        // Student basic info
+        prisma.user.findUnique({
+          where: { id: studentId, role: "STUDENT" },
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            phone: true,
+            createdAt: true,
+            updatedAt: true,
+            suspendedAt: true,
+            role: true,
+          },
+        }),
+        // Enrollments with course info
+        prisma.enrollment.findMany({
+          where: { userId: studentId },
+          orderBy: { purchaseDate: "desc" },
+          select: {
+            id: true,
+            purchaseDate: true,
+            expiresAt: true,
+            orderNumber: true,
+            course: {
+              select: {
+                id: true,
+                title: true,
+                code: true,
+                category: {
+                  select: { id: true, name: true },
+                },
               },
             },
           },
-        },
-      }),
-      // Subscriptions
-      prisma.subscription.findMany({
-        where: { userId: studentId },
-        orderBy: { createdAt: "desc" },
-        select: {
-          id: true,
-          stripeSubscriptionId: true,
-          status: true,
-          currentPeriodEnd: true,
-          createdAt: true,
-        },
-      }),
-      // Recent progress (limited fields)
-      prisma.progressTracking.findMany({
-        where: { userId: studentId },
-        orderBy: { lastAccessedAt: "desc" },
-        take: 50,
-        include: {
-          contentItem: {
-            select: {
-              id: true,
-              contentType: true,
-              module: {
-                select: {
-                  id: true,
-                  title: true,
-                  course: {
-                    select: { id: true, title: true },
+        }),
+        // Subscriptions
+        prisma.subscription.findMany({
+          where: { userId: studentId },
+          orderBy: { createdAt: "desc" },
+          select: {
+            id: true,
+            stripeSubscriptionId: true,
+            status: true,
+            currentPeriodEnd: true,
+            createdAt: true,
+          },
+        }),
+        // Recent progress (limited fields)
+        prisma.progressTracking.findMany({
+          where: { userId: studentId },
+          orderBy: { lastAccessedAt: "desc" },
+          take: 50,
+          include: {
+            contentItem: {
+              select: {
+                id: true,
+                contentType: true,
+                module: {
+                  select: {
+                    id: true,
+                    title: true,
+                    course: {
+                      select: { id: true, title: true },
+                    },
                   },
                 },
               },
             },
           },
-        },
-      }),
-    ]);
+        }),
+        prisma.accompagnementEnrollment.findMany({
+          where: { userId: studentId },
+          orderBy: { createdAt: "desc" },
+          select: {
+            id: true,
+            expiresAt: true,
+            isActive: true,
+            onboardingCompleted: true,
+            createdAt: true,
+            product: {
+              select: {
+                id: true,
+                title: true,
+                course: { select: { title: true, slug: true } },
+              },
+            },
+          },
+        }),
+      ]);
 
     if (!student) {
       return null;
@@ -214,6 +233,7 @@ export async function getStudentDetailsAction(studentId: string) {
       enrollments,
       subscriptions,
       progressTracking: recentProgress,
+      accompagnementEnrollments,
     };
   } catch (error) {
     await logServerError({
