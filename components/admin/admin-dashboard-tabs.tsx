@@ -14,9 +14,10 @@ import { MessageList } from "./messages/message-list";
 import { SupportTicketList } from "./support-tickets/support-ticket-list";
 import { AppointmentList } from "./appointments/appointment-list";
 import { AvailabilityManagement } from "./appointments/availability-management";
-import { BookOpen, Users, ShoppingCart, Tag, MessageSquare, Ticket, Calendar, BarChart3, Menu, GraduationCap, AlertCircle, LineChart, Settings } from "lucide-react";
+import { BookOpen, Users, ShoppingCart, Tag, MessageSquare, Ticket, Calendar, BarChart3, Menu, GraduationCap, AlertCircle, LineChart, Settings, ClipboardCheck } from "lucide-react";
 import { ErrorLogViewer } from "./error-logs/error-log-viewer";
 import { AccountManagement } from "./account/account-management";
+import { AccompagnementAdminTabs } from "./accompagnement/accompagnement-admin-tabs";
 
 interface AdminDashboardTabsProps {
   defaultTab?: string;
@@ -139,6 +140,12 @@ export function AdminDashboardTabs({ defaultTab = "overview", children }: AdminD
                       Compte
                     </>
                   )}
+                  {activeTab === "accompagnement" && (
+                    <>
+                      <ClipboardCheck className="h-4 w-4" />
+                      Accompagnement
+                    </>
+                  )}
                 </span>
                 <Menu className="h-4 w-4" />
               </Button>
@@ -227,6 +234,13 @@ export function AdminDashboardTabs({ defaultTab = "overview", children }: AdminD
               >
                 <Settings className="h-4 w-4 mr-2" />
                 Compte
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => handleTabChange("accompagnement")}
+                className={activeTab === "accompagnement" ? "bg-accent" : ""}
+              >
+                <ClipboardCheck className="h-4 w-4 mr-2" />
+                Accompagnement
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -330,6 +344,14 @@ export function AdminDashboardTabs({ defaultTab = "overview", children }: AdminD
             <Settings className="h-4 w-4" />
             Compte
           </Button>
+          <Button
+            variant={activeTab === "accompagnement" ? "default" : "outline"}
+            onClick={() => handleTabChange("accompagnement")}
+            className="flex items-center gap-2"
+          >
+            <ClipboardCheck className="h-4 w-4" />
+            Accompagnement
+          </Button>
         </div>
       </div>
 
@@ -359,6 +381,7 @@ export function AdminDashboardTabs({ defaultTab = "overview", children }: AdminD
       {activeTab === "support" && <SupportTicketList />}
       {activeTab === "errors" && <ErrorLogViewer />}
       {activeTab === "account" && <AccountManagement />}
+      {activeTab === "accompagnement" && <AccompagnementAdminTabs />}
       {/* Cohorts are handled via dedicated route /tableau-de-bord/admin/cohorts */}
       {activeTab === "cohorts" && children ? children : null}
     </div>

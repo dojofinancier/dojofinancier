@@ -2,15 +2,14 @@
 
 import { useState, useEffect, lazy, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { BookOpen, User, Calendar, HelpCircle, Menu, GraduationCap } from "lucide-react";
+import { BookOpen, User, Calendar, HelpCircle, Menu, ClipboardCheck } from "lucide-react";
 const CoursesTab = lazy(() => import("./tabs/courses-tab").then((m) => ({ default: m.CoursesTab })));
-const CohortsTab = lazy(() => import("./tabs/cohorts-tab").then((m) => ({ default: m.CohortsTab })));
 const ProfileTab = lazy(() => import("./tabs/profile-tab").then((m) => ({ default: m.ProfileTab })));
 const AppointmentsTab = lazy(() => import("./tabs/appointments-tab").then((m) => ({ default: m.AppointmentsTab })));
 const SupportTab = lazy(() => import("./tabs/support-tab").then((m) => ({ default: m.SupportTab })));
+const AccompagnementTab = lazy(() => import("@/components/accompagnement/student-accompagnement-tab").then((m) => ({ default: m.StudentAccompagnementTab })));
 
 type User = {
   id: string;
@@ -36,28 +35,9 @@ type Enrollment = {
   };
 };
 
-type CohortEnrollment = {
-  id: string;
-  cohortId: string;
-  purchaseDate: Date;
-  expiresAt: Date;
-  cohort: {
-    id: string;
-    title: string;
-    slug: string | null;
-    instructor: {
-      id: string;
-      email: string;
-      firstName: string | null;
-      lastName: string | null;
-    } | null;
-  };
-};
-
 interface StudentDashboardProps {
   user: User;
   initialEnrollments: Enrollment[];
-  initialCohortEnrollments?: CohortEnrollment[];
 }
 
 const TabLoading = () => (
@@ -69,15 +49,20 @@ const TabLoading = () => (
 export function StudentDashboard({
   user,
   initialEnrollments,
-  initialCohortEnrollments = [],
 }: StudentDashboardProps) {
   const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState<"courses" | "cohorts" | "profile" | "appointments" | "support">("courses");
+  const [activeTab, setActiveTab] = useState<
+    "courses" | "profile" | "appointments" | "support" | "accompagnement"
+  >("courses");
 
   useEffect(() => {
     const tab = searchParams.get("tab");
-    if (tab === "cohorts" || tab === "profile" || tab === "appointments" || tab === "support") {
+    if (tab === "profile" || tab === "appointments" || tab === "support" || tab === "accompagnement") {
       setActiveTab(tab);
+    }
+    // Legacy deep link
+    if (tab === "suivi") {
+      setActiveTab("accompagnement");
     }
   }, [searchParams]);
 
@@ -106,12 +91,6 @@ export function StudentDashboard({
                       Formations
                     </>
                   )}
-                  {activeTab === "cohorts" && (
-                    <>
-                      <GraduationCap className="h-4 w-4" />
-                      Cohortes
-                    </>
-                  )}
                   {activeTab === "profile" && (
                     <>
                       <User className="h-4 w-4" />
@@ -130,6 +109,12 @@ export function StudentDashboard({
                       Support
                     </>
                   )}
+                  {activeTab === "accompagnement" && (
+                    <>
+                      <ClipboardCheck className="h-4 w-4" />
+                      Accompagnement
+                    </>
+                  )}
                 </span>
                 <Menu className="h-4 w-4" />
               </Button>
@@ -141,13 +126,6 @@ export function StudentDashboard({
               >
                 <BookOpen className="h-4 w-4 mr-2" />
                 Formations
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => setActiveTab("cohorts")}
-                className={activeTab === "cohorts" ? "bg-accent" : ""}
-              >
-                <GraduationCap className="h-4 w-4 mr-2" />
-                Cohortes
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => setActiveTab("profile")}
@@ -170,6 +148,13 @@ export function StudentDashboard({
                 <HelpCircle className="h-4 w-4 mr-2" />
                 Support
               </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setActiveTab("accompagnement")}
+                className={activeTab === "accompagnement" ? "bg-accent" : ""}
+              >
+                <ClipboardCheck className="h-4 w-4 mr-2" />
+                Accompagnement
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -183,14 +168,6 @@ export function StudentDashboard({
           >
             <BookOpen className="h-4 w-4" />
             Formations
-          </Button>
-          <Button
-            variant={activeTab === "cohorts" ? "default" : "outline"}
-            onClick={() => setActiveTab("cohorts")}
-            className="flex items-center gap-2"
-          >
-            <GraduationCap className="h-4 w-4" />
-            Cohortes
           </Button>
           <Button
             variant={activeTab === "profile" ? "default" : "outline"}
@@ -216,6 +193,14 @@ export function StudentDashboard({
             <HelpCircle className="h-4 w-4" />
             Support
           </Button>
+          <Button
+            variant={activeTab === "accompagnement" ? "default" : "outline"}
+            onClick={() => setActiveTab("accompagnement")}
+            className="flex items-center gap-2"
+          >
+            <ClipboardCheck className="h-4 w-4" />
+            Accompagnement
+          </Button>
         </div>
       </div>
 
@@ -223,15 +208,7 @@ export function StudentDashboard({
       <div className="mt-6">
         {activeTab === "courses" && (
           <Suspense fallback={<TabLoading />}>
-            <CoursesTab
-              enrollments={initialEnrollments}
-              cohortEnrollments={[]}
-            />
-          </Suspense>
-        )}
-        {activeTab === "cohorts" && (
-          <Suspense fallback={<TabLoading />}>
-            <CohortsTab cohortEnrollments={initialCohortEnrollments} />
+            <CoursesTab enrollments={initialEnrollments} />
           </Suspense>
         )}
         {activeTab === "profile" && (
@@ -247,6 +224,11 @@ export function StudentDashboard({
         {activeTab === "support" && (
           <Suspense fallback={<TabLoading />}>
             <SupportTab />
+          </Suspense>
+        )}
+        {activeTab === "accompagnement" && (
+          <Suspense fallback={<TabLoading />}>
+            <AccompagnementTab />
           </Suspense>
         )}
       </div>

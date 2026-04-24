@@ -9,12 +9,16 @@ import { createAppointmentPaymentIntentAction, createMultipleAppointmentsPayment
 import { getPublishedCoursesAction } from "@/app/actions/courses";
 import { toast } from "sonner";
 import { Loader2, Calendar as CalendarIcon, Clock, ChevronLeft, ChevronRight, ShoppingCart, X, DollarSign } from "lucide-react";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek, isToday, isPast } from "date-fns";
+import { startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek, isToday, isPast } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
-import { fr } from "date-fns/locale";
 import { formatInTimeZone } from "date-fns-tz";
-import { EASTERN_TIMEZONE } from "@/lib/utils/timezone";
+import {
+  EASTERN_TIMEZONE,
+  formatAppointmentMonthYearFr,
+  formatAppointmentTimeFr,
+  formatAppointmentWeekdayDateFr,
+} from "@/lib/utils/timezone";
 import { AppointmentPaymentDialog } from "./appointment-payment-dialog";
 
 type Course = {
@@ -265,9 +269,7 @@ export function AppointmentBooking() {
   };
 
 
-  const formatTime = (dateString: string) => {
-    return format(new Date(dateString), "HH:mm", { locale: fr });
-  };
+  const formatTime = (dateString: string) => formatAppointmentTimeFr(dateString);
 
   const calculatePrice = (hourlyRate: number, durationMinutes: number) => {
     return ((hourlyRate * durationMinutes) / 60).toFixed(2);
@@ -369,7 +371,7 @@ export function AppointmentBooking() {
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2">
                   <CalendarIcon className="h-5 w-5" />
-                  {format(currentMonth, "MMMM yyyy", { locale: fr })}
+                  {formatAppointmentMonthYearFr(currentMonth)}
                 </CardTitle>
                 <div className="flex items-center gap-2">
                   <Button
@@ -424,7 +426,9 @@ export function AppointmentBooking() {
                       onClick={() => !isPastDate && isCurrentMonth && handleDateSelect(date)}
                       disabled={isPastDate || !isCurrentMonth}
                     >
-                      <span className="text-sm font-medium">{format(date, "d")}</span>
+                      <span className="text-sm font-medium">
+                        {formatInTimeZone(date, EASTERN_TIMEZONE, "d")}
+                      </span>
                       {/* Green dot indicator for available dates */}
                       {isAvailable && (
                         <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-1.5 h-1.5 bg-green-500 rounded-full" />
@@ -450,7 +454,7 @@ export function AppointmentBooking() {
               <CardTitle className="flex items-center gap-2">
                 <Clock className="h-5 w-5" />
                 {selectedDate
-                  ? format(selectedDate, "EEEE d MMMM yyyy", { locale: fr })
+                  ? formatAppointmentWeekdayDateFr(selectedDate)
                   : "Sélectionnez une date"}
               </CardTitle>
             </CardHeader>
@@ -522,7 +526,7 @@ export function AppointmentBooking() {
                   <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
                     <div className="flex-1">
                       <div className="font-medium">
-                        {format(new Date(slot.start), "EEEE d MMMM yyyy", { locale: fr })}
+                        {formatAppointmentWeekdayDateFr(slot.start)}
                       </div>
                       <div className="text-sm text-muted-foreground">
                         {formatTime(slot.start)} - {formatTime(slot.end)}

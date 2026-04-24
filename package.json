@@ -16,7 +16,12 @@
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
     "db:populate-slugs": "tsx scripts/populate-slugs.ts",
-    "db:migrate-knowledge-base": "tsx scripts/migrate-knowledge-base.ts"
+    "db:migrate-knowledge-base": "tsx scripts/migrate-knowledge-base.ts",
+    "accompagnement:trigger-onboarding-email": "tsx scripts/trigger-onboarding-email.ts",
+    "accompagnement:trigger-daily-checkin": "tsx scripts/trigger-daily-checkin.ts",
+    "accompagnement:trigger-daily-checkin-sms": "tsx scripts/trigger-daily-checkin.ts --sms",
+    "accompagnement:grant-enrollment": "tsx scripts/grant-accompagnement-enrollment.ts",
+    "email:ping": "tsx scripts/email-ping.ts"
   },
   "dependencies": {
     "@date-fns/tz": "^1.4.1",
@@ -77,6 +82,7 @@
     "sonner": "^2.0.7",
     "stripe": "^19.3.1",
     "tailwind-merge": "^3.4.0",
+    "twilio": "^5.13.1",
     "zod": "^4.1.12"
   },
   "devDependencies": {

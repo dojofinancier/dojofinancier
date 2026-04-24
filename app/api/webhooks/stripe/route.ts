@@ -3,9 +3,10 @@ import { stripe } from "@/lib/stripe/server";
 import { prisma } from "@/lib/prisma";
 import { createEnrollmentAction } from "@/app/actions/enrollments";
 import { createCohortEnrollmentAction } from "@/app/actions/cohort-enrollments";
+import { createAccompagnementEnrollmentAction } from "@/app/actions/accompagnement-payments";
 import { trackCouponUsageAction } from "@/app/actions/coupons";
 import { logServerError } from "@/lib/utils/error-logging";
-import { sendPaymentSuccessWebhook } from "@/lib/webhooks/make";
+import { sendPaymentSuccessWebhook, sendMakeWebhook } from "@/lib/webhooks/make";
 // User is already created during checkout, so we don't need to create it here
 
 /**
@@ -74,6 +75,57 @@ export async function POST(request: NextRequest) {
         couponId,
         type,
       } = paymentIntent.metadata;
+
+      // Handle accompagnement product payments
+      if (type === "accompagnement") {
+        const { accompagnementProductId } = paymentIntent.metadata;
+        if (!userId || !accompagnementProductId) {
+          await logServerError({
+            errorMessage: "Missing userId or accompagnementProductId in accompagnement payment metadata",
+            severity: "HIGH",
+          });
+          return NextResponse.json({ received: true });
+        }
+
+        const enrollmentResult = await createAccompagnementEnrollmentAction({
+          userId,
+          accompagnementProductId,
+          paymentIntentId: paymentIntent.id,
+        });
+
+        if (!enrollmentResult.success) {
+          await logServerError({
+            errorMessage: `Failed to create accompagnement enrollment: ${enrollmentResult.error}`,
+            severity: "CRITICAL",
+          });
+        }
+
+        // Fire Make.com webhook (non-blocking)
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { email: true, firstName: true, lastName: true },
+        });
+        const product = await prisma.accompagnementProduct.findUnique({
+          where: { id: accompagnementProductId },
+          include: { course: { select: { title: true } } },
+        });
+
+        if (user && product) {
+          sendMakeWebhook("accompagnement.enrollment.created" as any, {
+            enrollment_id: enrollmentResult.data?.id,
+            user_id: userId,
+            user_email: user.email,
+            user_name: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email,
+            product_id: accompagnementProductId,
+            product_title: product.title,
+            course_title: product.course.title,
+            amount: parseFloat(finalAmount || "0"),
+            timestamp: new Date().toISOString(),
+          }).catch((err) => console.error("Accompagnement webhook failed:", err));
+        }
+
+        return NextResponse.json({ received: true });
+      }
 
       if (!userId || (!courseId && !cohortId)) {
         await logServerError({

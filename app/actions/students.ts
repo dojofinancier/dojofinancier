@@ -16,6 +16,7 @@ export async function getStudentsAction(params: {
   limit?: number;
   search?: string;
   suspended?: boolean;
+  courseId?: string;
 }): Promise<PaginatedResult<any>> {
   try {
     await requireAdmin();
@@ -37,6 +38,14 @@ export async function getStudentsAction(params: {
         { firstName: { contains: params.search, mode: "insensitive" } },
         { lastName: { contains: params.search, mode: "insensitive" } },
       ];
+    }
+
+    if (params.courseId) {
+      where.enrollments = {
+        some: {
+          courseId: params.courseId,
+        },
+      };
     }
 
     const students = await prisma.user.findMany({
@@ -82,6 +91,33 @@ export async function getStudentsAction(params: {
       nextCursor: null,
       hasMore: false,
     };
+  }
+}
+
+/**
+ * Get all courses available for student filtering (admin only)
+ */
+export async function getStudentFilterCoursesAction(): Promise<
+  Array<{ id: string; title: string; code: string | null }>
+> {
+  try {
+    await requireAdmin();
+
+    return await prisma.course.findMany({
+      orderBy: { title: "asc" },
+      select: {
+        id: true,
+        title: true,
+        code: true,
+      },
+    });
+  } catch (error) {
+    await logServerError({
+      errorMessage: `Failed to get student filter courses: ${error instanceof Error ? error.message : "Unknown error"}`,
+      stackTrace: error instanceof Error ? error.stack : undefined,
+      severity: "MEDIUM",
+    });
+    return [];
   }
 }
 

@@ -5,8 +5,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { AppointmentDetails } from "@/components/admin/appointments/appointment-details";
-import { format } from "date-fns";
-import { fr } from "date-fns/locale";
+import { formatAppointmentDateTimeFr } from "@/lib/utils/timezone";
 
 interface AppointmentDetailPageProps {
   params: Promise<{ appointmentId: string }>;
@@ -32,7 +31,7 @@ export default async function AppointmentDetailPage({ params }: AppointmentDetai
         </Link>
         <h1 className="text-3xl font-bold">Détails du rendez-vous</h1>
         <p className="text-muted-foreground mt-2">
-          {format(new Date(appointment.scheduledAt), "d MMMM yyyy, HH:mm", { locale: fr })}
+          {formatAppointmentDateTimeFr(appointment.scheduledAt)}
         </p>
       </div>
       <AppointmentDetails appointment={appointment} />

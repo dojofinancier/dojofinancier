@@ -13,10 +13,14 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { rescheduleAppointmentAction } from "@/app/actions/appointments";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek, isToday, isPast } from "date-fns";
-import { fr } from "date-fns/locale";
+import { startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek, isToday, isPast } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
-import { EASTERN_TIMEZONE } from "@/lib/utils/timezone";
+import {
+  EASTERN_TIMEZONE,
+  formatAppointmentDateTimeFr,
+  formatAppointmentMonthYearFr,
+  formatAppointmentTimeFr,
+} from "@/lib/utils/timezone";
 import { Calendar, Clock, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -129,7 +133,7 @@ export function RescheduleModal({ appointment, onRescheduled }: RescheduleModalP
             {appointment.course?.title || "Rendez-vous"}
           </h3>
           <p className="text-sm text-muted-foreground mb-1">
-            <strong>Actuel:</strong> {format(appointmentDate, "d MMMM yyyy, HH:mm", { locale: fr })}
+            <strong>Actuel:</strong> {formatAppointmentDateTimeFr(appointmentDate)}
           </p>
           <p className="text-sm text-muted-foreground">
             Durée: {appointment.durationMinutes} minutes
@@ -158,7 +162,7 @@ export function RescheduleModal({ appointment, onRescheduled }: RescheduleModalP
                   Créneau sélectionné:
                 </p>
                 <p className="text-sm text-blue-800 dark:text-blue-200">
-                  {format(new Date(selectedSlot.start), "d MMMM yyyy, HH:mm", { locale: fr })}
+                  {formatAppointmentDateTimeFr(selectedSlot.start)}
                 </p>
               </div>
             )}
@@ -364,7 +368,7 @@ function RescheduleBooking({
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <h3 className="font-semibold">
-            {format(currentMonth, "MMMM yyyy", { locale: fr })}
+            {formatAppointmentMonthYearFr(currentMonth)}
           </h3>
           <Button
             variant="outline"
@@ -408,7 +412,7 @@ function RescheduleBooking({
                   !isSelected && !isPastDate && !isOtherMonth && !hasAvailability && "cursor-not-allowed opacity-50"
                 )}
               >
-                {format(date, "d")}
+                {formatInTimeZone(date, EASTERN_TIMEZONE, "d")}
                 {hasAvailability && !isOtherMonth && (
                   <span className="block w-1 h-1 mx-auto mt-1 rounded-full bg-primary" />
                 )}
@@ -450,7 +454,7 @@ function RescheduleBooking({
                       <div className="flex items-center gap-2">
                         <Clock className="h-4 w-4" />
                         <span className="font-medium">
-                          {format(slotStart, "HH:mm")} - {format(new Date(slot.end), "HH:mm")}
+                          {formatAppointmentTimeFr(slotStart)} - {formatAppointmentTimeFr(slot.end)}
                         </span>
                       </div>
                     </button>

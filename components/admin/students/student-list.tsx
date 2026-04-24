@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/select";
 import {
   getStudentsAction,
+  getStudentFilterCoursesAction,
   suspendStudentAction,
   activateStudentAction,
 } from "@/app/actions/students";
@@ -45,11 +46,19 @@ type StudentListItem = {
   };
 };
 
+type CourseFilterOption = {
+  id: string;
+  title: string;
+  code: string | null;
+};
+
 export function StudentList() {
   const [students, setStudents] = useState<StudentListItem[]>([]);
+  const [courses, setCourses] = useState<CourseFilterOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [suspendedFilter, setSuspendedFilter] = useState<boolean | undefined>(undefined);
+  const [courseFilter, setCourseFilter] = useState<string>("all");
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
 
@@ -61,6 +70,7 @@ export function StudentList() {
         limit: 20,
         search: search || undefined,
         suspended: suspendedFilter,
+        courseId: courseFilter === "all" ? undefined : courseFilter,
       });
       if (cursor) {
         setStudents((prev) => [...prev, ...result.items]);
@@ -74,7 +84,20 @@ export function StudentList() {
     } finally {
       setLoading(false);
     }
-  }, [search, suspendedFilter]);
+  }, [search, suspendedFilter, courseFilter]);
+
+  useEffect(() => {
+    async function loadCourses() {
+      try {
+        const filterCourses = await getStudentFilterCoursesAction();
+        setCourses(filterCourses);
+      } catch {
+        toast.error("Erreur lors du chargement des formations");
+      }
+    }
+
+    loadCourses();
+  }, []);
 
   useEffect(() => {
     loadStudents();
@@ -120,6 +143,19 @@ export function StudentList() {
             <SelectItem value="all">Tous</SelectItem>
             <SelectItem value="active">Actifs</SelectItem>
             <SelectItem value="suspended">Suspendus</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={courseFilter} onValueChange={setCourseFilter}>
+          <SelectTrigger className="w-[240px]">
+            <SelectValue placeholder="Toutes les formations" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Toutes les formations</SelectItem>
+            {courses.map((course) => (
+              <SelectItem key={course.id} value={course.id}>
+                {course.code ? `${course.code} - ${course.title}` : course.title}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
         <Button onClick={() => loadStudents()} variant="outline">

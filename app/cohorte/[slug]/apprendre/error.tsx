@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, RefreshCw, Home, Mail, GraduationCap } from "lucide-react";
+import { AlertCircle, RefreshCw, Home, Mail, BookOpen } from "lucide-react";
 import { logClientErrorAction } from "@/app/actions/error-logs";
 import { useRouter } from "next/navigation";
 
@@ -69,12 +69,12 @@ export default function CohortError({
               Réessayer
             </Button>
             <Button
-              onClick={() => router.push("/tableau-de-bord/etudiant?tab=cohorts")}
+              onClick={() => router.push("/tableau-de-bord/etudiant")}
               className="flex-1"
               variant="outline"
             >
-              <GraduationCap className="h-4 w-4 mr-2" />
-              Mes cohortes
+              <BookOpen className="h-4 w-4 mr-2" />
+              Tableau de bord
             </Button>
           </div>
         </CardContent>

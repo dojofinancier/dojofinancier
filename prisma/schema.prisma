@@ -25,35 +25,36 @@ model User {
   suspendedAt DateTime? @map("suspended_at")
 
   // Relations
-  enrollments              Enrollment[]
-  progressTracking         ProgressTracking[]
-  quizAttempts             QuizAttempt[]
-  flashcardStudySessions   FlashcardStudySession[]
-  studentNotes             Note[]
-  subscriptions            Subscription[]
-  messages                 Message[]
-  messageThreads           MessageThread[]
-  appointments             Appointment[]
-  supportTicketsAsStudent  SupportTicket[]           @relation("SupportTicketStudent")
-  supportTicketsAsAdmin    SupportTicket[]           @relation("SupportTicketAdmin")
-  supportTicketReplies     SupportTicketReply[]
-  errorLogs                ErrorLog[]
-  cohortsAsInstructor      Cohort[]                  @relation("CohortInstructor")
-  cohortEnrollments        CohortEnrollment[]
-  groupCoachingSessions    GroupCoachingSession[]
-  cohortMessages           CohortMessage[]
-  cohortMessageReads       CohortMessageRead[]
-  userCourseSettings       UserCourseSettings[]
-  moduleProgress           ModuleProgress[]
-  smartReviewItems         SmartReviewItem[]
-  smartReviewProgress      SmartReviewProgress[]
-  assessmentResults        AssessmentResult[]
-  dailyPlanEntries         DailyPlanEntry[]
-  learningActivityAttempts LearningActivityAttempt[]
-  questionBankAttempts     QuestionBankAttempt[]
-  caseStudyAttempts        CaseStudyAttempt[]
-  quizCorrectionsGrantsAsStudent QuizCorrectionsGrant[] @relation("QuizCorrectionsGrantStudent")
-  quizCorrectionsGrantsGranted   QuizCorrectionsGrant[] @relation("QuizCorrectionsGrantGranter")
+  enrollments                    Enrollment[]
+  progressTracking               ProgressTracking[]
+  quizAttempts                   QuizAttempt[]
+  flashcardStudySessions         FlashcardStudySession[]
+  studentNotes                   Note[]
+  subscriptions                  Subscription[]
+  messages                       Message[]
+  messageThreads                 MessageThread[]
+  appointments                   Appointment[]
+  supportTicketsAsStudent        SupportTicket[]            @relation("SupportTicketStudent")
+  supportTicketsAsAdmin          SupportTicket[]            @relation("SupportTicketAdmin")
+  supportTicketReplies           SupportTicketReply[]
+  errorLogs                      ErrorLog[]
+  cohortsAsInstructor            Cohort[]                   @relation("CohortInstructor")
+  cohortEnrollments              CohortEnrollment[]
+  groupCoachingSessions          GroupCoachingSession[]
+  cohortMessages                 CohortMessage[]
+  cohortMessageReads             CohortMessageRead[]
+  userCourseSettings             UserCourseSettings[]
+  moduleProgress                 ModuleProgress[]
+  smartReviewItems               SmartReviewItem[]
+  smartReviewProgress            SmartReviewProgress[]
+  assessmentResults              AssessmentResult[]
+  dailyPlanEntries               DailyPlanEntry[]
+  learningActivityAttempts       LearningActivityAttempt[]
+  questionBankAttempts           QuestionBankAttempt[]
+  caseStudyAttempts              CaseStudyAttempt[]
+  quizCorrectionsGrantsAsStudent QuizCorrectionsGrant[]     @relation("QuizCorrectionsGrantStudent")
+  quizCorrectionsGrantsGranted   QuizCorrectionsGrant[]     @relation("QuizCorrectionsGrantGranter")
+  accompagnementEnrollments      AccompagnementEnrollment[]
 
   @@map("users")
 }
@@ -106,8 +107,8 @@ model Course {
   orientationText          String?     @map("orientation_text") @db.Text // Rich text explainer for Phase 0 when no video is provided
   launchDate               DateTime?   @map("launch_date") // Optional launch date - course accessible only after this date (if published)
   productStats             Json?       @default("[]") @map("product_stats") // Customizable product page stats: [{value: number, label: string}]
-  consolidatedNotesPdfUrl String?     @map("consolidated_notes_pdf_url") // Admin-uploaded consolidated notes PDF (public URL)
-  programTimelineSteps     Json?      @map("program_timeline_steps") // 5 steps; null = site default (see lib/constants/program-timeline-defaults)
+  consolidatedNotesPdfUrl  String?     @map("consolidated_notes_pdf_url") // Admin-uploaded consolidated notes PDF (public URL)
+  programTimelineSteps     Json?       @map("program_timeline_steps") // 5 steps; null = site default (see lib/constants/program-timeline-defaults)
   createdAt                DateTime    @default(now()) @map("created_at")
   updatedAt                DateTime    @updatedAt @map("updated_at")
 
@@ -130,6 +131,7 @@ model Course {
   learningActivities        LearningActivity[]
   quizzes                   Quiz[]
   notes                     Note[]
+  accompagnementProduct     AccompagnementProduct?
 
   @@map("courses")
 }
@@ -141,17 +143,17 @@ enum PaymentType {
 
 // Modules
 model Module {
-  id                   String   @id @default(uuid())
-  courseId             String   @map("course_id")
-  order                Int
-  title                String
-  shortTitle           String?  @map("short_title") // Short title for sidebar display
-  description          String?  @db.Text
-  examWeight           Float?   @map("exam_weight") // Pondération à l'examen (e.g., 0.15 for 15%)
-  detailedNotesPdfUrl  String?  @map("detailed_notes_pdf_url") // Admin-uploaded detailed notes PDF for this chapter
-  slideImages          Json?    @default("[]") @map("slide_images") // Array of image URLs for slide deck viewer
-  createdAt            DateTime @default(now()) @map("created_at")
-  updatedAt            DateTime @updatedAt @map("updated_at")
+  id                  String   @id @default(uuid())
+  courseId            String   @map("course_id")
+  order               Int
+  title               String
+  shortTitle          String?  @map("short_title") // Short title for sidebar display
+  description         String?  @db.Text
+  examWeight          Float?   @map("exam_weight") // Pondération à l'examen (e.g., 0.15 for 15%)
+  detailedNotesPdfUrl String?  @map("detailed_notes_pdf_url") // Admin-uploaded detailed notes PDF for this chapter
+  slideImages         Json?    @default("[]") @map("slide_images") // Array of image URLs for slide deck viewer
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
 
   // Relations
   course             Course             @relation(fields: [courseId], references: [id], onDelete: Cascade)
@@ -236,11 +238,11 @@ model Quiz {
   updatedAt     DateTime @updatedAt @map("updated_at")
 
   // Relations
-  course      Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  contentItem ContentItem    @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
-  questions            QuizQuestion[]
-  attempts             QuizAttempt[]
-  correctionsGrants  QuizCorrectionsGrant[]
+  course            Course                 @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  contentItem       ContentItem            @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+  questions         QuizQuestion[]
+  attempts          QuizAttempt[]
+  correctionsGrants QuizCorrectionsGrant[]
 
   @@index([courseId])
   @@index([courseId, isMockExam]) // For efficient exam queries
@@ -284,9 +286,9 @@ model QuizAttempt {
   timeSpent   Int?     @map("time_spent") // seconds
 
   // Relations
-  user               User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  quiz               Quiz                   @relation(fields: [quizId], references: [id], onDelete: Cascade)
-  correctionsGrants  QuizCorrectionsGrant[]
+  user              User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quiz              Quiz                   @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  correctionsGrants QuizCorrectionsGrant[]
 
   @@map("quiz_attempts")
 }
@@ -582,16 +584,16 @@ model StripeWebhookEvent {
 
 // Enrollments
 model Enrollment {
-  id              String   @id @default(uuid())
-  userId          String   @map("user_id")
-  courseId        String   @map("course_id")
-  purchaseDate    DateTime @default(now()) @map("purchase_date")
-  expiresAt       DateTime @map("expires_at")
-  paymentIntentId String?  @map("payment_intent_id") // Unique per non-null value (enforced by partial unique index in DB)
-  orderNumber     Int?     @unique @map("order_number") // Business order number starting at 5190
-  excludeFromStats Boolean @default(false) @map("exclude_from_stats") // When true, excluded from revenue and enrollment stats (e.g. test orders)
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  id               String   @id @default(uuid())
+  userId           String   @map("user_id")
+  courseId         String   @map("course_id")
+  purchaseDate     DateTime @default(now()) @map("purchase_date")
+  expiresAt        DateTime @map("expires_at")
+  paymentIntentId  String?  @map("payment_intent_id") // Unique per non-null value (enforced by partial unique index in DB)
+  orderNumber      Int?     @unique @map("order_number") // Business order number starting at 5190
+  excludeFromStats Boolean  @default(false) @map("exclude_from_stats") // When true, excluded from revenue and enrollment stats (e.g. test orders)
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
 
   // Relations
   user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -1042,16 +1044,16 @@ model CohortModule {
 
 // Cohort Enrollments
 model CohortEnrollment {
-  id              String   @id @default(uuid())
-  userId          String   @map("user_id")
-  cohortId        String   @map("cohort_id")
-  purchaseDate    DateTime @default(now()) @map("purchase_date")
-  expiresAt       DateTime @map("expires_at")
-  paymentIntentId String?  @map("payment_intent_id") // Unique per non-null value (enforced by partial unique index in DB)
-  orderNumber     Int?     @unique @map("order_number") // Business order number starting at 5190
-  excludeFromStats Boolean @default(false) @map("exclude_from_stats") // When true, excluded from revenue and enrollment stats (e.g. test orders)
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  id               String   @id @default(uuid())
+  userId           String   @map("user_id")
+  cohortId         String   @map("cohort_id")
+  purchaseDate     DateTime @default(now()) @map("purchase_date")
+  expiresAt        DateTime @map("expires_at")
+  paymentIntentId  String?  @map("payment_intent_id") // Unique per non-null value (enforced by partial unique index in DB)
+  orderNumber      Int?     @unique @map("order_number") // Business order number starting at 5190
+  excludeFromStats Boolean  @default(false) @map("exclude_from_stats") // When true, excluded from revenue and enrollment stats (e.g. test orders)
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
 
   // Relations
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -1419,4 +1421,383 @@ model CohortFAQ {
   @@index([cohortId])
   @@index([cohortId, order])
   @@map("cohort_faqs")
+}
+
+// ============================================
+// ACCOMPAGNEMENT (ACCOUNTABILITY) PRODUCT
+// ============================================
+
+enum CheckInStatus {
+  SCHEDULED
+  SENT
+  RESPONDED
+  MISSED
+}
+
+enum CheckInType {
+  LIGHT
+  MID_WEEK
+  WEEKLY
+  MISSED
+}
+
+enum CheckInChannel {
+  EMAIL
+  SMS
+}
+
+enum CheckInAnswerSource {
+  MCQ
+  OEQ
+}
+
+enum ChapterAssessmentStatus {
+  NOT_STARTED
+  READ_LOW
+  READ_SOMEWHAT
+  READ_CONFIDENT
+}
+
+enum WeakAreaSignalType {
+  WRONG_ANSWER
+  SELF_LOW_CONF
+}
+
+enum ContextLineCategory {
+  NORMAL
+  WEAK_AREA
+  MISSED_ACK
+  PLAN_REMINDER
+  EXAM_URGENCY
+}
+
+model AccompagnementProduct {
+  id                 String   @id @default(uuid())
+  courseId           String   @unique @map("course_id")
+  title              String
+  description        String?  @db.Text
+  price              Decimal  @db.Decimal(10, 2)
+  accessDurationDays Int      @default(365) @map("access_duration_days")
+  sendTime           String   @default("07:00") @map("send_time") // HH:MM in America/Toronto
+  aiModel            String   @default("gpt-5.4-mini") @map("ai_model") // OpenAI model for classification and summaries
+  published          Boolean  @default(false)
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  course      Course                     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  enrollments AccompagnementEnrollment[]
+
+  @@map("accompagnement_products")
+}
+
+model AccompagnementEnrollment {
+  id                      String         @id @default(uuid())
+  userId                  String         @map("user_id")
+  accompagnementProductId String         @map("accompagnement_product_id")
+  paymentIntentId         String?        @map("payment_intent_id")
+  orderNumber             Int?           @unique @map("order_number")
+  expiresAt               DateTime       @map("expires_at")
+  onboardingCompleted     Boolean        @default(false) @map("onboarding_completed")
+  isActive                Boolean        @default(true) @map("is_active")
+  excludeFromStats        Boolean        @default(false) @map("exclude_from_stats")
+  channel                 CheckInChannel @default(EMAIL)
+  phoneE164               String?        @map("phone_e164")
+  timezone                String         @default("America/Toronto")
+  nextCheckInOverride     CheckInType?   @map("next_check_in_override")
+  /// Full week-by-week projection JSON (see StudyPlanHorizon in code). Updated when plan logic runs.
+  studyPlanHorizon        Json?          @map("study_plan_horizon")
+  compressedMode          Boolean        @default(false) @map("compressed_mode")
+  /// Student confirmed \"je maintiens ma date\" when schedule was unrealistic → enables compressed mode.
+  ackUnrealisticSchedule  Boolean        @default(false) @map("ack_unrealistic_schedule")
+  studyPlanGeneratedAt    DateTime?      @map("study_plan_generated_at")
+  /// When true, cron and engine skip sending daily check-ins (student-controlled pause).
+  checkInsPaused          Boolean        @default(false) @map("check_ins_paused")
+  createdAt               DateTime       @default(now()) @map("created_at")
+  updatedAt               DateTime       @updatedAt @map("updated_at")
+
+  // Relations
+  user            User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product         AccompagnementProduct     @relation(fields: [accompagnementProductId], references: [id], onDelete: Cascade)
+  onboarding      AccompagnementOnboarding?
+  checkIns        DailyCheckIn[]
+  onboardingEmailLogs OnboardingEmailLog[]
+  weeklyLogs      WeeklyEmailLog[]
+  weeklyPlans     WeeklyPlan[]
+  weeklyReviews   WeeklyReview[]
+  weakAreaSignals WeakAreaSignal[]
+
+  @@unique([userId, accompagnementProductId])
+  @@index([userId])
+  @@index([accompagnementProductId])
+  @@index([isActive])
+  @@map("accompagnement_enrollments")
+}
+
+model OnboardingEmailLog {
+  id             String   @id @default(uuid())
+  enrollmentId   String   @map("enrollment_id")
+  recipientEmail String   @map("recipient_email")
+  provider       String   @default("sender.net")
+  status         String
+  emailMessageId String?  @map("email_message_id")
+  errorMessage   String?  @map("error_message")
+  meta           Json?
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  enrollment AccompagnementEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+
+  @@index([enrollmentId, createdAt])
+  @@index([status, createdAt])
+  @@map("onboarding_email_logs")
+}
+
+model AccompagnementOnboarding {
+  id                String    @id @default(uuid())
+  enrollmentId      String    @unique @map("enrollment_id")
+  examDate          DateTime? @map("exam_date")
+  studyHoursPerWeek Int       @default(6) @map("study_hours_per_week")
+  additionalNotes   String?   @map("additional_notes") @db.Text
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  enrollment         AccompagnementEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  chapterAssessments ChapterSelfAssessment[]
+
+  @@map("accompagnement_onboardings")
+}
+
+model ChapterSelfAssessment {
+  id           String                  @id @default(uuid())
+  onboardingId String                  @map("onboarding_id")
+  chapter      Int // matches modules.order
+  topic        String?
+  status       ChapterAssessmentStatus
+  createdAt    DateTime                @default(now()) @map("created_at")
+  updatedAt    DateTime                @updatedAt @map("updated_at")
+
+  onboarding AccompagnementOnboarding @relation(fields: [onboardingId], references: [id], onDelete: Cascade)
+
+  @@unique([onboardingId, chapter])
+  @@index([onboardingId])
+  @@map("chapter_self_assessments")
+}
+
+model DailyCheckIn {
+  id                String         @id @default(uuid())
+  enrollmentId      String         @map("enrollment_id")
+  type              CheckInType
+  token             String         @unique @default(uuid())
+  scheduledFor      DateTime       @map("scheduled_for")
+  sentAt            DateTime?      @map("sent_at")
+  channel           CheckInChannel @default(EMAIL)
+  contextLineKey    String?        @map("context_line_key")
+  contextLineBody   String?        @map("context_line_body") @db.Text
+  providerMessageId String?        @map("provider_message_id")
+  status            CheckInStatus  @default(SCHEDULED)
+  createdAt         DateTime       @default(now()) @map("created_at")
+  updatedAt         DateTime       @updatedAt @map("updated_at")
+
+  // Relations
+  enrollment AccompagnementEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  response   CheckInResponse?
+  answers    CheckInAnswer[]
+
+  @@index([enrollmentId])
+  @@index([enrollmentId, scheduledFor])
+  @@index([status])
+  @@index([scheduledFor, status])
+  @@map("daily_check_ins")
+}
+
+model CheckInResponse {
+  id             String   @id @default(uuid())
+  dailyCheckInId String   @unique @map("daily_check_in_id")
+  score          Int? // Percentage correct across MCQs in this check-in (0-100)
+  responseRate   Int?     @map("response_rate") // # answered / # asked * 100
+  yesNoReply     Boolean? @map("yes_no_reply") // For MISSED format "will you complete today's study block"
+  respondedAt    DateTime @default(now()) @map("responded_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  checkIn DailyCheckIn @relation(fields: [dailyCheckInId], references: [id], onDelete: Cascade)
+
+  @@map("check_in_responses")
+}
+
+model CheckInAnswer {
+  id                 String              @id @default(uuid())
+  dailyCheckInId     String              @map("daily_check_in_id")
+  source             CheckInAnswerSource
+  adaptiveQuestionId String              @map("adaptive_question_id") // references adaptive_mcq.id or adaptive_oeq.id
+  adaptiveCourse     String              @map("adaptive_course")
+  adaptiveChapter    Int                 @map("adaptive_chapter")
+  adaptiveTopic      String              @map("adaptive_topic")
+  orderIndex         Int                 @map("order_index")
+  studentAnswer      String?             @map("student_answer") @db.Text
+  isCorrect          Boolean?            @map("is_correct")
+  aiClassification   Json?               @map("ai_classification") // { label, feedback }
+  createdAt          DateTime            @default(now()) @map("created_at")
+
+  checkIn DailyCheckIn @relation(fields: [dailyCheckInId], references: [id], onDelete: Cascade)
+
+  @@index([dailyCheckInId])
+  @@index([adaptiveQuestionId])
+  @@map("check_in_answers")
+}
+
+model WeeklyPlan {
+  id              String   @id @default(uuid())
+  enrollmentId    String   @map("enrollment_id")
+  weekStartDate   DateTime @map("week_start_date")
+  plannedChapters Json     @default("[]") @map("planned_chapters") // Int[]
+  focusTopics     Json     @default("[]") @map("focus_topics") // string[]
+  /// apprendre | réviser | pratiquer
+  phase                 String?  @map("phase")
+  /// on_track | tight | at_risk | unrealistic (for that week / snapshot)
+  planStatus            String?  @map("plan_status")
+  weeklyGoalSummary     String?  @map("weekly_goal_summary") @db.Text
+  /// [{ chapter, primaryModality, secondaryModality, reason }]
+  selectedChaptersDetail Json?   @map("selected_chapters_detail")
+  /// [{ chapter, status: COMPLETED|PARTIAL|NOT_COMPLETED }] student check-in at week end
+  chapterConfirmations   Json?   @map("chapter_confirmations")
+  estimatedHours         Int?    @map("estimated_hours")
+  notes           String?  @db.Text
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  enrollment AccompagnementEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+
+  @@unique([enrollmentId, weekStartDate])
+  @@index([enrollmentId])
+  @@map("weekly_plans")
+}
+
+model WeeklyReview {
+  id              String   @id @default(uuid())
+  enrollmentId    String   @map("enrollment_id")
+  weekStartDate   DateTime @map("week_start_date")
+  score           Int? // 0-100 quiz score
+  responseRate    Int?     @map("response_rate") // 0-100 consistency
+  weakAreas       Json     @default("[]") @map("weak_areas") // [{ chapter, topic, hitCount }]
+  coveredTopics   Json     @default("[]") @map("covered_topics") // [{ chapter, topic }]
+  summaryMarkdown String?  @map("summary_markdown") @db.Text
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  enrollment AccompagnementEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+
+  @@unique([enrollmentId, weekStartDate])
+  @@index([enrollmentId])
+  @@map("weekly_reviews")
+}
+
+model WeakAreaSignal {
+  id           String             @id @default(uuid())
+  enrollmentId String             @map("enrollment_id")
+  chapter      Int
+  topic        String
+  signalType   WeakAreaSignalType @map("signal_type")
+  createdAt    DateTime           @default(now()) @map("created_at")
+
+  enrollment AccompagnementEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+
+  @@index([enrollmentId])
+  @@index([enrollmentId, createdAt])
+  @@index([enrollmentId, chapter])
+  @@map("weak_area_signals")
+}
+
+model ContextLineTemplate {
+  id                   String              @id @default(uuid())
+  category             ContextLineCategory
+  body                 String              @db.Text
+  weekdayApplicability Json                @default("[0,1,2,3,4,5,6]") @map("weekday_applicability") // array of 0=Sun..6=Sat
+  locale               String              @default("fr")
+  active               Boolean             @default(true)
+  createdAt            DateTime            @default(now()) @map("created_at")
+  updatedAt            DateTime            @updatedAt @map("updated_at")
+
+  @@index([category, active])
+  @@map("context_line_templates")
+}
+
+model WeeklyEmailLog {
+  id             String   @id @default(uuid())
+  enrollmentId   String   @map("enrollment_id")
+  weekStartDate  DateTime @map("week_start_date")
+  weekEndDate    DateTime @map("week_end_date")
+  emailMessageId String?  @map("email_message_id")
+  contentSummary Json?    @map("content_summary")
+  sentAt         DateTime @default(now()) @map("sent_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  enrollment AccompagnementEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+
+  @@index([enrollmentId])
+  @@index([enrollmentId, weekStartDate])
+  @@map("weekly_email_logs")
+}
+
+// Read-only views of the Supabase adaptive question bank.
+// These tables are managed/seeded outside the Prisma migration flow.
+
+model AdaptiveMcq {
+  id                 String    @id @db.Uuid
+  questionId         String    @map("question_id")
+  questionType       String    @map("question_type")
+  course             String
+  chapter            Int
+  topic              String
+  subtopics          Json
+  difficulty         String
+  formatUse          String    @map("format_use")
+  language           String
+  questionText       String    @map("question_text") @db.Text
+  options            Json
+  correctAnswer      String    @map("correct_answer")
+  explanation        String    @db.Text
+  conceptTested      String?   @map("concept_tested") @db.Text
+  questionTypeDetail String?   @map("question_type_detail")
+  status             String
+  generationModel    String?   @map("generation_model")
+  generationMetadata Json?     @map("generation_metadata")
+  createdAt          DateTime? @map("created_at")
+  updatedAt          DateTime? @map("updated_at")
+
+  @@index([course, status])
+  @@index([course, chapter, status])
+  @@index([course, topic, status])
+  @@map("adaptive_mcq")
+}
+
+model AdaptiveOeq {
+  id                 String    @id @db.Uuid
+  questionId         String    @map("question_id")
+  course             String
+  chapter            Int
+  topic              String
+  subtopics          Json
+  difficulty         String
+  formatUse          String    @map("format_use")
+  language           String
+  questionText       String    @map("question_text") @db.Text
+  modelAnswer        String    @map("model_answer") @db.Text
+  explanation        String    @db.Text
+  conceptTested      String?   @map("concept_tested") @db.Text
+  questionTypeDetail String?   @map("question_type_detail")
+  status             String
+  generationModel    String?   @map("generation_model")
+  generationMetadata Json?     @map("generation_metadata")
+  createdAt          DateTime? @map("created_at")
+  updatedAt          DateTime? @map("updated_at")
+
+  @@index([course, status])
+  @@index([course, chapter, status])
+  @@index([course, topic, status])
+  @@map("adaptive_oeq")
 }

@@ -935,6 +935,11 @@ CREATE POLICY "admin_select_message_reads" ON cohort_message_reads
   FOR SELECT
   USING (is_admin());
 
+-- ----------------------------------------------------------------------------
+-- Accompagnement (ERCI) tables: RLS definitions live in prisma/sql/rls_accompagnement.sql
+-- (run after this file so get_current_user_id / is_admin exist).
+-- ----------------------------------------------------------------------------
+
 -- ============================================================================
 -- END OF RLS POLICIES
 -- ============================================================================

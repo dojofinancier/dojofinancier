@@ -24,8 +24,10 @@ import {
 } from "@/app/actions/appointments";
 import { toast } from "sonner";
 import { Loader2, Eye, Calendar } from "lucide-react";
-import { format } from "date-fns";
-import { fr } from "date-fns/locale";
+import {
+  formatAppointmentDateShortFr,
+  formatAppointmentTimeFr,
+} from "@/lib/utils/timezone";
 import Link from "next/link";
 
 type AppointmentItem = {
@@ -175,10 +177,10 @@ export function AppointmentList() {
                   <TableRow key={appointment.id}>
                     <TableCell>
                       <div className="font-medium">
-                        {format(new Date(appointment.scheduledAt), "d MMM yyyy", { locale: fr })}
+                        {formatAppointmentDateShortFr(appointment.scheduledAt)}
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        {format(new Date(appointment.scheduledAt), "HH:mm", { locale: fr })}
+                        {formatAppointmentTimeFr(appointment.scheduledAt)}
                       </div>
                     </TableCell>
                     <TableCell>

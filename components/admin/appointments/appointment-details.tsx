@@ -16,8 +16,7 @@ import {
   updateAppointmentAction,
 } from "@/app/actions/appointments";
 import { toast } from "sonner";
-import { format } from "date-fns";
-import { fr } from "date-fns/locale";
+import { formatAppointmentDateTimeFr } from "@/lib/utils/timezone";
 import { Calendar, User, BookOpen, Settings } from "lucide-react";
 import Link from "next/link";
 
@@ -121,7 +120,7 @@ export function AppointmentDetails({ appointment: initialAppointment }: Appointm
             <div>
               <Label className="text-muted-foreground">Date et heure</Label>
               <p className="font-medium">
-                {format(new Date(appointment.scheduledAt), "d MMMM yyyy, HH:mm", { locale: fr })}
+                {formatAppointmentDateTimeFr(appointment.scheduledAt)}
               </p>
             </div>
             {appointment.course && (

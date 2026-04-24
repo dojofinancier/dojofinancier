@@ -18,6 +18,13 @@ export type MakeEventType =
   | 'error.occurred'
   | 'contact.form.submitted'
   | 'investor.diagnostic.completed'
+  // Accompagnement product events
+  | 'accompagnement.enrollment.created'
+  | 'accompagnement.onboarding.completed'
+  | 'checkin.sent'
+  | 'checkin.response.received'
+  | 'checkin.missed'
+  | 'accompagnement.weekly.sent'
   // Admin operations (optional, for future use)
   | 'course.created'
   | 'course.updated'
@@ -52,6 +59,14 @@ function getUrlForType(type: MakeEventType): string | undefined {
       return process.env.MAKE_WEBHOOK_CONTACT || process.env.MAKE_WEBHOOK_CONTACT_URL
     case 'investor.diagnostic.completed':
       return process.env.MAKE_WEBHOOK_INVESTOR_DIAGNOSTIC_URL || process.env.MAKE_WEBHOOK_CONTACT || process.env.MAKE_WEBHOOK_CONTACT_URL
+    // Accompagnement product events
+    case 'accompagnement.enrollment.created':
+    case 'accompagnement.onboarding.completed':
+    case 'checkin.sent':
+    case 'checkin.response.received':
+    case 'checkin.missed':
+    case 'accompagnement.weekly.sent':
+      return process.env.MAKE_WEBHOOK_ACCOMPAGNEMENT_URL || process.env.MAKE_WEBHOOK_PAYMENTS_URL
     // Admin operations (optional)
     case 'course.created':
     case 'course.updated':

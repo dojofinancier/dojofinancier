@@ -4,8 +4,38 @@
  */
 
 import { toZonedTime, fromZonedTime, formatInTimeZone } from "date-fns-tz";
+import { fr } from "date-fns/locale";
 
 export const EASTERN_TIMEZONE = "America/Toronto"; // Eastern Time (handles EST/EDT automatically)
+
+function appointmentInstant(date: Date | string): Date {
+  return date instanceof Date ? date : new Date(date);
+}
+
+/** Long French date + time for 1:1 appointments (always America/Toronto). */
+export function formatAppointmentDateTimeFr(date: Date | string): string {
+  return formatInEasternTime(appointmentInstant(date), "d MMMM yyyy, HH:mm", { locale: fr });
+}
+
+/** Short French date for appointment lists. */
+export function formatAppointmentDateShortFr(date: Date | string): string {
+  return formatInEasternTime(appointmentInstant(date), "d MMM yyyy", { locale: fr });
+}
+
+/** Time only (French locale) in Eastern. */
+export function formatAppointmentTimeFr(date: Date | string): string {
+  return formatInEasternTime(appointmentInstant(date), "HH:mm", { locale: fr });
+}
+
+/** Weekday + calendar date in Eastern (booking summaries). */
+export function formatAppointmentWeekdayDateFr(date: Date | string): string {
+  return formatInEasternTime(appointmentInstant(date), "EEEE d MMMM yyyy", { locale: fr });
+}
+
+/** Month and year label in Eastern (booking calendars). */
+export function formatAppointmentMonthYearFr(date: Date | string): string {
+  return formatInEasternTime(appointmentInstant(date), "MMMM yyyy", { locale: fr });
+}
 
 /**
  * Get current date/time in Eastern Time zone

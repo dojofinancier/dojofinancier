@@ -7,8 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { getAppointmentsAction } from "@/app/actions/appointments";
 import { toast } from "sonner";
 import { Loader2, Calendar, Plus } from "lucide-react";
-import { format } from "date-fns";
-import { fr } from "date-fns/locale";
+import { formatAppointmentDateTimeFr } from "@/lib/utils/timezone";
 import { AppointmentBooking } from "./appointment-booking";
 import { RescheduleModal } from "./reschedule-modal";
 
@@ -176,9 +175,7 @@ export function AppointmentsTab() {
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <CardTitle>
-                            {format(new Date(appointment.scheduledAt), "d MMMM yyyy, HH:mm", {
-                              locale: fr,
-                            })}
+                            {formatAppointmentDateTimeFr(appointment.scheduledAt)}
                           </CardTitle>
                           {appointment.course && (
                             <CardDescription className="mt-1">
@@ -221,9 +218,7 @@ export function AppointmentsTab() {
                       <div className="flex items-start justify-between">
                         <div>
                           <CardTitle>
-                            {format(new Date(appointment.scheduledAt), "d MMMM yyyy, HH:mm", {
-                              locale: fr,
-                            })}
+                            {formatAppointmentDateTimeFr(appointment.scheduledAt)}
                           </CardTitle>
                           {appointment.course && (
                             <CardDescription className="mt-1">
