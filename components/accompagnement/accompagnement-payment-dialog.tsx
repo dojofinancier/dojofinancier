@@ -21,10 +21,58 @@ import type { StripeCardElementChangeEvent } from "@stripe/stripe-js";
 import { toast } from "sonner";
 import { getStripeClient } from "@/lib/stripe/client";
 import { Loader2 } from "lucide-react";
-import {
-  createAccompagnementPaymentIntentAction,
-  createAccompagnementEnrollmentAction,
-} from "@/app/actions/accompagnement-payments";
+
+type AccompagnementPaymentResult = {
+  success: boolean;
+  error?: string;
+  data?: {
+    clientSecret?: string;
+    paymentIntentId?: string;
+    amount?: number;
+    productTitle?: string;
+    courseTitle?: string;
+    id?: string;
+  };
+};
+
+async function fetchAccompagnementPaymentIntent(
+  accompagnementProductId: string
+): Promise<AccompagnementPaymentResult> {
+  const res = await fetch("/api/accompagnement/payment-intent", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ accompagnementProductId }),
+    credentials: "same-origin",
+  });
+  try {
+    return (await res.json()) as AccompagnementPaymentResult;
+  } catch {
+    return {
+      success: false,
+      error: "Réponse serveur invalide.",
+    };
+  }
+}
+
+async function fetchAccompagnementEnrollment(body: {
+  accompagnementProductId: string;
+  paymentIntentId: string;
+}): Promise<AccompagnementPaymentResult> {
+  const res = await fetch("/api/accompagnement/enrollment", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    credentials: "same-origin",
+  });
+  try {
+    return (await res.json()) as AccompagnementPaymentResult;
+  } catch {
+    return {
+      success: false,
+      error: "Réponse serveur invalide.",
+    };
+  }
+}
 
 interface AccompagnementPaymentDialogProps {
   open: boolean;
@@ -33,7 +81,6 @@ interface AccompagnementPaymentDialogProps {
   productTitle: string;
   courseTitle: string;
   amount: number;
-  userId: string;
   onSuccess: () => void;
 }
 
@@ -41,13 +88,11 @@ function InnerForm({
   productId,
   productTitle,
   amount,
-  userId,
   onSuccess,
 }: {
   productId: string;
   productTitle: string;
   amount: number;
-  userId: string;
   onSuccess: () => void;
 }) {
   const stripe = useStripe();
@@ -62,11 +107,13 @@ function InnerForm({
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const res = await createAccompagnementPaymentIntentAction({
-        accompagnementProductId: productId,
-      });
+      const res = await fetchAccompagnementPaymentIntent(productId);
       if (cancelled) return;
-      if (res.success && res.data?.clientSecret) {
+      if (
+        res.success &&
+        res.data?.clientSecret &&
+        res.data?.paymentIntentId
+      ) {
         setClientSecret(res.data.clientSecret);
         setPaymentIntentId(res.data.paymentIntentId);
       } else {
@@ -130,8 +177,7 @@ function InnerForm({
         return;
       }
       if (paymentIntent?.status === "succeeded") {
-        const enrollRes = await createAccompagnementEnrollmentAction({
-          userId,
+        const enrollRes = await fetchAccompagnementEnrollment({
           accompagnementProductId: productId,
           paymentIntentId: paymentIntent.id,
         });
@@ -234,7 +280,6 @@ export function AccompagnementPaymentDialog({
   productTitle,
   courseTitle,
   amount,
-  userId,
   onSuccess,
 }: AccompagnementPaymentDialogProps) {
   const stripePromise = useMemo(() => getStripeClient(), []);
@@ -257,7 +302,6 @@ export function AccompagnementPaymentDialog({
               productId={productId}
               productTitle={productTitle}
               amount={amount}
-              userId={userId}
               onSuccess={() => {
                 onOpenChange(false);
                 onSuccess();

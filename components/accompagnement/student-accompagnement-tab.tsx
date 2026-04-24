@@ -1393,7 +1393,6 @@ function AccompagnementProductOfferList({
           productTitle={selected.title}
           courseTitle={selected.courseTitle}
           amount={selected.price}
-          userId={userId}
           onSuccess={onEnrolled}
         />
       )}

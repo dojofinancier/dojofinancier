@@ -3,7 +3,7 @@ import { stripe } from "@/lib/stripe/server";
 import { prisma } from "@/lib/prisma";
 import { createEnrollmentAction } from "@/app/actions/enrollments";
 import { createCohortEnrollmentAction } from "@/app/actions/cohort-enrollments";
-import { createAccompagnementEnrollmentAction } from "@/app/actions/accompagnement-payments";
+import { createAccompagnementEnrollment } from "@/lib/accompagnement/payment-flow";
 import { trackCouponUsageAction } from "@/app/actions/coupons";
 import { logServerError } from "@/lib/utils/error-logging";
 import { sendPaymentSuccessWebhook, sendMakeWebhook } from "@/lib/webhooks/make";
@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ received: true });
         }
 
-        const enrollmentResult = await createAccompagnementEnrollmentAction({
+        const enrollmentResult = await createAccompagnementEnrollment({
           userId,
           accompagnementProductId,
           paymentIntentId: paymentIntent.id,
