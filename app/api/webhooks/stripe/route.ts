@@ -7,6 +7,7 @@ import { createAccompagnementEnrollment } from "@/lib/accompagnement/payment-flo
 import { trackCouponUsageAction } from "@/app/actions/coupons";
 import { logServerError } from "@/lib/utils/error-logging";
 import { sendPaymentSuccessWebhook, sendMakeWebhook } from "@/lib/webhooks/make";
+import { notifyAccompagnementEnrollmentCreated } from "@/lib/webhooks/accompagnement-enrollment-created";
 // User is already created during checkout, so we don't need to create it here
 
 /**
@@ -107,20 +108,23 @@ export async function POST(request: NextRequest) {
         });
         const product = await prisma.accompagnementProduct.findUnique({
           where: { id: accompagnementProductId },
-          include: { course: { select: { title: true } } },
+          include: { course: { select: { title: true, slug: true } } },
         });
 
         if (user && product) {
-          sendMakeWebhook("accompagnement.enrollment.created" as any, {
-            enrollment_id: enrollmentResult.data?.id,
-            user_id: userId,
-            user_email: user.email,
-            user_name: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email,
-            product_id: accompagnementProductId,
-            product_title: product.title,
-            course_title: product.course.title,
-            amount: parseFloat(finalAmount || "0"),
-            timestamp: new Date().toISOString(),
+          notifyAccompagnementEnrollmentCreated({
+            enrollmentId: enrollmentResult.data?.id,
+            userId,
+            userEmail: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            productId: accompagnementProductId,
+            productTitle: product.title,
+            courseTitle: product.course.title,
+            courseSlug: product.course.slug,
+            source: "stripe",
+            amountCad: parseFloat(finalAmount || "0"),
+            paymentIntentId: paymentIntent.id,
           }).catch((err) => console.error("Accompagnement webhook failed:", err));
         }
 

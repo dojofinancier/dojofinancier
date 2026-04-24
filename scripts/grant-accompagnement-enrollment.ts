@@ -18,6 +18,7 @@
  */
 
 import { prisma } from "../lib/prisma";
+import { notifyAccompagnementEnrollmentCreated } from "../lib/webhooks/accompagnement-enrollment-created";
 
 const USAGE = [
   "Usage:",
@@ -200,6 +201,23 @@ async function main() {
   });
 
   console.log(`\nCreated accompagnement enrollment: ${enrollment.id}`);
+
+  await notifyAccompagnementEnrollmentCreated({
+    enrollmentId: enrollment.id,
+    userId: user.id,
+    userEmail: user.email,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    productId: product.id,
+    productTitle: product.title,
+    courseTitle: product.course.title,
+    courseSlug: product.course.slug,
+    source: "manual_grant",
+    amountCad: 0,
+    paymentIntentId: null,
+  }).catch((err) =>
+    console.error("Make accompagnement.enrollment.created failed:", err)
+  );
 }
 
 main()
