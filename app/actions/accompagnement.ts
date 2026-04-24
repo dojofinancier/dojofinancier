@@ -16,6 +16,7 @@ import {
   regenerateAccompagnementStudyPlan,
 } from "@/lib/accompagnement/study-plan";
 import { enrichWeakAreasWithTopicLabels } from "@/lib/accompagnement/adaptive-topic-label";
+import { sortWeakAreasForDisplay } from "@/lib/accompagnement/weak-areas-display";
 import { normalizePhoneToE164 } from "@/lib/utils/phone-e164";
 
 export type { StudyPlanHorizonV1 } from "@/lib/accompagnement/study-plan";
@@ -723,9 +724,8 @@ export async function getAccompagnementEnrollmentDashboardBundleAction(
       .slice(0, 8);
 
     const courseSlug = enrollment.product?.course?.slug ?? null;
-    const weakAreas = await enrichWeakAreasWithTopicLabels(
-      courseSlug,
-      weakAreasRaw
+    const weakAreas = sortWeakAreasForDisplay(
+      await enrichWeakAreasWithTopicLabels(courseSlug, weakAreasRaw)
     );
 
     const examDate =
@@ -988,7 +988,9 @@ export async function getWeakAreasAction(
       .slice(0, 8);
 
     const courseSlug = enrollment.product?.course?.slug ?? null;
-    const top = await enrichWeakAreasWithTopicLabels(courseSlug, topRaw);
+    const top = sortWeakAreasForDisplay(
+      await enrichWeakAreasWithTopicLabels(courseSlug, topRaw)
+    );
 
     return { success: true, data: top };
   } catch (error) {

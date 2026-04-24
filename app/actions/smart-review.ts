@@ -32,6 +32,8 @@ export interface SmartReviewItemWithRelations {
     activityType: string;
     instructions: string | null;
     content: any;
+    correctAnswers: any;
+    tolerance: number | null;
   } | null;
   module?: {
     id: string;
@@ -328,6 +330,8 @@ export async function getNextReviewItemAction(
                 activityType: true,
                 instructions: true,
                 content: true,
+                correctAnswers: true,
+                tolerance: true,
               },
             },
             module: { select: { id: true, title: true, order: true } },
@@ -374,6 +378,8 @@ export async function getNextReviewItemAction(
             activityType: true,
             instructions: true,
             content: true,
+            correctAnswers: true,
+            tolerance: true,
           },
         },
         module: { select: { id: true, title: true, order: true } },

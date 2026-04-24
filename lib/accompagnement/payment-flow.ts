@@ -184,6 +184,39 @@ export async function createAccompagnementEnrollment(data: {
     });
     const nextOrderNumber = (lastOrder?.orderNumber ?? 9999) + 1;
 
+    const prior = await prisma.accompagnementEnrollment.findUnique({
+      where: {
+        userId_accompagnementProductId: {
+          userId: data.userId,
+          accompagnementProductId: data.accompagnementProductId,
+        },
+      },
+    });
+
+    if (prior) {
+      if (prior.paymentIntentId === data.paymentIntentId) {
+        return { success: true, data: { id: prior.id } };
+      }
+      const now = new Date();
+      const effectivelyActive = prior.isActive && prior.expiresAt >= now;
+      if (effectivelyActive) {
+        return { success: true, data: { id: prior.id } };
+      }
+      const enrollment = await prisma.accompagnementEnrollment.update({
+        where: { id: prior.id },
+        data: {
+          paymentIntentId: data.paymentIntentId,
+          orderNumber: nextOrderNumber,
+          expiresAt,
+          onboardingCompleted: false,
+          isActive: true,
+          checkInsPaused: false,
+          nextCheckInOverride: null,
+        },
+      });
+      return { success: true, data: enrollment };
+    }
+
     const enrollment = await prisma.accompagnementEnrollment.create({
       data: {
         userId: data.userId,
@@ -199,11 +232,21 @@ export async function createAccompagnementEnrollment(data: {
     return { success: true, data: enrollment };
   } catch (error: unknown) {
     if ((error as { code?: string })?.code === "P2002") {
-      const existing = await prisma.accompagnementEnrollment.findFirst({
+      const byPi = await prisma.accompagnementEnrollment.findFirst({
         where: { paymentIntentId: data.paymentIntentId },
         select: { id: true },
       });
-      return { success: true, data: existing };
+      if (byPi) return { success: true, data: byPi };
+      const byUserProduct = await prisma.accompagnementEnrollment.findUnique({
+        where: {
+          userId_accompagnementProductId: {
+            userId: data.userId,
+            accompagnementProductId: data.accompagnementProductId,
+          },
+        },
+        select: { id: true },
+      });
+      if (byUserProduct) return { success: true, data: byUserProduct };
     }
 
     await logServerError({

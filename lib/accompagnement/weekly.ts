@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { getEasternWeekStart } from "./schedule";
 import { generateWeeklySummary } from "@/lib/ai/accompagnement";
 import { regenerateAccompagnementStudyPlan } from "@/lib/accompagnement/study-plan";
+import { sortWeakAreasForDisplay } from "@/lib/accompagnement/weak-areas-display";
 
 export interface WeeklyAggregates {
   totalCheckIns: number;
@@ -85,9 +86,11 @@ export async function aggregateWeek(
         hitCount: 1,
       });
   }
-  const weakAreas = Array.from(weakMap.values())
-    .sort((a, b) => b.hitCount - a.hitCount)
-    .slice(0, 5);
+  const weakAreas = sortWeakAreasForDisplay(
+    Array.from(weakMap.values())
+      .sort((a, b) => b.hitCount - a.hitCount)
+      .slice(0, 5)
+  );
 
   // Covered topics: distinct (chapter, topic) answered during the week
   const answered = await prisma.checkInAnswer.findMany({

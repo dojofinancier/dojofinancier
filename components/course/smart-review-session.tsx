@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +31,13 @@ export function SmartReviewSession({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAnswer, setShowAnswer] = useState(false);
   const [sessionCount, setSessionCount] = useState(1);
+  const [hasSubmittedActivity, setHasSubmittedActivity] = useState(false);
+
+  // Reset per-item state whenever the parent loads a new review item
+  useEffect(() => {
+    setShowAnswer(false);
+    setHasSubmittedActivity(false);
+  }, [currentItem.id]);
 
   const handleRating = async (difficulty: ReviewDifficulty) => {
     if (isSubmitting) return;
@@ -48,6 +55,7 @@ export function SmartReviewSession({
 
       // Reset state and get next item
       setShowAnswer(false);
+      setHasSubmittedActivity(false);
       setSessionCount((prev) => prev + 1);
       await onNext();
     } catch (error) {
@@ -64,6 +72,7 @@ export function SmartReviewSession({
     setIsSubmitting(true);
     try {
       setShowAnswer(false);
+      setHasSubmittedActivity(false);
       setSessionCount((prev) => prev + 1);
       await onNext();
     } catch (error) {
@@ -75,6 +84,7 @@ export function SmartReviewSession({
 
   const itemType = currentItem.flashcardId ? "flashcard" : "activity";
   const isFlashcard = itemType === "flashcard";
+  const canRate = isFlashcard ? showAnswer : hasSubmittedActivity;
 
   return (
     <div className="space-y-4">
@@ -150,12 +160,14 @@ export function SmartReviewSession({
                 activityId={currentItem.learningActivity.id}
                 activity={currentItem.learningActivity}
                 reviewMode={true}
+                onNext={handleSkip}
+                onComplete={() => setHasSubmittedActivity(true)}
               />
             )}
           </div>
 
-          {/* Rating Buttons - Only show after answer is revealed (for flashcards) or always (for activities) */}
-          {(showAnswer || !isFlashcard) && (
+          {/* Rating Buttons - Only show once the user has revealed (flashcard) or submitted (activity) */}
+          {canRate && (
             <div className="space-y-4 border-t pt-6 bg-gradient-to-b from-muted/30 to-transparent -mx-6 px-6 pb-2">
               <p className="text-base font-semibold text-center">
                 Comment c'était ? <span className="text-muted-foreground font-normal text-sm">(cliquez pour continuer)</span>

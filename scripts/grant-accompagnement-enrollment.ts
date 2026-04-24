@@ -4,7 +4,8 @@
  * Requirements:
  *   - User exists (by email or user UUID).
  *   - User has an active main-course Enrollment for the course tied to the product.
- *   - No duplicate active AccompagnementEnrollment for that product.
+ *   - No duplicate *active* AccompagnementEnrollment for that product.
+ *   - If a row exists but was cancelled or expired (same user + product), it is reactivated.
  *
  * Onboarding stays false; the student completes configuration in the tab.
  *
@@ -149,21 +150,24 @@ async function main() {
     );
   }
 
-  const existing = await prisma.accompagnementEnrollment.findFirst({
+  const existingRow = await prisma.accompagnementEnrollment.findUnique({
     where: {
-      userId: user.id,
-      accompagnementProductId: product.id,
-      expiresAt: { gte: new Date() },
-      isActive: true,
+      userId_accompagnementProductId: {
+        userId: user.id,
+        accompagnementProductId: product.id,
+      },
     },
-    select: { id: true, expiresAt: true, onboardingCompleted: true },
+    select: { id: true, expiresAt: true, onboardingCompleted: true, isActive: true },
   });
 
-  if (existing) {
-    console.log(
-      `Already has active accompagnement enrollment ${existing.id} (expires ${existing.expiresAt.toISOString()}, onboardingCompleted=${existing.onboardingCompleted}).`
-    );
-    return;
+  if (existingRow) {
+    const now = new Date();
+    if (existingRow.isActive && existingRow.expiresAt >= now) {
+      console.log(
+        `Already has active accompagnement enrollment ${existingRow.id} (expires ${existingRow.expiresAt.toISOString()}, onboardingCompleted=${existingRow.onboardingCompleted}).`
+      );
+      return;
+    }
   }
 
   const expiresAt = new Date();
@@ -182,25 +186,45 @@ async function main() {
   console.log(`Expires at:  ${expiresAt.toISOString()}`);
   console.log(`Order #:     ${nextOrderNumber}`);
   console.log(`paymentIntentId: (none — manual grant)`);
+  if (existingRow) {
+    console.log(
+      `Mode:        reactivate existing enrollment ${existingRow.id} (was inactive or expired)`
+    );
+  }
 
   if (dryRun) {
-    console.log("\n--dry-run: no row created.");
+    console.log("\n--dry-run: no database write.");
     return;
   }
 
-  const enrollment = await prisma.accompagnementEnrollment.create({
-    data: {
-      userId: user.id,
-      accompagnementProductId: product.id,
-      paymentIntentId: null,
-      orderNumber: nextOrderNumber,
-      expiresAt,
-      onboardingCompleted: false,
-      isActive: true,
-    },
-  });
+  const enrollment = existingRow
+    ? await prisma.accompagnementEnrollment.update({
+        where: { id: existingRow.id },
+        data: {
+          paymentIntentId: null,
+          orderNumber: nextOrderNumber,
+          expiresAt,
+          onboardingCompleted: false,
+          isActive: true,
+          checkInsPaused: false,
+          nextCheckInOverride: null,
+        },
+      })
+    : await prisma.accompagnementEnrollment.create({
+        data: {
+          userId: user.id,
+          accompagnementProductId: product.id,
+          paymentIntentId: null,
+          orderNumber: nextOrderNumber,
+          expiresAt,
+          onboardingCompleted: false,
+          isActive: true,
+        },
+      });
 
-  console.log(`\nCreated accompagnement enrollment: ${enrollment.id}`);
+  console.log(
+    `\n${existingRow ? "Reactivated" : "Created"} accompagnement enrollment: ${enrollment.id}`
+  );
 
   await notifyAccompagnementEnrollmentCreated({
     enrollmentId: enrollment.id,

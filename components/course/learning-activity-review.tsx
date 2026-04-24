@@ -10,9 +10,13 @@ interface LearningActivityReviewProps {
     activityType: string;
     instructions: string | null;
     content: any;
+    correctAnswers?: any;
+    tolerance?: number | null;
     moduleId?: string | null;
   };
   reviewMode?: boolean;
+  onNext?: () => void;
+  onComplete?: (score: number | null) => void;
 }
 
 /**
@@ -23,9 +27,9 @@ export function LearningActivityReview({
   activityId,
   activity,
   reviewMode = false,
+  onNext,
+  onComplete,
 }: LearningActivityReviewProps) {
-  // In review mode, we show a compact version
-  // For now, we'll reuse the existing player but in a simplified view
   return (
     <LearningActivityPlayer
       activityId={activityId}
@@ -35,11 +39,12 @@ export function LearningActivityReview({
         title: activity.title,
         instructions: activity.instructions,
         content: activity.content,
-        correctAnswers: null, // Not shown in review mode
-        tolerance: null,
+        correctAnswers: activity.correctAnswers ?? null,
+        tolerance: activity.tolerance ?? null,
       }}
       reviewMode={reviewMode}
+      onNext={onNext}
+      onComplete={onComplete}
     />
   );
 }
-
