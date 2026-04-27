@@ -46,6 +46,7 @@ export function CheckInForm({ token, type, questions }: Props) {
 
   const totalPages =
     type === "WEEKLY" ? Math.ceil(questions.length / PAGE_SIZE) : 1;
+  const hasPromptInputs = type === "MISSED" || questions.length > 0;
 
   const visibleQuestions =
     type === "WEEKLY"
@@ -99,6 +100,12 @@ export function CheckInForm({ token, type, questions }: Props) {
 
   return (
     <div>
+      {!hasPromptInputs && (
+        <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          Ce suivi ne contient pas de question a repondre. Merci de reessayer
+          avec le prochain message quotidien.
+        </div>
+      )}
       {type === "WEEKLY" && (
         <div className="mb-4 text-sm text-slate-500">
           Page {pageIndex + 1} sur {totalPages} — {questions.length} questions
@@ -227,7 +234,7 @@ export function CheckInForm({ token, type, questions }: Props) {
           <Button
             type="button"
             className={brandBtn}
-            disabled={!canSubmit || submitting}
+            disabled={!hasPromptInputs || !canSubmit || submitting}
             onClick={handleSubmit}
           >
             {submitting ? "Envoi…" : "Soumettre"}

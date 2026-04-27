@@ -4,6 +4,7 @@
  */
 
 import type { StudyPlanHorizonV1 } from "./study-plan";
+type UnitTerm = "chapitre" | "élément";
 
 function hashDay(enrollmentId: string, ymd: string): number {
   const s = `${enrollmentId}:${ymd}`;
@@ -14,33 +15,70 @@ function hashDay(enrollmentId: string, ymd: string): number {
   return Math.abs(h);
 }
 
+function toStudentUnitNumber(internalChapter: number): number {
+  return Number.isFinite(internalChapter)
+    ? Math.max(1, Math.trunc(internalChapter) + 1)
+    : 1;
+}
+
 function formatChapters(chapters: number[]): string {
+  const display = chapters.map(toStudentUnitNumber);
+  const uniqueDisplay = Array.from(new Set(display));
+  if (uniqueDisplay.length === 0) return "";
+  if (uniqueDisplay.length === 1) return `${uniqueDisplay[0]}`;
+  if (uniqueDisplay.length === 2) return `${uniqueDisplay[0]} et ${uniqueDisplay[1]}`;
   if (chapters.length === 0) return "";
-  if (chapters.length === 1) return `${chapters[0]}`;
-  if (chapters.length === 2) return `${chapters[0]} et ${chapters[1]}`;
-  return `${chapters.slice(0, -1).join(", ")} et ${chapters[chapters.length - 1]}`;
+  return `${uniqueDisplay.slice(0, -1).join(", ")} et ${uniqueDisplay[uniqueDisplay.length - 1]}`;
 }
 
 const ACCOUNTABILITY_TEMPLATES: ((ch: number) => string)[] = [
-  (ch) => `As-tu fait la révision du chapitre ${ch} ?`,
-  (ch) => `As-tu commencé le chapitre prévu cette semaine (chapitre ${ch}) ?`,
+  (ch) => `As-tu fait la révision de ${withDefiniteArticleSingular("élément")} ${toStudentUnitNumber(ch)} ?`,
   (ch) =>
-    `Où en es-tu avec le chapitre ${ch} : commencé, partiellement fait, ou terminé ?`,
+    `As-tu commencé ${withDefiniteArticleSingular("élément")} prévu cette semaine (${withBareUnit("élément")} ${toStudentUnitNumber(ch)}) ?`,
+  (ch) =>
+    `Où en es-tu avec ${withDefiniteArticleSingular("élément")} ${toStudentUnitNumber(ch)} : commencé, partiellement fait, ou terminé ?`,
 ];
 
 const SOFT_TEMPLATES: ((ch: number, multi: string) => string)[] = [
-  (ch) => `Aujourd'hui, ton focus est le chapitre ${ch}.`,
-  (ch) => `Petit suivi lié au chapitre ${ch}.`,
-  (_ch, multi) => `Cette semaine, l'accent est mis sur les chapitres ${multi}.`,
+  (ch) => `Aujourd'hui, ton focus est ${withDefiniteArticleSingular("élément")} ${toStudentUnitNumber(ch)}.`,
+  (ch) => `Petit suivi lié à ${withDefiniteArticleSingular("élément")} ${toStudentUnitNumber(ch)}.`,
+  (_ch, multi) => `Cette semaine, l'accent est mis sur les ${withPluralUnit("élément")} ${multi}.`,
 ];
+
+function withDefiniteArticleSingular(unit: UnitTerm): string {
+  return unit === "élément" ? "l'élément" : "le chapitre";
+}
+
+function withBareUnit(unit: UnitTerm): string {
+  return unit;
+}
+
+function withPluralUnit(unit: UnitTerm): string {
+  return unit === "élément" ? "éléments" : "chapitres";
+}
+
+function renderTemplateForUnit(
+  template: (ch: number, multi: string) => string,
+  unit: UnitTerm,
+  ch: number,
+  multi: string
+): string {
+  return template(ch, multi)
+    .replaceAll("l'élément", withDefiniteArticleSingular(unit))
+    .replaceAll("le chapitre", withDefiniteArticleSingular(unit))
+    .replaceAll("élément", withBareUnit(unit))
+    .replaceAll("éléments", withPluralUnit(unit));
+}
 
 export function pickPlanAwareContextLine(params: {
   enrollmentId: string;
   /** YYYY-MM-DD Eastern or local server date — caller should pass ET date string */
   dateKey: string;
   plannedChapters: number[];
+  unitTerm?: UnitTerm;
 }): { body: string; key: string } | null {
   const { enrollmentId, dateKey, plannedChapters } = params;
+  const unitTerm = params.unitTerm ?? "élément";
   if (plannedChapters.length === 0) return null;
 
   const h = hashDay(enrollmentId, dateKey);
@@ -52,7 +90,7 @@ export function pickPlanAwareContextLine(params: {
   if (accountability) {
     const tpl = ACCOUNTABILITY_TEMPLATES[h % ACCOUNTABILITY_TEMPLATES.length];
     return {
-      body: tpl(ch),
+      body: renderTemplateForUnit(tpl, unitTerm, ch, multi),
       key: `plan:accountability:${dateKey}:${h % ACCOUNTABILITY_TEMPLATES.length}`,
     };
   }
@@ -60,13 +98,13 @@ export function pickPlanAwareContextLine(params: {
   const softIdx = h % SOFT_TEMPLATES.length;
   if (plannedChapters.length >= 2 && softIdx === 2) {
     return {
-      body: SOFT_TEMPLATES[2](ch, multi),
+      body: renderTemplateForUnit(SOFT_TEMPLATES[2], unitTerm, ch, multi),
       key: `plan:soft:week:${dateKey}`,
     };
   }
   const tpl = SOFT_TEMPLATES[softIdx % 2];
   return {
-    body: tpl(ch, multi),
+    body: renderTemplateForUnit(tpl, unitTerm, ch, multi),
     key: `plan:soft:${softIdx}:${dateKey}`,
   };
 }

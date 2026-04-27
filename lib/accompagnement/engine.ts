@@ -28,6 +28,7 @@ import {
   plannedChaptersFromHorizon,
 } from "@/lib/accompagnement/plan-context-lines";
 import { normalizePhoneToE164 } from "@/lib/utils/phone-e164";
+import { CHECKIN_SHAPE } from "./types";
 
 export interface CreateAndSendCheckInResult {
   created: boolean;
@@ -130,6 +131,19 @@ export async function createAndSendCheckIn(params: {
     courseSlug,
     type: params.type,
   });
+  const expected = CHECKIN_SHAPE[params.type];
+  if (picked.mcqs.length < expected.mcqCount) {
+    return {
+      created: false,
+      error: `Insufficient MCQ inventory for ${params.type} (${picked.mcqs.length}/${expected.mcqCount})`,
+    };
+  }
+  if (picked.oeqs.length < expected.oeqCount) {
+    return {
+      created: false,
+      error: `Insufficient OEQ inventory for ${params.type} (${picked.oeqs.length}/${expected.oeqCount})`,
+    };
+  }
 
   // 2. Pick context line (weekday index: 0 = Sun ... 6 = Sat in ET)
   const iso = parseInt(formatInEasternTime(now, "i"), 10); // 1=Mon..7=Sun
@@ -165,6 +179,15 @@ export async function createAndSendCheckIn(params: {
           enrollmentId: enrollment.id,
           dateKey: dateKeyEt,
           plannedChapters: plannedFromHorizon,
+          unitTerm:
+            (enrollment.product.course.slug || "")
+              .toLowerCase()
+              .includes("negp") ||
+            (enrollment.product.course.code || "")
+              .toLowerCase()
+              .includes("negp")
+              ? "chapitre"
+              : "élément",
         })
       : null;
 
