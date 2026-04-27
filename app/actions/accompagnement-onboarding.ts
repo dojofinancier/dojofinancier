@@ -7,6 +7,7 @@ import { sendMakeWebhook } from "@/lib/webhooks/make";
 import { sendOnboardingWelcomeEmailAndLog } from "@/lib/accompagnement/onboarding-email";
 import { regenerateAccompagnementStudyPlan } from "@/lib/accompagnement/study-plan";
 import { normalizePhoneToE164 } from "@/lib/utils/phone-e164";
+import { EASTERN_TIMEZONE } from "@/lib/utils/timezone";
 import { z } from "zod";
 
 const chapterAssessmentSchema = z.object({
@@ -37,6 +38,28 @@ export async function submitOnboardingAction(
   try {
     const user = await requireAuth();
     const validated = onboardingSchema.parse(data);
+    const examDateRaw = validated.examDate?.trim() || null;
+
+    if (examDateRaw) {
+      const dateOnlyPattern = /^\d{4}-\d{2}-\d{2}$/;
+      if (!dateOnlyPattern.test(examDateRaw)) {
+        return {
+          success: false,
+          error: "Date d'examen invalide.",
+        };
+      }
+
+      const todayEt = new Intl.DateTimeFormat("en-CA", {
+        timeZone: EASTERN_TIMEZONE,
+      }).format(new Date());
+
+      if (examDateRaw < todayEt) {
+        return {
+          success: false,
+          error: "La date d'examen ne peut pas etre dans le passe.",
+        };
+      }
+    }
 
     let phoneE164: string | null = null;
     if (validated.channel === "SMS") {
@@ -62,7 +85,7 @@ export async function submitOnboardingAction(
       return { success: false, error: "Inscription introuvable" };
     }
 
-    const examDate = validated.examDate ? new Date(validated.examDate) : null;
+    const examDate = examDateRaw ? new Date(examDateRaw) : null;
 
     await prisma.$transaction(async (tx) => {
       // Upsert the onboarding parent

@@ -139,10 +139,14 @@ export function ProductForm({ product, onSaved, onCancel }: ProductFormProps) {
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Suivi personnalisé quotidien..."
-              rows={3}
+              placeholder={"Suivi personnalisé quotidien...\n\n- Check-ins adaptes\n- Plan hebdomadaire\n- Soutien motive"}
+              rows={6}
               className="mt-1"
             />
+            <p className="mt-1 text-xs text-muted-foreground">
+              Formatage pris en charge (Markdown): paragraphes, listes, gras,
+              liens, etc.
+            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-4">

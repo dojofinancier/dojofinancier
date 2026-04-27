@@ -78,6 +78,12 @@ const CHAPTER_STATUS_STEPS: ChapterStatus[] = [
   "READ_CONFIDENT",
 ];
 
+function getTodayEasternDateInputValue(): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Toronto",
+  }).format(new Date());
+}
+
 function chapterStatusToStep(status: ChapterStatus): number {
   const i = CHAPTER_STATUS_STEPS.indexOf(status);
   return i === -1 ? 0 : i;
@@ -99,6 +105,7 @@ export function OnboardingForm({ enrollmentId, onComplete }: OnboardingFormProps
   const [notes, setNotes] = useState("");
   const [chapters, setChapters] = useState<ChapterRow[]>([]);
   const [chaptersLoading, setChaptersLoading] = useState(true);
+  const [todayEasternDate] = useState<string>(() => getTodayEasternDateInputValue());
 
   const totalSteps = 5;
 
@@ -130,6 +137,11 @@ export function OnboardingForm({ enrollmentId, onComplete }: OnboardingFormProps
   }, [enrollmentId]);
 
   async function handleSubmit() {
+    if (examDate && examDate < todayEasternDate) {
+      toast.error("La date d'examen ne peut pas etre dans le passe.");
+      return;
+    }
+
     const smsPhone = normalizePhoneToE164(phone.trim());
     if (channel === "SMS" && !smsPhone) {
       toast.error(
@@ -223,7 +235,7 @@ export function OnboardingForm({ enrollmentId, onComplete }: OnboardingFormProps
                 type="date"
                 value={examDate}
                 onChange={(e) => setExamDate(e.target.value)}
-                min={new Date().toISOString().split("T")[0]}
+                min={todayEasternDate}
                 className="mt-1"
               />
             </div>

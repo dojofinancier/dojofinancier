@@ -32,6 +32,8 @@ import {
 } from "@/components/ui/dialog";
 import { OnboardingForm } from "./onboarding-form";
 import { AccompagnementPaymentDialog } from "./accompagnement-payment-dialog";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import {
   getAccompagnementStatusAction,
   getAccompagnementEnrollmentDashboardBundleAction,
@@ -1364,9 +1366,13 @@ function AccompagnementProductOfferList({
           </div>
           <CardContent className="pt-6">
             {product.description && (
-              <p className="text-sm text-muted-foreground mb-4">
-                {product.description}
-              </p>
+              <div className="mb-4 rounded-md border border-border/60 bg-muted/20 p-3">
+                <div className="prose prose-sm max-w-none text-muted-foreground dark:prose-invert prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-1">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {product.description}
+                  </ReactMarkdown>
+                </div>
+              </div>
             )}
             <div className="flex items-center justify-between">
               <p className="text-2xl font-bold">
