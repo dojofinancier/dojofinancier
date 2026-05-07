@@ -2,7 +2,10 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  // Windows/macOS local dev uses "native"; Netlify (AWS Lambda Node 20 / AL2023) needs
+  // this glibc engine — avoids shipping extra engines when both get traced into functions.
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {

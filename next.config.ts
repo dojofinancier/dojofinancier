@@ -4,6 +4,15 @@ import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
   /* config options here */
+  // Keep native-heavy packages external so file tracing does not inflate each
+  // Netlify serverless artifact (avoids upload "request body too large" failures).
+  serverExternalPackages: [
+    "@prisma/client",
+    "@react-pdf/renderer",
+    "openai",
+    "stripe",
+    "twilio",
+  ],
   // Suppress webpack warnings from Next.js internals
   webpack: (config, { dev }) => {
     if (dev) {
@@ -122,8 +131,13 @@ export default withSentryConfig(nextConfig, {
   org: process.env.SENTRY_ORG,
   project: process.env.SENTRY_PROJECT,
   authToken: process.env.SENTRY_AUTH_TOKEN,
-  widenClientFileUpload: true,
+  // true uploads many dependency source files to Sentry (better stacks) but can
+  // bloat build output; false shrinks Netlify server bundles when near upload limits.
+  widenClientFileUpload: false,
   tunnelRoute: "/monitoring",
   silent: !process.env.CI,
+  sourcemaps: {
+    deleteSourcemapsAfterUpload: true,
+  },
 });
 

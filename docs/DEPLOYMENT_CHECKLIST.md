@@ -227,6 +227,18 @@ Use one stable shape so the OpenAI step never branches on provider:
 
 ## 🔧 Netlify-Specific Configuration
 
+### Deploy failed: `uploadDeployFunction` / `request body too large`
+
+Netlify rejects a **single serverless function ZIP** that is too large for their upload API. Common causes after adding Sentry, Prisma, or PDF tooling: traced `node_modules` (multiple Prisma engines, `@react-pdf`, etc.).
+
+**This repo mitigates that by:**
+
+- `next.config.ts` → `serverExternalPackages` (Prisma, Stripe, OpenAI, Twilio, `@react-pdf/renderer`) so those deps are not duplicated inside every traced bundle.
+- `prisma/schema.prisma` → `binaryTargets = ["native", "rhel-openssl-3.0.x"]` so Linux deploys use one known Lambda-compatible engine alongside your local `native` binary.
+- Sentry `widenClientFileUpload: false` to avoid pulling extra client sources into the build output (source maps still upload when `SENTRY_AUTH_TOKEN` is set).
+
+If deploys still fail: check **very large files under `public/`** (e.g. huge PDFs), remove them from git or serve from storage; then run a clean build locally and inspect `.next` size.
+
 ### Build Settings
 - **Build command:** `export NEXT_PUBLIC_GIT_SHA="${COMMIT_REF:-unknown}" && npm run db:generate && npm run build` (see `netlify.toml`)
 - **Publish directory:** Automatically handled by Next.js plugin
