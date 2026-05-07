@@ -134,6 +134,19 @@ const nextConfig: NextConfig = {
     removeConsole: process.env.NODE_ENV === 'production' ? {
       exclude: ['error', 'warn'], // Keep error and warn logs
     } : false,
+    // Hard backstop: even if Sentry leaves source maps behind (no token,
+    // upload skipped, or `disable: true`), strip every server-side `.map`
+    // before Netlify packages serverless functions.
+    runAfterProductionCompile: async ({ distDir }) => {
+      const serverDir = path.join(distDir, "server");
+      const removed = pruneServerSourcemaps(serverDir);
+      if (removed > 0) {
+        // eslint-disable-next-line no-console
+        console.log(
+          `[next.config] Pruned ${removed} server-side .map file(s) from ${serverDir}`
+        );
+      }
+    },
   },
   
   // Image optimization
@@ -162,28 +175,6 @@ const nextConfig: NextConfig = {
       ".next/cache/**",
     ],
   },
-};
-
-// Hard backstop: even if Sentry leaves source maps behind (no token, upload
-// skipped, or `disable: true`), strip every server-side `.map` before Netlify's
-// adapter packages the serverless functions. `runAfterProductionCompile` is a
-// top-level Next 15+ config key that fires once after `next build` finishes.
-// Safe alongside Sentry source map upload: Sentry uploads during its own build
-// step (which runs before this hook), so deleting after is fine.
-(nextConfig as NextConfig & {
-  runAfterProductionCompile?: (ctx: {
-    distDir: string;
-    projectDir: string;
-  }) => Promise<void> | void;
-}).runAfterProductionCompile = ({ distDir }) => {
-  const serverDir = path.join(distDir, "server");
-  const removed = pruneServerSourcemaps(serverDir);
-  if (removed > 0) {
-    // eslint-disable-next-line no-console
-    console.log(
-      `[next.config] Pruned ${removed} server-side .map file(s) from ${serverDir}`
-    );
-  }
 };
 
 export default withSentryConfig(nextConfig, {

@@ -1,24 +1,11 @@
-import fs from "fs";
-import path from "path";
-import { prisma } from "@/lib/prisma";
+import { Client } from "pg";
 
 export type CheckStatus = "ok" | "fail";
 
-export function getDeploymentMeta() {
-  return {
-    commit:
-      process.env.NEXT_PUBLIC_GIT_SHA?.trim() ||
-      process.env.VERCEL_GIT_COMMIT_SHA?.trim() ||
-      process.env.COMMIT_REF?.trim() ||
-      null,
-    deployUrl: process.env.URL?.trim() || process.env.DEPLOY_URL?.trim() || null,
-    context: process.env.CONTEXT?.trim() || null,
-    nodeEnv: process.env.NODE_ENV,
-  };
-}
-
 export function checkRequiredEnv(): Record<string, CheckStatus> {
-  const flag = (v: string | undefined) => (v && v.trim().length > 0 ? "ok" : ("fail" as const));
+  const flag = (v: string | undefined) =>
+    v && v.trim().length > 0 ? "ok" : ("fail" as const);
+
   return {
     databaseUrl: flag(process.env.DATABASE_URL),
     supabaseUrl: flag(process.env.NEXT_PUBLIC_SUPABASE_URL),
@@ -28,22 +15,19 @@ export function checkRequiredEnv(): Record<string, CheckStatus> {
   };
 }
 
-export function checkCriticalPublicAssets(): Record<string, CheckStatus> {
-  const dir = path.join(process.cwd(), "public");
-  const files = ["logo_dark.png", "logo_light.png", "Favicon.ico"];
-  const out: Record<string, CheckStatus> = {};
-  for (const name of files) {
-    out[name] = fs.existsSync(path.join(dir, name)) ? "ok" : "fail";
-  }
-  return out;
-}
-
 export async function checkDatabase(): Promise<CheckStatus> {
+  const url = process.env.DATABASE_URL?.trim();
+  if (!url) return "fail";
+
+  const client = new Client({ connectionString: url });
   try {
-    await prisma.$queryRaw`SELECT 1`;
+    await client.connect();
+    await client.query("SELECT 1");
     return "ok";
   } catch {
     return "fail";
+  } finally {
+    await client.end().catch(() => undefined);
   }
 }
 
@@ -52,7 +36,8 @@ export function aggregateChecks(checks: Record<string, CheckStatus>): {
   failed: string[];
 } {
   const failed = Object.entries(checks)
-    .filter(([, v]) => v === "fail")
-    .map(([k]) => k);
+    .filter(([, value]) => value === "fail")
+    .map(([name]) => name);
+
   return { status: failed.length === 0 ? "ok" : "degraded", failed };
 }

@@ -11,6 +11,7 @@
     "start": "next start",
     "lint": "next lint",
     "db:generate": "prisma generate",
+    "db:prune-artifacts": "node scripts/prune-prisma-artifacts.cjs",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",

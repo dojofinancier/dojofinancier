@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { triageIncidentWithOpenAI } from "@/lib/observability/incident-triage-openai";
 import { sendIncidentTriageWebhook } from "@/lib/webhooks/make";
-import { getDeploymentMeta } from "@/lib/observability/health";
+import { getDeploymentMeta } from "@/lib/observability/deployment-meta";
 import { verifyBearerSecret } from "@/lib/security/request-secrets";
 
 const bodySchema = z.object({

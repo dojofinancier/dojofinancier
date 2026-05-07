@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   aggregateChecks,
-  checkCriticalPublicAssets,
   checkDatabase,
   checkRequiredEnv,
-  getDeploymentMeta,
 } from "@/lib/observability/health";
+import { getDeploymentMeta } from "@/lib/observability/deployment-meta";
 import { verifyBearerSecret } from "@/lib/security/request-secrets";
 
 /**
@@ -36,12 +35,10 @@ export async function GET(request: NextRequest) {
   }
 
   const envChecks = checkRequiredEnv();
-  const assetChecks = checkCriticalPublicAssets();
   const database = await checkDatabase();
 
   const checks = {
     ...envChecks,
-    ...assetChecks,
     database,
   };
 

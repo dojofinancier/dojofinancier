@@ -2,7 +2,7 @@
   package = "@netlify/plugin-nextjs"
 
 [build]
-  command = "export NEXT_PUBLIC_GIT_SHA=\"${COMMIT_REF:-unknown}\" && npm run db:generate && npm run build"
+  command = "export NEXT_PUBLIC_GIT_SHA=\"${COMMIT_REF:-unknown}\" && npm run db:generate && npm run db:prune-artifacts && npm run build"
   # Note: publish directory is automatically handled by the Next.js adapter
   # db:generate runs prisma generate which creates the Prisma Client from schema.prisma
 
