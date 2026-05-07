@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { verifyCronAuth } from "@/lib/security/request-secrets";
 import { prisma } from "@/lib/prisma";
 import {
   buildWeeklyRecapEmail,
@@ -150,14 +151,4 @@ export async function GET(request: NextRequest) {
     console.error("Weekly recap cron error:", error);
     return NextResponse.json({ error: "Cron job failed" }, { status: 500 });
   }
-}
-
-function verifyCronAuth(request: NextRequest): { ok: boolean } {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return { ok: false };
-  const queryParam = request.nextUrl.searchParams.get("secret");
-  if (queryParam === secret) return { ok: true };
-  const header = request.headers.get("authorization");
-  if (header && header === `Bearer ${secret}`) return { ok: true };
-  return { ok: false };
 }

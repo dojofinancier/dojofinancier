@@ -15,6 +15,13 @@ import { notifyAccompagnementEnrollmentCreated } from "@/lib/webhooks/accompagne
  * Handles payment success and creates enrollment
  */
 export async function POST(request: NextRequest) {
+  if (!process.env.STRIPE_WEBHOOK_SECRET) {
+    return NextResponse.json(
+      { error: "Stripe webhook is not configured" },
+      { status: 500 }
+    );
+  }
+
   const body = await request.text();
   const signature = request.headers.get("stripe-signature");
 
@@ -31,7 +38,7 @@ export async function POST(request: NextRequest) {
     event = stripe.webhooks.constructEvent(
       body,
       signature,
-      process.env.STRIPE_WEBHOOK_SECRET!
+      process.env.STRIPE_WEBHOOK_SECRET
     );
   } catch (err) {
     await logServerError({

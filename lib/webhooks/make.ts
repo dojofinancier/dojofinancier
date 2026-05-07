@@ -16,6 +16,7 @@ export type MakeEventType =
   | 'ticket.status_changed'
   | 'ticket.reply_added'
   | 'error.occurred'
+  | 'incident.triage.completed'
   | 'contact.form.submitted'
   | 'investor.diagnostic.completed'
   // Accompagnement product events
@@ -55,6 +56,8 @@ function getUrlForType(type: MakeEventType): string | undefined {
       return process.env.MAKE_WEBHOOK_SUPPORT_TICKETS_URL
     case 'error.occurred':
       return process.env.MAKE_WEBHOOK_ERRORS_URL
+    case 'incident.triage.completed':
+      return process.env.MAKE_WEBHOOK_INCIDENT_TRIAGE_URL
     case 'contact.form.submitted':
       return process.env.MAKE_WEBHOOK_CONTACT || process.env.MAKE_WEBHOOK_CONTACT_URL
     case 'investor.diagnostic.completed':
@@ -102,7 +105,7 @@ export async function sendMakeWebhook(
   try {
     new URL(url)
   } catch {
-    console.error(`Invalid webhook URL for event type ${type}: ${url}`)
+    console.error(`Invalid webhook URL for event type: ${type}`)
     return
   }
 
@@ -580,6 +583,38 @@ export async function sendTicketReplyWebhook(data: {
     is_internal: data.isInternal,
     timestamp: data.timestamp,
   })
+}
+
+/**
+ * AI-assisted incident triage result (uptime, Sentry, Netlify, DNS, etc.)
+ */
+export async function sendIncidentTriageWebhook(envelope: {
+  received_at: string;
+  deployment: {
+    commit: string | null;
+    deployUrl: string | null;
+    context: string | null;
+    nodeEnv: string | undefined;
+  };
+  input: {
+    source: string;
+    severity?: "low" | "medium" | "high" | "critical";
+    title?: string;
+    message: string;
+    url?: string;
+    metadata?: Record<string, any>;
+  };
+  triage: {
+    plain_language_summary: string;
+    severity_assessment: string;
+    likely_causes: string[];
+    recommended_actions: string[];
+    rollback_or_mitigation: string;
+    technical_notes: string;
+    confidence: string;
+  };
+}) {
+  await sendMakeWebhook('incident.triage.completed', envelope);
 }
 
 /**

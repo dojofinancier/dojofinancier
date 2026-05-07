@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import path from "path";
+import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
   /* config options here */
@@ -35,12 +36,22 @@ const nextConfig: NextConfig = {
               // Frames: Stripe + Google Tag Manager + Vimeo
               "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://*.stripe.com https://www.googletagmanager.com https://td.doubleclick.net https://player.vimeo.com",
               // Connections: GA + Google Ads + Stripe + Supabase
-              "connect-src 'self' https://www.google-analytics.com https://region1.google-analytics.com https://www.google.com https://googleads.g.doubleclick.net https://stats.g.doubleclick.net https://*.stripe.com https://*.stripe.network https://*.supabase.co wss://*.supabase.co",
+              "connect-src 'self' https://www.google-analytics.com https://region1.google-analytics.com https://www.google.com https://googleads.g.doubleclick.net https://stats.g.doubleclick.net https://*.stripe.com https://*.stripe.network https://*.supabase.co wss://*.supabase.co https://*.ingest.sentry.io https://*.ingest.us.sentry.io",
               // Images: GA tracking pixels + Google Ads + Stripe
               "img-src 'self' data: blob: https://*.stripe.com https://www.google-analytics.com https://www.google.com https://googleads.g.doubleclick.net https://www.googleadservices.com https://www.google.ca https://www.google.fr",
               "style-src 'self' 'unsafe-inline'",
               "font-src 'self' data:",
             ].join("; "),
+          },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          {
+            key: "Referrer-Policy",
+            value: "strict-origin-when-cross-origin",
+          },
+          {
+            key: "Permissions-Policy",
+            value: "camera=(), microphone=(), geolocation=()",
           },
         ],
       },
@@ -107,5 +118,12 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: path.resolve(__dirname),
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  widenClientFileUpload: true,
+  tunnelRoute: "/monitoring",
+  silent: !process.env.CI,
+});
 
