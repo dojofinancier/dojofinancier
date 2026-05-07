@@ -8,37 +8,6 @@ import type { PaginatedResult } from "@/lib/utils/pagination";
 import { sendCohortEnrollmentWebhook } from "@/lib/webhooks/make";
 import { stripe } from "@/lib/stripe/server";
 
-/**
- * Get the next order number for enrollments
- * Order numbers start at 5190 and increment sequentially
- * Shared between course and cohort enrollments
- */
-async function getNextOrderNumber(): Promise<number> {
-  const STARTING_ORDER_NUMBER = 5190;
-  
-  // Get max order number from both Enrollment and CohortEnrollment tables
-  const [maxEnrollmentOrder, maxCohortOrder] = await Promise.all([
-    prisma.enrollment.findFirst({
-      orderBy: { orderNumber: "desc" },
-      select: { orderNumber: true },
-      where: { orderNumber: { not: null } },
-    }),
-    prisma.cohortEnrollment.findFirst({
-      orderBy: { orderNumber: "desc" },
-      select: { orderNumber: true },
-      where: { orderNumber: { not: null } },
-    }),
-  ]);
-
-  const maxOrder = Math.max(
-    maxEnrollmentOrder?.orderNumber || 0,
-    maxCohortOrder?.orderNumber || 0,
-    STARTING_ORDER_NUMBER - 1 // Ensure we start at 5190 if no orders exist
-  );
-
-  return maxOrder + 1;
-}
-
 const cohortEnrollmentSchema = z.object({
   userId: z.string().min(1),
   cohortId: z.string().min(1),
@@ -122,14 +91,10 @@ export async function createCohortEnrollmentAction(
       };
     }
 
-    // Get next order number
-    const orderNumber = await getNextOrderNumber();
-
+    // order_number is allocated atomically by the DB via DEFAULT nextval('enrollment_order_seq').
+    // Do NOT pass orderNumber here — let the database default fire to avoid races.
     const enrollment = await prisma.cohortEnrollment.create({
-      data: {
-        ...validatedData,
-        orderNumber,
-      },
+      data: validatedData,
       include: {
         user: {
           select: {
@@ -217,6 +182,46 @@ export async function createCohortEnrollmentAction(
         success: false,
         error: error.issues[0]?.message || "Données invalides",
       };
+    }
+
+    // Idempotent recovery on payment_intent_id collision (race between Stripe
+    // webhook + client fallback). Treat as success and return the existing row.
+    if (
+      data.paymentIntentId &&
+      (error as { code?: string })?.code === "P2002" &&
+      Array.isArray((error as { meta?: { target?: string[] } })?.meta?.target) &&
+      (error as { meta?: { target?: string[] } }).meta!.target!.some(
+        (t) =>
+          t === "payment_intent_id" ||
+          t === "cohort_enrollments_payment_intent_id_key"
+      )
+    ) {
+      const existing = await prisma.cohortEnrollment.findFirst({
+        where: { paymentIntentId: data.paymentIntentId },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+              phone: true,
+            },
+          },
+          cohort: { select: { id: true, title: true, price: true } },
+        },
+      });
+      if (existing) {
+        return {
+          success: true,
+          data: {
+            ...existing,
+            cohort: existing.cohort
+              ? { ...existing.cohort, price: Number(existing.cohort.price) }
+              : null,
+          },
+        };
+      }
     }
 
     await logServerError({

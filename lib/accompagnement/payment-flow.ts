@@ -177,13 +177,6 @@ export async function createAccompagnementEnrollment(data: {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + product.accessDurationDays);
 
-    const lastOrder = await prisma.accompagnementEnrollment.findFirst({
-      where: { orderNumber: { not: null } },
-      orderBy: { orderNumber: "desc" },
-      select: { orderNumber: true },
-    });
-    const nextOrderNumber = (lastOrder?.orderNumber ?? 9999) + 1;
-
     const prior = await prisma.accompagnementEnrollment.findUnique({
       where: {
         userId_accompagnementProductId: {
@@ -202,6 +195,12 @@ export async function createAccompagnementEnrollment(data: {
       if (effectivelyActive) {
         return { success: true, data: { id: prior.id } };
       }
+      // Resubscribe: allocate a fresh business order number from the same DB
+      // sequence used by new accompagnement_enrollments inserts (atomic, race-free).
+      const seqRows = await prisma.$queryRaw<{ nextval: bigint }[]>`
+        SELECT nextval('accompagnement_order_seq') AS nextval
+      `;
+      const nextOrderNumber = Number(seqRows[0].nextval);
       const enrollment = await prisma.accompagnementEnrollment.update({
         where: { id: prior.id },
         data: {
@@ -217,12 +216,13 @@ export async function createAccompagnementEnrollment(data: {
       return { success: true, data: enrollment };
     }
 
+    // order_number is allocated atomically by the DB via DEFAULT
+    // nextval('accompagnement_order_seq'). Do NOT pass orderNumber here.
     const enrollment = await prisma.accompagnementEnrollment.create({
       data: {
         userId: data.userId,
         accompagnementProductId: data.accompagnementProductId,
         paymentIntentId: data.paymentIntentId,
-        orderNumber: nextOrderNumber,
         expiresAt,
         onboardingCompleted: false,
         isActive: true,

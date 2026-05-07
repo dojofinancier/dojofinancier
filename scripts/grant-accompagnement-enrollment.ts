@@ -173,18 +173,11 @@ async function main() {
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + product.accessDurationDays);
 
-  const lastOrder = await prisma.accompagnementEnrollment.findFirst({
-    where: { orderNumber: { not: null } },
-    orderBy: { orderNumber: "desc" },
-    select: { orderNumber: true },
-  });
-  const nextOrderNumber = (lastOrder?.orderNumber ?? 9999) + 1;
-
   console.log(`User:        ${user.email} (${user.id})`);
   console.log(`Product:     ${product.title} (${product.id})`);
   console.log(`Course:      ${product.course.title} [${product.course.slug}]`);
   console.log(`Expires at:  ${expiresAt.toISOString()}`);
-  console.log(`Order #:     ${nextOrderNumber}`);
+  console.log(`Order #:     (allocated by DB sequence accompagnement_order_seq)`);
   console.log(`paymentIntentId: (none — manual grant)`);
   if (existingRow) {
     console.log(
@@ -197,33 +190,43 @@ async function main() {
     return;
   }
 
-  const enrollment = existingRow
-    ? await prisma.accompagnementEnrollment.update({
-        where: { id: existingRow.id },
-        data: {
-          paymentIntentId: null,
-          orderNumber: nextOrderNumber,
-          expiresAt,
-          onboardingCompleted: false,
-          isActive: true,
-          checkInsPaused: false,
-          nextCheckInOverride: null,
-        },
-      })
-    : await prisma.accompagnementEnrollment.create({
-        data: {
-          userId: user.id,
-          accompagnementProductId: product.id,
-          paymentIntentId: null,
-          orderNumber: nextOrderNumber,
-          expiresAt,
-          onboardingCompleted: false,
-          isActive: true,
-        },
-      });
+  let enrollment;
+  if (existingRow) {
+    // Reactivate: allocate a fresh order number from the same DB sequence used
+    // by inserts (atomic, race-free).
+    const seqRows = await prisma.$queryRaw<{ nextval: bigint }[]>`
+      SELECT nextval('accompagnement_order_seq') AS nextval
+    `;
+    const nextOrderNumber = Number(seqRows[0].nextval);
+    enrollment = await prisma.accompagnementEnrollment.update({
+      where: { id: existingRow.id },
+      data: {
+        paymentIntentId: null,
+        orderNumber: nextOrderNumber,
+        expiresAt,
+        onboardingCompleted: false,
+        isActive: true,
+        checkInsPaused: false,
+        nextCheckInOverride: null,
+      },
+    });
+  } else {
+    // order_number is allocated atomically by the DB via DEFAULT
+    // nextval('accompagnement_order_seq'). Do NOT pass orderNumber here.
+    enrollment = await prisma.accompagnementEnrollment.create({
+      data: {
+        userId: user.id,
+        accompagnementProductId: product.id,
+        paymentIntentId: null,
+        expiresAt,
+        onboardingCompleted: false,
+        isActive: true,
+      },
+    });
+  }
 
   console.log(
-    `\n${existingRow ? "Reactivated" : "Created"} accompagnement enrollment: ${enrollment.id}`
+    `\n${existingRow ? "Reactivated" : "Created"} accompagnement enrollment: ${enrollment.id} (order #${enrollment.orderNumber ?? "?"})`
   );
 
   await notifyAccompagnementEnrollmentCreated({

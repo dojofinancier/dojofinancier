@@ -593,7 +593,9 @@ model Enrollment {
   purchaseDate     DateTime @default(now()) @map("purchase_date")
   expiresAt        DateTime @map("expires_at")
   paymentIntentId  String?  @map("payment_intent_id") // Unique per non-null value (enforced by partial unique index in DB)
-  orderNumber      Int?     @unique @map("order_number") // Business order number starting at 5190
+  // Allocated atomically by the DB via nextval('enrollment_order_seq') (shared with cohort_enrollments).
+  // Do NOT pass this from application code — let the DEFAULT fire.
+  orderNumber      Int?     @unique @default(dbgenerated("nextval('enrollment_order_seq'::regclass)")) @map("order_number")
   excludeFromStats Boolean  @default(false) @map("exclude_from_stats") // When true, excluded from revenue and enrollment stats (e.g. test orders)
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
@@ -1053,7 +1055,9 @@ model CohortEnrollment {
   purchaseDate     DateTime @default(now()) @map("purchase_date")
   expiresAt        DateTime @map("expires_at")
   paymentIntentId  String?  @map("payment_intent_id") // Unique per non-null value (enforced by partial unique index in DB)
-  orderNumber      Int?     @unique @map("order_number") // Business order number starting at 5190
+  // Allocated atomically by the DB via nextval('enrollment_order_seq') (shared with enrollments).
+  // Do NOT pass this from application code — let the DEFAULT fire.
+  orderNumber      Int?     @unique @default(dbgenerated("nextval('enrollment_order_seq'::regclass)")) @map("order_number")
   excludeFromStats Boolean  @default(false) @map("exclude_from_stats") // When true, excluded from revenue and enrollment stats (e.g. test orders)
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
@@ -1499,7 +1503,10 @@ model AccompagnementEnrollment {
   userId                  String         @map("user_id")
   accompagnementProductId String         @map("accompagnement_product_id")
   paymentIntentId         String?        @map("payment_intent_id")
-  orderNumber             Int?           @unique @map("order_number")
+  // Allocated atomically by the DB via nextval('accompagnement_order_seq').
+  // Do NOT pass this from application code on create — let the DEFAULT fire.
+  // For resubscribe-style updates, allocate via SELECT nextval('accompagnement_order_seq') in app code.
+  orderNumber             Int?           @unique @default(dbgenerated("nextval('accompagnement_order_seq'::regclass)")) @map("order_number")
   expiresAt               DateTime       @map("expires_at")
   onboardingCompleted     Boolean        @default(false) @map("onboarding_completed")
   isActive                Boolean        @default(true) @map("is_active")

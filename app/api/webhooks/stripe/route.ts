@@ -176,10 +176,14 @@ export async function POST(request: NextRequest) {
       let enrollmentResult;
       let enrollmentId: string;
 
-      // If enrollment already exists, use it (idempotency) but still ensure coupon is tracked
+      // If enrollment already exists (e.g. created by the client-side fallback
+      // milliseconds earlier), DO NOT return early. We still want to ensure
+      // coupon usage is tracked AND the Make payment webhook is sent for this
+      // Stripe event. Stripe-event-id idempotency above (stripe_webhook_events)
+      // already prevents duplicate Make sends across webhook retries for the
+      // same event, so falling through here is safe.
       if (existingEnrollment) {
         enrollmentId = existingEnrollment.id;
-        // Backfill coupon usage if payment used a coupon but record was never created (e.g. frontend created enrollment first)
         if (!isCohortPayment && couponId && enrollmentId) {
           try {
             await trackCouponUsageAction(
@@ -196,10 +200,7 @@ export async function POST(request: NextRequest) {
             });
           }
         }
-        return NextResponse.json({ received: true });
-      }
-
-      if (isCohortPayment) {
+      } else if (isCohortPayment) {
         // Handle cohort enrollment
         const cohort = await prisma.cohort.findUnique({
           where: { id: cohortId! },

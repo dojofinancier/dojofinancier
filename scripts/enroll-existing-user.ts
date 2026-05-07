@@ -18,34 +18,9 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-const STARTING_ORDER_NUMBER = 5190;
-
 function isUUID(str: string): boolean {
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   return uuidRegex.test(str);
-}
-
-async function getNextOrderNumber(): Promise<number> {
-  const [maxEnrollmentOrder, maxCohortOrder] = await Promise.all([
-    prisma.enrollment.findFirst({
-      orderBy: { orderNumber: "desc" },
-      select: { orderNumber: true },
-      where: { orderNumber: { not: null } },
-    }),
-    prisma.cohortEnrollment.findFirst({
-      orderBy: { orderNumber: "desc" },
-      select: { orderNumber: true },
-      where: { orderNumber: { not: null } },
-    }),
-  ]);
-
-  const maxOrder = Math.max(
-    maxEnrollmentOrder?.orderNumber ?? 0,
-    maxCohortOrder?.orderNumber ?? 0,
-    STARTING_ORDER_NUMBER - 1
-  );
-
-  return maxOrder + 1;
 }
 
 async function findCourseByIdentifier(identifier: string) {
@@ -121,14 +96,14 @@ async function enrollExistingUser() {
 
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + durationDays);
-    const orderNumber = await getNextOrderNumber();
 
+    // order_number is allocated atomically by the DB via DEFAULT
+    // nextval('enrollment_order_seq'). Do NOT pass orderNumber here.
     await prisma.enrollment.create({
       data: {
         userId: user.id,
         courseId: course.id,
         expiresAt,
-        orderNumber,
       },
     });
 
