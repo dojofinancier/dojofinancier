@@ -1,6 +1,33 @@
 import type { NextConfig } from "next";
+import fs from "fs";
 import path from "path";
 import { withSentryConfig } from "@sentry/nextjs";
+
+const HAS_SENTRY_AUTH_TOKEN = Boolean(process.env.SENTRY_AUTH_TOKEN);
+
+/**
+ * Recursively delete every `.js.map` (and `.mjs.map`) under `dir`.
+ * Server-side source maps are never needed at runtime; leaving them in `.next/`
+ * pushes Netlify serverless function ZIPs over the upload limit.
+ */
+function pruneServerSourcemaps(dir: string): number {
+  if (!fs.existsSync(dir)) return 0;
+  let removed = 0;
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      removed += pruneServerSourcemaps(full);
+    } else if (/\.(m?js)\.map$/.test(entry.name)) {
+      try {
+        fs.unlinkSync(full);
+        removed++;
+      } catch {
+        // best-effort
+      }
+    }
+  }
+  return removed;
+}
 
 const nextConfig: NextConfig = {
   /* config options here */
@@ -125,19 +152,56 @@ const nextConfig: NextConfig = {
   
   // Set output file tracing root to fix lockfile detection warning
   outputFileTracingRoot: path.resolve(__dirname),
+
+  // Defense-in-depth: never let server source maps end up inside the traced
+  // function bundles that Netlify uploads.
+  outputFileTracingExcludes: {
+    "*": [
+      ".next/server/**/*.map",
+      ".next/static/**/*.map",
+      ".next/cache/**",
+    ],
+  },
+};
+
+// Hard backstop: even if Sentry leaves source maps behind (no token, upload
+// skipped, or `disable: true`), strip every server-side `.map` before Netlify's
+// adapter packages the serverless functions. `runAfterProductionCompile` is a
+// top-level Next 15+ config key that fires once after `next build` finishes.
+// Safe alongside Sentry source map upload: Sentry uploads during its own build
+// step (which runs before this hook), so deleting after is fine.
+(nextConfig as NextConfig & {
+  runAfterProductionCompile?: (ctx: {
+    distDir: string;
+    projectDir: string;
+  }) => Promise<void> | void;
+}).runAfterProductionCompile = ({ distDir }) => {
+  const serverDir = path.join(distDir, "server");
+  const removed = pruneServerSourcemaps(serverDir);
+  if (removed > 0) {
+    // eslint-disable-next-line no-console
+    console.log(
+      `[next.config] Pruned ${removed} server-side .map file(s) from ${serverDir}`
+    );
+  }
 };
 
 export default withSentryConfig(nextConfig, {
   org: process.env.SENTRY_ORG,
   project: process.env.SENTRY_PROJECT,
   authToken: process.env.SENTRY_AUTH_TOKEN,
-  // true uploads many dependency source files to Sentry (better stacks) but can
-  // bloat build output; false shrinks Netlify server bundles when near upload limits.
+  // true uploads many dependency source files to Sentry (better stacks) but
+  // bloats build output; false shrinks Netlify server bundles when near upload limits.
   widenClientFileUpload: false,
   tunnelRoute: "/monitoring",
   silent: !process.env.CI,
   sourcemaps: {
-    deleteSourcemapsAfterUpload: true,
+    // When no auth token is configured, skip Sentry source map handling entirely
+    // so the build doesn't emit/keep maps that we'd then have to strip.
+    disable: !HAS_SENTRY_AUTH_TOKEN,
+    // When maps ARE produced and uploaded, delete every .map under .next so
+    // they never end up inside the Netlify function ZIP.
+    filesToDeleteAfterUpload: [".next/**/*.map"],
   },
 });
 
