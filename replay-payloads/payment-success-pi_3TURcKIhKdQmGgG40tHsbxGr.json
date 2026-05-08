@@ -1,0 +1,24 @@
+{
+  "type": "payment.success",
+  "payload": {
+    "payment_intent_id": "pi_3TURcKIhKdQmGgG40tHsbxGr",
+    "user_id": "1cbc3d13-a6bb-45d8-8ef7-2b05745dc9b3",
+    "user_name": "Carol-Ann Vincent",
+    "user_email": "vincentcarolann@gmail.com",
+    "user_phone": "819-880-0245",
+    "course_id": "aacb161a-8bb5-4b1c-bd8f-5744d17007a5",
+    "course_title": "Formation préparatoire ERCI",
+    "cohort_id": null,
+    "cohort_title": null,
+    "enrollment_id": "e5c4abe0-837c-48f0-b929-3603ebe2cc9b",
+    "order_number": 5396,
+    "amount": 397,
+    "original_amount": 397,
+    "discount_amount": 0,
+    "coupon_code": null,
+    "type": "course",
+    "timestamp": "2026-05-07T13:05:37.374Z"
+  },
+  "event_id": "make_manual_replay_pi_3TURcKIhKdQmGgG40tHsbxGr",
+  "sent_at": "2026-05-07T15:45:00.000Z"
+}

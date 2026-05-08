@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -39,15 +40,28 @@ export function ExamList({ courseId, onStartExam }: ExamListProps) {
 
   const exams = result?.success && result.data ? (result.data as Exam[]) : [];
 
-  if (error) {
+  useEffect(() => {
+    if (!error) return;
     toast.error("Erreur lors du chargement des examens");
-  }
+  }, [error]);
 
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="py-12 text-center">
+          <p className="text-muted-foreground">
+            Impossible de charger la liste des examens. Réessayez dans un instant.
+          </p>
+        </CardContent>
+      </Card>
     );
   }
 

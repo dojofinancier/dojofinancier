@@ -142,6 +142,16 @@ export function ModuleDetailPage({ courseId, moduleId, onBack, componentVisibili
 
   // Update active tab if the selected tab is no longer available
   useEffect(() => {
+    if (loading) return;
+
+    const firstAvailableTab = (): "videos" | "notes" | "quiz" | "slides" => {
+      if (videosEnabled && videos.length > 0) return "videos";
+      if (notesEnabled) return "notes";
+      if (slidesEnabled && slideImages.length > 0) return "slides";
+      if (quizzesEnabled) return "quiz";
+      return "notes";
+    };
+
     const tabAvailable =
       (activeTab === "videos" && videosEnabled && videos.length > 0) ||
       (activeTab === "notes" && notesEnabled) ||
@@ -149,13 +159,21 @@ export function ModuleDetailPage({ courseId, moduleId, onBack, componentVisibili
       (activeTab === "quiz" && quizzesEnabled);
 
     if (!tabAvailable) {
-      if (videosEnabled && videos.length > 0) setActiveTab("videos");
-      else if (notesEnabled) setActiveTab("notes");
-      else if (slidesEnabled && slideImages.length > 0) setActiveTab("slides");
-      else if (quizzesEnabled) setActiveTab("quiz");
-      else setActiveTab("notes");
+      const next = firstAvailableTab();
+      if (next !== activeTab) {
+        setActiveTab(next);
+      }
     }
-  }, [activeTab, videosEnabled, videos.length, notesEnabled, quizzesEnabled, slidesEnabled, slideImages.length]);
+  }, [
+    loading,
+    activeTab,
+    videosEnabled,
+    videos.length,
+    notesEnabled,
+    quizzesEnabled,
+    slidesEnabled,
+    slideImages.length,
+  ]);
 
   const loadStudentNote = async () => {
     try {
@@ -637,6 +655,8 @@ export function ModuleDetailPage({ courseId, moduleId, onBack, componentVisibili
                     })
                   : [];
                 const userAnswer = answers[currentQuestion.id];
+                const radioValue =
+                  userAnswer && optionKeys.includes(userAnswer) ? userAnswer : undefined;
 
                 return (
                   <div key={quizItem.id} className="space-y-4">
@@ -655,7 +675,7 @@ export function ModuleDetailPage({ courseId, moduleId, onBack, componentVisibili
                             plainClassName="font-semibold text-lg"
                           />
                           <RadioGroup
-                            value={userAnswer || ""}
+                            value={radioValue}
                             onValueChange={(value) =>
                               handleQuizAnswerChange(quiz.id, currentQuestion.id, value)
                             }
